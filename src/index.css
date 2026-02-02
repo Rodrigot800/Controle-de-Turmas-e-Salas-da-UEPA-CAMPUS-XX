@@ -1,0 +1,39 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+body {
+    background: #f5f6f8;
+    padding: 20px;
+}
+
+.header {
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 16px 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.header-icon {
+    font-size: 32px;
+}
+
+.header h1 {
+    font-size: 20px;
+    margin-bottom: 4px;
+}
+
+.header span {
+    font-size: 14px;
+    color: #666;
+}
