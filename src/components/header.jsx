@@ -1,12 +1,23 @@
-function Header() {
+import uepaLogo from '../assets/Assinatura_Padrão_CampusXX_Castanhal_Avatar_Horizontal_Cores.png'
+
+function Header({ title, subtitle }) {
+
     return (
         <header className="header">
             <div className="header-content">
-                <div className="header-icon">📘</div>
+                <div className="header-content">
+                    <img
+                        src={uepaLogo}
+                        alt="Logo UEPA"
+                        className="header-logo"
+                    />
+
+            </div>
 
                 <div>
-                    <h1>Controle de Salas e Turmas – UEPA</h1>
-                    <span>Sistema acadêmico de organização de salas</span>
+                    <h1>{title}</h1>
+                    <span>{subtitle}
+                    </span>
                 </div>
             </div>
         </header>

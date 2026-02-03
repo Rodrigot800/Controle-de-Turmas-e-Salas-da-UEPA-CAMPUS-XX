@@ -37,3 +37,64 @@ body {
     font-size: 14px;
     color: #666;
 }
+
+.header-logo {
+    width: 150px;
+    height: auto;
+}
+
+.status-sala {
+    background: #fff;
+    padding: 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 32px;
+}
+
+.status-sala button {
+    margin-right: 8px;
+    padding: 6px 12px;
+}
+
+.livre {
+    color: green;
+    font-weight: bold;
+}
+.ocupada {
+    color: red;
+    font-weight: bold;
+}
+
+.slot-cell {
+    width: 120px;
+    padding: 16px;
+    text-align: center;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    user-select: none;
+}
+
+.slot-cell.livre {
+    background: #d4edda;
+    color: #155724;
+}
+
+.slot-cell.ocupada {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.grid {
+    display: flex;
+    gap: 12px;
+}
+
+.livre {
+    background: #2ecc71;
+}
+
+.ocupado {
+    background: #e74c3c;
+}
