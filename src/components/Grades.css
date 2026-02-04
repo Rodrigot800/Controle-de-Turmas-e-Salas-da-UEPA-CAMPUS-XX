@@ -1,0 +1,48 @@
+.grade {
+    margin: 20px;
+    border: 1px solid #ccc;
+}
+
+.grade-header,
+.grade-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+}
+
+.grade-header {
+    font-weight: bold;
+    background-color: #f0f0f0;
+}
+
+.grade-row:nth-child(even) {
+    background-color: #fafafa;
+}
+
+.sala-nome {
+    font-weight: 500;
+}
+/* Status */
+.livre {
+    color: #2e7d32;
+    font-weight: 500;
+}
+
+.ocupada {
+    color: #1565c0;
+    font-weight: 500;
+}
+
+/* Tipo de sala */
+.sala-info {
+    background-color: #e3f2fd;
+}
+
+.sala-lab {
+    background-color: #fff3e0;
+}
+
+.sala-comum {
+    background-color: #ffffff;
+}
