@@ -1,7 +1,7 @@
 import "./Grades.css";
 
-export function GradeSalas({ salas, ocupacoes }) {
-
+export function GradeSalas({ salas, ocupacoes, onCellClick }) {
+ 
     function getStatusClass(valor) {
         return valor === "livre" ? "livre" : "ocupado";
     }
@@ -30,7 +30,7 @@ export function GradeSalas({ salas, ocupacoes }) {
 
             {/* Linhas */}
             {salas.map((sala) => {
-                const manha = getOcupacaoSala(sala.id, "manha");
+                const manha = getOcupacaoSala(sala.id, salas.ocupacoes);
                 const tarde = getOcupacaoSala(sala.id, "tarde");
                 const noite = getOcupacaoSala(sala.id, "noite");
 
@@ -41,17 +41,30 @@ export function GradeSalas({ salas, ocupacoes }) {
                     >
                         <span className="sala-nome">{sala.nome}</span>
 
-                        <span className={getStatusClass(manha ? "ocupado" : "livre")}>
+                        <span
+                            onClick={() => onCellClick(sala.id, "manha")}
+                            className={getStatusClass(manha ? "ocupado" : "livre")}
+                        >
                             {manha ? manha.turma : "Livre"}
                         </span>
 
-                        <span className={getStatusClass(tarde ? "ocupado" : "livre")}>
+
+                        <span
+                            onClick={() => onCellClick(sala.id, "tarde")}
+                            className={getStatusClass(tarde ? "ocupado" : "livre")}
+                        >
                             {tarde ? tarde.turma : "Livre"}
                         </span>
 
-                        <span className={getStatusClass(noite ? "ocupado" : "livre")}>
+
+                        <span
+                            onClick={() => onCellClick(sala.id, "noite")}
+                            className={getStatusClass(noite ? "ocupado" : "livre")}
+                        >
                             {noite ? noite.turma : "Livre"}
                         </span>
+
+                        
                     </div>
                 );
             })}
