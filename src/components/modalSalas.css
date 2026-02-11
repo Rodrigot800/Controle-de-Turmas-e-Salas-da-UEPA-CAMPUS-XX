@@ -1,0 +1,126 @@
+/* Fundo escuro atrás do modal */
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+/* Caixa do modal */
+.modal {
+    
+    background: #ffffff;
+    width: 420px;
+    max-width: 90%;
+    max-height: 90%;
+    border-radius: 10px;
+    padding: 20px 24px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    animation: modalFade 0.25s ease-out;
+}
+
+/* Animação suave */
+@keyframes modalFade {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Título */
+.modal h2 {
+    margin-bottom: 16px;
+    font-size: 18px;
+    text-align: center;
+    color: #333;
+}
+
+.form-row {
+    display: flex;
+    gap: 1px;
+    /* espaço entre eles */
+}
+
+.form-row input,
+.form-row select {
+    flex: 1;
+    /* ambos ocupam o mesmo espaço */
+    padding: 3px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 12px;
+}
+
+/* Inputs e select */
+.modal input,
+.modal select {
+    width: 50%;
+    padding: 5px;
+    margin: 0 10px 10px 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 10px;
+}
+
+/* Botões */
+.modal button {
+    padding: 10px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+/* Botão adicionar */
+.modal button:first-of-type {
+    background: #2563eb;
+    color: #fff;
+    width: 100%;
+    margin-bottom: 12px;
+}
+
+.modal button:first-of-type:hover {
+    background: #1d4ed8;
+}
+
+/* Lista de salas */
+.modal ul {
+    list-style: none;
+    padding: 0;
+    margin: 12px 0;
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+/* Item da lista */
+.modal li {
+    background: #f3f4f6;
+    padding: 8px 10px;
+    border-radius: 6px;
+    margin-bottom: 6px;
+    font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+}
+
+/* Botão fechar */
+.modal button:last-of-type {
+    background: #e5e7eb;
+    color: #111;
+    width: 100%;
+}
+
+.modal button:last-of-type:hover {
+    background: #d1d5db;
+}
