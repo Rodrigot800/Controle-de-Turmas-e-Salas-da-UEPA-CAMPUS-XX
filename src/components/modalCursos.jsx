@@ -6,11 +6,19 @@ export default function ModalCursos({ cursos, setCursos, onClose }) {
     const [vagas, setVagas] = useState("");
     const [semestres, setSemestres] = useState("");
 
+    function gerarProximoId(lista) {
+        if (lista.length === 0) return 1;
+
+        const maiorId = Math.max(...lista.map(item => item.id));
+        return maiorId + 1;
+    }
+
+
     function adicionarCurso() {
         if (!nomeCurso || !vagas || !semestres) return;
 
         const novoCurso = {
-            id_curso: Date.now(),
+            id_curso: gerarProximoId(cursos),
             nome_curso: nomeCurso,
             vagas: Number(vagas),
             semestres: Number(semestres),

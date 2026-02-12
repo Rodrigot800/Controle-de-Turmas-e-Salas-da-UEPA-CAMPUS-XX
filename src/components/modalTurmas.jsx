@@ -7,11 +7,18 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
     const [semestre, setSemestre] = useState(1);
     const [anoInicio, setAnoInicio] = useState(new Date().getFullYear());
 
+    function gerarProximoId(lista) {
+        if (lista.length === 0) return 1;
+
+        const maiorId = Math.max(...lista.map(item => item.id));
+        return maiorId + 1;
+    }
+
     function adicionarTurma() {
         if (!nome || !cursoId) return;
 
         const novaTurma = {
-            id: Date.now(),
+            id: gerarProximoId(turmas),
             nome,
             cursoId: Number(cursoId),
             semestre: Number(semestre),
@@ -50,12 +57,15 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
 
                     <div>
                         <label>Curso</label>
-                        <select value={cursoId} onChange={(e) => setCursoId(e.target.value)}>
-                            <option value="">Selecione</option>
+                        <select
+                            value={cursoId}
+                            onChange={(e) => setCursoId(e.target.value)}
+                        >
+                            <option value="">Selecione um curso</option>
 
                             {cursos.map((curso) => (
-                                <option key={curso.id} value={curso.id}>
-                                    {curso.nome}
+                                <option key={curso.id_curso} value={curso.id_curso}>
+                                    {curso.nome_curso}
                                 </option>
                             ))}
                         </select>

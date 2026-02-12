@@ -7,11 +7,18 @@ export default function ModalSalas({ salas, setSalas, onClose }) {
     const [capacidade, setCapacidade] = useState("");
     const [piso, setPiso] = useState("");
 
+    function gerarProximoId(lista) {
+        if (lista.length === 0) return 1;
+
+        const maiorId = Math.max(...lista.map(item => item.id));
+        return maiorId + 1;
+    }
+
     function adicionarSala() {
         if (!nome) return;
 
         const novaSala = {
-            id: Date.now(),
+            id: gerarProximoId(salas),
             nome,
             tipo,
             capacidade,
