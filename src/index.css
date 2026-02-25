@@ -1,0 +1,100 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+body {
+    background: #f5f6f8;
+    padding: 20px;
+}
+
+.header {
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 16px 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.header-icon {
+    font-size: 32px;
+}
+
+.header h1 {
+    font-size: 20px;
+    margin-bottom: 4px;
+}
+
+.header span {
+    font-size: 14px;
+    color: #666;
+}
+
+.header-logo {
+    width: 150px;
+    height: auto;
+}
+
+.status-sala {
+    background: #fff;
+    padding: 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 32px;
+}
+
+.status-sala button {
+    margin-right: 8px;
+    padding: 6px 12px;
+}
+
+.livre {
+    color: green;
+    font-weight: bold;
+}
+.ocupada {
+    color: red;
+    font-weight: bold;
+}
+
+.slot-cell {
+    width: 120px;
+    padding: 16px;
+    text-align: center;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    user-select: none;
+}
+
+.slot-cell.livre {
+    background: #d4edda;
+    color: #155724;
+}
+
+.slot-cell.ocupada {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.grid {
+    display: flex;
+    gap: 12px;
+}
+
+.livre {
+    background: #2ecc71;
+}
+
+.ocupado {
+    background: #e74c3c;
+}

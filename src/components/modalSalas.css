@@ -1,0 +1,184 @@
+/* Fundo */
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+/* Modal */
+.modal {
+    background: #ffffff;
+    width: 560px;
+    max-width: 35%;
+    border-radius: 14px;
+    padding: 22px 24px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+    animation: modalFade 0.25s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    position: relative;
+}
+
+@keyframes modalFade {
+    from {
+        opacity: 0;
+        transform: scale(0.96);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Cabeçalho */
+.modal h2 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #0f172a;
+    text-align: center;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px 14px;
+    margin-bottom: 16px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 3px;
+}
+
+.form-group input,
+.form-group select {
+    height: 30px;
+    /* 🔽 MENOR AINDA */
+    padding: 4px 6px;
+
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+
+    font-size: 12px;
+    background-color: #fff;
+}
+
+.form-group select {
+    cursor: pointer;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.25);
+}
+/* Botão adicionar */
+.btn-primary {
+    background: #2563eb;
+    color: #fff;
+    padding: 5px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 50px;
+    cursor: pointer;
+    transition: background 0.2s;
+
+}
+
+.btn-primary:hover {
+    background: #1d4ed8;
+}
+
+/* Lista */
+.lista-salas {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+/* Linha da lista */
+.linha-sala {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    font-size: 13px;
+    color: #0f172a;
+}
+
+.linha-sala:not(:last-child) {
+    margin-bottom: 6px;
+}
+
+/* Botão excluir */
+.btn-delete {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    background: transparent;
+    color: #64748b;
+    font-size: 12px;
+    cursor: pointer;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, color 0.2s;
+}
+
+.btn-delete:hover {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+}
+
+/* Botão X de fechar */
+.btn-close-icon {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+
+    width: 28px;
+    height: 28px;
+
+    border-radius: 50%;
+    border: none;
+
+    background: transparent;
+    color: #64748b;
+
+    font-size: 20px;
+    font-weight: 500;
+    cursor: pointer;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    transition: background 0.2s, color 0.2s;
+}
+
+.btn-close-icon:hover {
+    background: rgba(0, 0, 0, 0.08);
+    color: #0f172a;
+}
