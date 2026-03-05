@@ -50,25 +50,46 @@ function App() {
 
   return (
     <>
-      <Header />
+      
+      <Header
+        title="Controle de Salas e Turmas"
+        subtitle="Gerencie as salas, turmas e alocações de forma fácil e rápida"
+      />
+      <div className="container mt-4">
 
-      <button onClick={() => setModalSalasAberto(true)}>
-        Gerenciar Salas
-      </button>
+        <div className="card shadow-sm">
+          <div className="card-body">
 
-      <button onClick={() => setModalCursosAberto(true)}>
-        Gerenciar Cursos
-      </button>
-      <button onClick={() => setModalTurmasAberto(true)}>
-        Gerenciar Turmas
-      </button>
-      <button onClick={() => setModalAlocacoesAberto(true)}>
-        Gerenciar Alocações
-      </button>
+            <div className="d-flex justify-content-end flex-wrap gap-2">
+
+              <button className="btn btn-outline-primary" onClick={() => setModalSalasAberto(true)}>
+                 Salas
+              </button>
+
+              <button className="btn btn-outline-primary" onClick={() => setModalCursosAberto(true)}>
+                Cursos
+              </button>
+
+              <button className="btn btn-outline-primary" onClick={() => setModalTurmasAberto(true)}>
+                Turmas
+              </button>
+
+              <button className="btn btn-outline-primary" onClick={() => setModalAlocacoesAberto(true)}>
+                Alocações
+              </button>
+
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+      
 
       <TabelaAlocacoes
         salas={salas}
         turmas={turmas}
+        cursos={cursos}
         alocacoes={alocacoes}
       />
 
