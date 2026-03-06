@@ -4,8 +4,8 @@ import "./modalSalas.css";
 export default function ModalSalas({ salas, setSalas, onClose }) {
     const [nome, setNome] = useState("");
     const [tipo, setTipo] = useState("comum");
-    const [capacidade, setCapacidade] = useState("");
-    const [piso, setPiso] = useState("");
+    const [capacidade, setCapacidade] = useState("30");
+    const [piso, setPiso] = useState("térreo");
 
     function gerarProximoId(lista) {
         if (lista.length === 0) return 1;
@@ -14,8 +14,41 @@ export default function ModalSalas({ salas, setSalas, onClose }) {
         return maiorId + 1;
     }
 
+    function validarEntrada() {
+        if (nome.trim() === "" || nome.length < 2) {
+            alert("Por favor, insira um nome válido para a sala.");
+            return false;
+        }
+
+        if (capacidade <= 0 || Number(capacidade) === false) {
+            alert("Por favor, insira uma capacidade válida.");
+            return false;
+        }
+
+        if (piso.trim() === "" ) {
+            alert("Por favor, insira o piso da sala.");
+            return false;
+        }
+
+        return true;
+    }
+
+
     function adicionarSala() {
-        if (!nome) return;
+        if (!validarEntrada()) return;
+        if (nome.trim() === "") {
+            alert("O nome da sala é obrigatório.");
+            return;
+        } 
+
+        const salaExiste = salas.some(
+            sala => sala.nome.toLowerCase() === nome.trim().toLowerCase()
+        );
+
+        if (salaExiste) {
+            alert("Já existe uma sala com esse nome. Por favor, escolha outro nome.");
+            return;
+        }
 
         const novaSala = {
             id: gerarProximoId(salas),
@@ -32,9 +65,7 @@ export default function ModalSalas({ salas, setSalas, onClose }) {
         });
 
         setNome("");
-        setCapacidade("");
-        setPiso("");
-        setTipo("comum");
+        
     }
 
     function removerSala(id) {
@@ -75,17 +106,18 @@ export default function ModalSalas({ salas, setSalas, onClose }) {
                                 value={capacidade}
                                 onChange={(e) => setCapacidade(e.target.value)}
                                 placeholder="30"
+                                step= "10"
                             />
                         </div>
 
                         <div className="form-group">
                             <label>Piso</label>
-                            <input
-                                type="text"
-                                value={piso}
-                                onChange={(e) => setPiso(e.target.value)}
-                                placeholder="1º andar"
-                            />
+                            <select name="piso" id="piso" value={piso} onChange={(e) => setPiso(e.target.value)}>
+                                <option value="térreo">Térreo</option>
+                                <option value="1º andar">1º andar</option>
+                                <option value="2º andar">2º andar</option>
+                                
+                            </select>
                         </div>
 
                         <div className="form-group">

@@ -15,8 +15,40 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
         return maiorId + 1;
     }
 
+    function validarEntrada() {
+        if (!nome || nome.trim().length < 2) {
+            alert("Por favor, insira um nome válido para a turma.");
+            return false;
+        }
+        if (!cursoId) {
+            alert("Por favor, selecione um curso.");
+            return false;
+        }
+        if (!turno) {
+            alert("Por favor, selecione um turno.");
+            return false;
+        }
+        if (!semestre || (semestre != 2 && semestre != 1)) {
+            alert("Por favor, selecione um semestre válido (1° ou 2°).");
+            return false;
+        }
+        if (!anoInicio || Number(anoInicio) < 2000 || Number(anoInicio) > new Date().getFullYear() + 5) {
+            alert("Por favor, insira um ano de início válido.");
+            return false;
+        }
+        return true;
+    }
+
     function adicionarTurma() {
-        if (!nome || !cursoId) return;
+        if (!validarEntrada()) return;
+
+        if (turmas.some(t =>
+            t.nome.trim().toLowerCase() === nome.trim().toLowerCase() &&
+            t.anoInicio == anoInicio 
+        )) {
+            alert("Já existe uma turma com esse nome. Por favor, escolha outro nome.");
+            return;
+        }
 
         const novaTurma = {
             id: gerarProximoId(turmas),
@@ -87,11 +119,10 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
 
                     <div>
                         <label>Semestre</label>
-                        <input
-                            type="number"
-                            value={semestre}
-                            onChange={(e) => setSemestre(e.target.value)}
-                        />
+                        <select value={semestre} onChange={(e) => setSemestre(e.target.value)}>
+                            <option value={1}>1º </option>
+                            <option value={2}>2º </option>
+                        </select>
                     </div>
 
                     <div>

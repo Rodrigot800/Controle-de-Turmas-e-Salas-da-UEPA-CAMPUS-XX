@@ -3,8 +3,8 @@ import "./modalCursos.css";
 
 export default function ModalCursos({ cursos, setCursos, onClose }) {
     const [nomeCurso, setNomeCurso] = useState("");
-    const [vagas, setVagas] = useState("");
-    const [semestres, setSemestres] = useState("");
+    const [vagas, setVagas] = useState("30");
+    const [semestres, setSemestres] = useState("8");
 
     function gerarProximoId(lista) {
         if (lista.length === 0) return 1;
@@ -12,9 +12,32 @@ export default function ModalCursos({ cursos, setCursos, onClose }) {
         const maiorId = Math.max(...lista.map(item => item.id_curso));
         return maiorId + 1;
     }
-
+    function validarEntrada() {
+        if (nomeCurso.trim() === "" || nomeCurso.length < 2) {
+            alert("Por favor, insira um nome válido para o curso.");
+            return false;
+        }
+        if (vagas <= 0 || Number(vagas) === false) {
+            alert("Por favor, insira uma quantidade válida de vagas.");
+            return false;
+        }
+        if (semestres <= 0 || Number(semestres) === false) {
+            alert("Por favor, insira uma quantidade válida de semestres.");
+            return false;
+        }
+        return true;
+    }
     function adicionarCurso() {
-        if (!nomeCurso || !vagas || !semestres) return;
+        if (!validarEntrada()) return;
+
+        const cursoExiste = cursos.some(
+            curso => curso.nome_curso.toLowerCase() === nomeCurso.trim().toLowerCase()
+        );
+
+        if (cursoExiste) {
+            alert("Já existe um curso com esse nome. Por favor, escolha outro nome.");
+            return;
+        }
 
         const novoCurso = {
             id_curso: gerarProximoId(cursos),
@@ -30,8 +53,7 @@ export default function ModalCursos({ cursos, setCursos, onClose }) {
         });
 
         setNomeCurso("");
-        setVagas("");
-        setSemestres("");
+        
     }
 
     function removerCurso(id) {
@@ -65,6 +87,7 @@ export default function ModalCursos({ cursos, setCursos, onClose }) {
                             value={vagas}
                             onChange={(e) => setVagas(e.target.value)}
                             placeholder="40"
+                            step="10"
                         />
                     </div>
 
@@ -75,6 +98,7 @@ export default function ModalCursos({ cursos, setCursos, onClose }) {
                             value={semestres}
                             onChange={(e) => setSemestres(e.target.value)}
                             placeholder="10"
+                            step="2"
                         />
                     </div>
                 </div>

@@ -7,7 +7,7 @@ export default function TabelaAlocacoes({
     alocacoes = []
 }) {
 
-    const [anoSelecionado, setAnoSelecionado] = useState(2024);
+    const [anoSelecionado, setAnoSelecionado] = useState(2026);
     const [semestreSelecionado, setSemestreSelecionado] = useState(1);
 
     function semestreAbsoluto(ano, semestre) {

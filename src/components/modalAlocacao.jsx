@@ -27,9 +27,35 @@ export default function ModalAlocacoes({
         }
     }
 
-    function adicionarAlocacao() {
-        if (!turmaId || !salaId || !turno) return;
+    function validarEntrada() {
+        if (!turmaId) {
+            alert("Por favor, selecione uma turma.");
+            return false;
+        }
+        if (!salaId) {
+            alert("Por favor, selecione uma sala.");
+            return false;
+        }
+        if (!turno) {
+            alert("Por favor, selecione um turno.");
+            return false;
+        }
+        return true;
+    }
 
+    function adicionarAlocacao() {
+        if (!validarEntrada()) return;
+        
+        const alocacaoExiste = alocacoes.some(
+            a =>
+                a.salaId == Number(salaId) &&
+                a.turno == turno 
+        );
+
+        if (alocacaoExiste) {
+            alert("Já existe uma alocação para esta sala e turno. Por favor, escolha outra sala ou turno.");
+            return;
+        }
         const nova = {
             id: gerarProximoId(alocacoes),
             turmaId: Number(turmaId),
