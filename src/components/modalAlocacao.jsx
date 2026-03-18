@@ -8,6 +8,13 @@ export default function ModalAlocacoes({
     setAlocacoes,
     onClose
 }) {
+
+    const [timeAlocacao, setTimeAlocacao] = useState("definitiva");
+    var anoAtual = new Date().getFullYear();
+    const [anoTemp, setAnoTemp] = useState(anoAtual);
+    var semestreAtual = new Date().getMonth() < 6 ? 1 : 2
+    const [semestreTemp, setSemestreTemp] = useState(semestreAtual);
+
     const [turmaId, setTurmaId] = useState("");
     const [salaId, setSalaId] = useState("");
     const [turno, setTurno] = useState("");
@@ -125,6 +132,40 @@ export default function ModalAlocacoes({
                             <option value="Noite">Noite</option>
                         </select>
                     </div>
+                    <div>
+                        <label>Tipo de Alocação</label>
+                        <select
+                            value={timeAlocacao}
+                            onChange={e => setTimeAlocacao(e.target.value)}
+                        >
+                            <option value="definitivo">Definitivo</option>
+                            <option value="temporario">Temporário</option>
+                        </select>
+                    </div>
+                    {timeAlocacao === "temporario" && (
+                        <div className="form-grid">
+                            <div>
+                                <label>Ano</label>
+                                <input
+                                    type="number"
+                                    value={anoTemp}
+                                    onChange={e => setAnoTemp(e.target.value)}
+                                />
+                            </div>
+
+                            <div>
+                                <label>Semestre</label>
+                                <select
+                                    value={semestreTemp}
+                                    onChange={e => setSemestreTemp(e.target.value)}
+                                >
+                                    <option value={1}>1º</option>
+                                    <option value={2}>2º</option>
+                                </select>
+                            </div>
+                        </div>
+                    )}
+                    
                 </div>
 
                 <button className="btn-primary" onClick={adicionarAlocacao}>

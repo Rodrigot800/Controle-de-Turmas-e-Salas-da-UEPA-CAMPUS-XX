@@ -52,7 +52,7 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
 
         const novaTurma = {
             id: gerarProximoId(turmas),
-            nome,
+            nome: nome,
             cursoId: Number(cursoId),
             semestre: Number(semestre),
             anoInicio: Number(anoInicio),
