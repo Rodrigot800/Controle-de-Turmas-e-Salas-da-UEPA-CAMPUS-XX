@@ -47,7 +47,14 @@ export default function ModalAlocacoes({
             alert("Por favor, selecione um turno.");
             return false;
         }
+        if (timeAlocacao === "temporario") {
+            if (!anoTemp) {
+                alert("Informe o ano da alocação temporária.");
+                return false;
+            }
+        }
         return true;
+        
     }
 
     function adicionarAlocacao() {
@@ -67,7 +74,9 @@ export default function ModalAlocacoes({
             id: gerarProximoId(alocacoes),
             turmaId: Number(turmaId),
             salaId: Number(salaId),
-            turno
+            turno,
+            anoAlocacaoTemp: timeAlocacao === "temporario" ? Number(anoTemp) : null,
+            semestreAlocacaoTemp: timeAlocacao === "temporario" ? Number(semestreTemp) : null
         };
 
         setAlocacoes(prev => [...prev, nova]);
@@ -75,6 +84,9 @@ export default function ModalAlocacoes({
         setTurmaId("");
         setSalaId("");
         setTurno("");
+        setTimeAlocacao("definitivo");
+        setAnoTemp(anoAtual);
+        setSemestreTemp(semestreAtual);
     }
 
     function removerAlocacao(id) {
