@@ -9,7 +9,7 @@ export default function ModalAlocacoes({
     onClose
 }) {
 
-    const [timeAlocacao, setTimeAlocacao] = useState("definitiva");
+    const [timeAlocacao, setTimeAlocacao] = useState("definitivo");
     var anoAtual = new Date().getFullYear();
     const [anoTemp, setAnoTemp] = useState(anoAtual);
     var semestreAtual = new Date().getMonth() < 6 ? 1 : 2
@@ -60,11 +60,26 @@ export default function ModalAlocacoes({
     function adicionarAlocacao() {
         if (!validarEntrada()) return;
         
-        const alocacaoExiste = alocacoes.some(
-            a =>
-                a.salaId == Number(salaId) &&
-                a.turno == turno 
-        );
+        const alocacaoExiste = alocacoes.some(a => {
+
+            if (
+                a.salaId != Number(salaId) ||
+                a.turno != turno
+            ) return false;
+
+            // se alguma for definitiva já bloqueia
+            if (a.timeAlocacao === "definitivo") return true;
+
+            // se ambas temporárias, verifica semestre
+            if (timeAlocacao === "temporario" && a.timeAlocacao === "temporario") {
+                return (
+                    a.anoAlocacaoTemp == anoTemp &&
+                    a.semestreAlocacaoTemp == semestreTemp
+                );
+            }
+
+            return false;
+        });
 
         if (alocacaoExiste) {
             alert("Já existe uma alocação para esta sala e turno. Por favor, escolha outra sala ou turno.");
@@ -75,6 +90,7 @@ export default function ModalAlocacoes({
             turmaId: Number(turmaId),
             salaId: Number(salaId),
             turno,
+            timeAlocacao,
             anoAlocacaoTemp: timeAlocacao === "temporario" ? Number(anoTemp) : null,
             semestreAlocacaoTemp: timeAlocacao === "temporario" ? Number(semestreTemp) : null
         };
@@ -188,7 +204,19 @@ export default function ModalAlocacoes({
                     {alocacoes.map(a => (
                         <li key={a.id} className="linha-sala">
                             <span>
-                                {nomeTurma(a.turmaId)} {turmas.find(t => t.id === a.turmaId)?.anoInicio || 'N/A'} — {nomeSala(a.salaId)} — {a.turno}
+                                {nomeTurma(a.turmaId)}
+                                ({turmas.find(t => t.id === a.turmaId)?.anoInicio || 'N/A'})
+                                {" — "}
+                                {nomeSala(a.salaId)}
+                                {" — "}
+                                {a.turno}
+
+                                {a.timeAlocacao === "temporario" && (
+                                    <span style={{ marginLeft: 8, color: "#666" }}>
+                                        [{a.anoAlocacaoTemp}.{a.semestreAlocacaoTemp}]
+                                    </span>
+                                )}
+                                
                             </span>
 
                             <button

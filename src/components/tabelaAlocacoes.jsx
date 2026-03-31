@@ -30,11 +30,26 @@ export default function TabelaAlocacoes({
 
     function turmaPorSalaETurno(salaId, turno) {
 
-        const alocacao = alocacoes.find(
-            a =>
-                Number(a.salaId) === Number(salaId) &&
-                a.turno === turno
-        );
+        const alocacao = alocacoes.find(a => {
+
+            if (
+                Number(a.salaId) !== Number(salaId) ||
+                a.turno !== turno
+            ) return false;
+
+            // definitiva sempre vale
+            if (a.timeAlocacao === "definitivo") return true;
+
+            // temporária só vale no semestre selecionado
+            if (a.timeAlocacao === "temporario") {
+                return (
+                    Number(a.anoAlocacaoTemp) === Number(anoSelecionado) &&
+                    Number(a.semestreAlocacaoTemp) === Number(semestreSelecionado)
+                );
+            }
+
+            return false;
+        });
 
         if (!alocacao) return null;
 
@@ -46,11 +61,6 @@ export default function TabelaAlocacoes({
 
         return turmaEstaAtiva(turma) ? turma : null;
     }
-
-    if (!salas.length) {
-        return <p>Nenhuma sala cadastrada.</p>;
-    }
-
     return (
         <div className="container mt-4">
 
