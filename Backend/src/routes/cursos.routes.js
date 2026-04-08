@@ -1,40 +1,59 @@
+// src/routes/cursos.js
 const express = require("express");
 const router = express.Router();
+const pool = require("../db/pool"); // seu pool do PostgreSQL
 
-// Lista de cursos (temporário - depois vem do banco)
-let cursos = [
-  {
-    id: 1,
-    nome: "ADS",
-    vagas: 40,
-    semestres: 6,
-  },
-];
-
-// Listar cursos
-router.get("/", (req, res) => {
-  res.json(cursos);
+// ===========================
+// Listar todos os cursos
+// ===========================
+router.get("/", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM cursos ORDER BY id ASC");
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Erro ao listar cursos:", err.message);
+    res.status(500).json({ erro: "Erro ao listar cursos" });
+  }
 });
 
-// Criar curso
-router.post("/", (req, res) => {
-  const novoCurso = {
-    id: cursos.length + 1,
-    ...req.body,
-  };
+// ===========================
+// Criar novo curso
+// ===========================
+router.post("/", async (req, res) => {
+  const { nome, vagas, semestres } = req.body;
 
-  cursos.push(novoCurso);
+  if (!nome || !vagas || !semestres) {
+    return res
+      .status(400)
+      .json({ erro: "Campos nome, vagas e semestres são obrigatórios" });
+  }
 
-  res.status(201).json(novoCurso);
+  try {
+    const result = await pool.query(
+      "INSERT INTO cursos (nome, vagas, semestres) VALUES ($1, $2, $3) RETURNING *",
+      [nome, Number(vagas), Number(semestres)],
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error("Erro ao criar curso:", err.message);
+    res.status(500).json({ erro: "Erro ao criar curso" });
+  }
 });
 
-// Deletar curso
-router.delete("/:id", (req, res) => {
+// ===========================
+// Deletar curso por ID
+// ===========================
+router.delete("/:id", async (req, res) => {
   const { id } = req.params;
 
-  cursos = cursos.filter((curso) => curso.id != id);
-
-  res.json({ mensagem: "Curso removido" });
+  try {
+    await pool.query("DELETE FROM cursos WHERE id = $1", [id]);
+    res.json({ mensagem: "Curso removido" });
+  } catch (err) {
+    console.error("Erro ao remover curso:", err.message);
+    res.status(500).json({ erro: "Erro ao remover curso" });
+  }
 });
 
 module.exports = router;

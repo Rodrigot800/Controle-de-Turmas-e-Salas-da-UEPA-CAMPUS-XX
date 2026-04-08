@@ -1,41 +1,36 @@
 const express = require("express");
 const router = express.Router();
+const pool = require("../db");
 
-let turmas = [
-  {
-    id: 1,
-    nome: "BES",
-    cursoId: 1,
-    semestreInicio: "2",
-    anoInicio: 2023,
-    turno: "matutino",
-  },
-];
+router.post("/", async (req, res) => {
+  const { nome, cursoId, semestreInicio, anoInicio, turno } = req.body;
 
-// Listar turmas
-router.get("/", (req, res) => {
-  res.json(turmas);
+  try {
+    const result = await pool.query(
+      `INSERT INTO turmas 
+            (nome, curso_id, semestre_inicio, ano_inicio, turno)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING *`,
+      [nome, cursoId, semestreInicio, anoInicio, turno],
+    );
+
+    res.json(result.rows[0]);
+  } catch (erro) {
+    console.error(erro);
+    res.status(500).json({ erro: erro.message });
+  }
 });
 
-// Criar turma
-router.post("/", (req, res) => {
-  const novaTurma = {
-    id: turmas.length + 1,
-    ...req.body,
-  };
+router.get("/", async (req, res) => {
+  const result = await pool.query(`
+        SELECT 
+            t.*,
+            c.nome as curso_nome
+        FROM turmas t
+        JOIN cursos c ON c.id = t.curso_id
+    `);
 
-  turmas.push(novaTurma);
-
-  res.status(201).json(novaTurma);
-});
-
-// Remover turma
-router.delete("/:id", (req, res) => {
-  const { id } = req.params;
-
-  turmas = turmas.filter((turma) => turma.id != id);
-
-  res.json({ mensagem: "Turma removida" });
+  res.json(result.rows);
 });
 
 module.exports = router;
