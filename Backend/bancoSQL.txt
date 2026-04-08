@@ -7,9 +7,9 @@ CREATE TABLE cursos (
 CREATE TABLE salas (
     id SERIAL PRIMARY KEY,
     nome VARCHAR(50) NOT NULL,
-    semestre INTEGER,
     capacidade INTEGER,
-    piso VARCHAR(50)
+    piso VARCHAR(20),
+    tipoSala VARCHAR(20)
 );
 CREATE TABLE turmas (
   id SERIAL PRIMARY KEY,
