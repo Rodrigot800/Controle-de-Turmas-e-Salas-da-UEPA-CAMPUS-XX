@@ -1,0 +1,33 @@
+CREATE TABLE cursos (
+  id SERIAL PRIMARY KEY,
+  nome VARCHAR(100),
+  vagas INTEGER,
+  semestres INTEGER
+);
+CREATE TABLE salas (
+    id SERIAL PRIMARY KEY,
+    nome VARCHAR(50) NOT NULL,
+    semestre INTEGER,
+    capacidade INTEGER,
+    piso VARCHAR(50)
+);
+CREATE TABLE turmas (
+  id SERIAL PRIMARY KEY,
+  nome VARCHAR(50),
+  curso_id INTEGER,
+  semestre_inicio INTEGER,
+  ano_inicio INTEGER,
+  turno VARCHAR(20),
+  FOREIGN KEY (curso_id) REFERENCES cursos(id)
+);
+CREATE TABLE alocacoes (
+  id SERIAL PRIMARY KEY,
+  turma_id INTEGER,
+  sala_id INTEGER,
+  turno VARCHAR(20),
+  time_alocacao VARCHAR(20),
+  ano_temp INTEGER,
+  semestre_temp INTEGER,
+  FOREIGN KEY (turma_id) REFERENCES turmas(id),
+  FOREIGN KEY (sala_id) REFERENCES salas(id)
+);
