@@ -8,7 +8,7 @@ const pool = require("../db/pool"); // seu pool do PostgreSQL
 // ===========================
 router.get("/", async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM cursos ORDER BY id ASC");
+    const result = await pool.query("SELECT id, nome, semestre, vagas FROM cursos ORDER BY nome");
     res.json(result.rows);
   } catch (err) {
     console.error("Erro ao listar cursos:", err.message);

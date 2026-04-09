@@ -1,7 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./modalCursos.css";
 
 export default function ModalCursos({ cursos, setCursos, onClose }) {
+  const [cursos, setCursos] = useState([]);
+
+  useEffect(() => {
+    fetch("http://localhost:3001/cursos")
+      .then((res) => res.json())
+      .then((data) => {
+        console.log("Cursos do banco:", data);
+        setCursos(data);
+      })
+      .catch((error) => console.error("Erro ao buscar cursos:", error));
+  }, []);
+
   const [nome, setnome] = useState("");
   const [vagas, setVagas] = useState("30");
   const [semestres, setSemestres] = useState("8");

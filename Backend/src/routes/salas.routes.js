@@ -7,7 +7,15 @@ const pool = require("../db/pool");
 // ===========================
 router.get("/", async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM salas ORDER BY id ASC");
+    const result = await pool.query(`
+      SELECT 
+        id,
+        nome,
+        capacidade,
+        piso,
+        tipo_sala as "tipoSala"
+      FROM salas
+    `);
     res.json(result.rows);
   } catch (err) {
     console.error("Erro ao listar cursos:", err.message);
@@ -31,7 +39,7 @@ router.post("/", async (req, res) => {
 
   try {
     const result = await pool.query(
-      "INSERT INTO salas (nome, piso, capacidade, tipoSala) VALUES ($1, $2, $3, $4) RETURNING *",
+      "INSERT INTO salas (nome, piso, capacidade, tipo_sala) VALUES ($1, $2, $3, $4) RETURNING *",
       [nome, piso, Number(capacidade), tipoSala],
     );
 
