@@ -1,0 +1,29 @@
+INSERT INTO salas (nome, capacidade, tipo_sala, piso)
+VALUES 
+('Sala 1', 30, 'comum', '1'),
+('Sala 2', 30, 'comum', '1'),
+('Sala 3', 30, 'comum', '1'),
+('Sala 4A', 30, 'comum', '1'),
+('Sala 4B', 30, 'comum', '1'),
+('Sala 5', 30, 'comum', '1'),
+('Sala 6', 30, 'comum', '1'),
+('Sala 7', 30, 'comum', '1'),
+('Sala 8', 30, 'comum', '1'),
+('Sala 9', 30, 'comum', '1'),
+('Sala 10', 30, 'comum', '1'),
+
+('Sala 11', 30, 'comum', '2'),
+('Sala 12', 30, 'comum', '2'),
+('Sala 13', 30, 'comum', '2'),
+('Sala 14', 30, 'comum', '2'),
+('Sala 15', 30, 'comum', '2'),
+('Sala 16', 30, 'comum', '2'),
+('Sala 17', 30, 'comum', '2'),
+('Sala 18', 30, 'comum', '2'),
+('Sala 19', 30, 'comum', '2'),
+('Sala 20', 30, 'comum', '2'),
+
+('Sala 21', 30, 'comum', 'térreo'),
+('Sala 22', 30, 'comum', 'térreo'),
+('Sala 23', 30, 'comum', 'térreo'),
+('Sala 24', 30, 'comum', 'térreo');
