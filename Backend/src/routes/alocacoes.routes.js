@@ -18,37 +18,37 @@ router.post("/", async (req, res) => {
   const { turmaId, salaId, turno, timeAlocacao, anoTemp, semestreTemp } =
     req.body;
 
-  if (
-    !turmaId ||
-    !salaId ||
-    !turno ||
-    !timeAlocacao ||
-    !anoTemp ||
-    !semestreTemp
-  ) {
+  if (timeAlocacao === "temporario" && (!anoTemp || !semestreTemp)) {
     return res.status(400).json({
-      erro: "Campos turmaId, salaId, turno, timeAlocacao, anoTemp e semestreTemp são obrigatórios",
+      erro: "Para alocações temporárias, anoTemp e semestreTemp são obrigatórios",
+    });
+  }
+
+  // Para alocações temporárias, anoTemp e semestreTemp são obrigatórios
+  if (timeAlocacao === "temporario" && (!anoTemp || !semestreTemp)) {
+    return res.status(400).json({
+      erro: "Para alocações temporárias, anoTemp e semestreTemp são obrigatórios",
     });
   }
 
   try {
     const result = await pool.query(
       `INSERT INTO alocacoes 
-    (turma_id, sala_id, turno, time_alocacao, ano_temp, semestre_temp)
-   VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+        (turma_id, sala_id, turno, time_alocacao, ano_temp, semestre_temp)
+        VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
       [
         Number(turmaId),
         Number(salaId),
         turno,
         timeAlocacao,
-        Number(anoTemp),
-        Number(semestreTemp),
+        timeAlocacao === "temporario" ? Number(anoTemp) : null,
+        timeAlocacao === "temporario" ? Number(semestreTemp) : null,
       ],
     );
 
     res.status(201).json(result.rows[0]);
   } catch (err) {
-    console.error("Erro ao criar alocacao:", err); // mostra o erro completo
+    console.error("Erro ao criar alocacao:", err);
     res.status(500).json({ erro: err.message });
   }
 });

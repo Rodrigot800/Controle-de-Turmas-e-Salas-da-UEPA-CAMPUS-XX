@@ -2,129 +2,148 @@ import { useState } from "react";
 import "./modalCursos.css";
 
 export default function ModalCursos({ cursos, setCursos, onClose }) {
-    const [nomeCurso, setNomeCurso] = useState("");
-    const [vagas, setVagas] = useState("30");
-    const [semestres, setSemestres] = useState("8");
+  const [nome, setnome] = useState("");
+  const [vagas, setVagas] = useState("30");
+  const [semestres, setSemestres] = useState("8");
 
-    function gerarProximoId(lista) {
-        if (lista.length === 0) return 1;
-
-        const maiorId = Math.max(...lista.map(item => item.id_curso));
-        return maiorId + 1;
+  function validarEntrada() {
+    if (nome.trim() === "" || nome.length < 2) {
+      alert("Por favor, insira um nome válido para o curso.");
+      return false;
     }
-    function validarEntrada() {
-        if (nomeCurso.trim() === "" || nomeCurso.length < 2) {
-            alert("Por favor, insira um nome válido para o curso.");
-            return false;
-        }
-        if (vagas <= 0 || Number(vagas) === false) {
-            alert("Por favor, insira uma quantidade válida de vagas.");
-            return false;
-        }
-        if (semestres <= 0 || Number(semestres) === false) {
-            alert("Por favor, insira uma quantidade válida de semestres.");
-            return false;
-        }
-        return true;
+    if (vagas <= 0 || Number(vagas) === false) {
+      alert("Por favor, insira uma quantidade válida de vagas.");
+      return false;
     }
-    function adicionarCurso() {
-        if (!validarEntrada()) return;
-
-        const cursoExiste = cursos.some(
-            curso => curso.nome_curso.toLowerCase() === nomeCurso.trim().toLowerCase()
-        );
-
-        if (cursoExiste) {
-            alert("Já existe um curso com esse nome. Por favor, escolha outro nome.");
-            return;
-        }
-
-        const novoCurso = {
-            id_curso: gerarProximoId(cursos),
-            nome_curso: nomeCurso,
-            vagas: Number(vagas),
-            semestres: Number(semestres),
-        };
-
-        setCursos((atuais) => {
-            const atualizados = [...atuais, novoCurso];
-            console.log("CURSOS APÓS ADICIONAR:", atualizados);
-            return atualizados;
-        });
-
-        setNomeCurso("");
-        
+    if (semestres <= 0 || Number(semestres) === false) {
+      alert("Por favor, insira uma quantidade válida de semestres.");
+      return false;
     }
+    return true;
+  }
+  async function adicionarCurso() {
+    if (!validarEntrada()) return;
 
-    function removerCurso(id) {
-        const confirma = window.confirm("Deseja excluir este curso?");
-        if (!confirma) return;
+    const novoCurso = {
+      nome: nome.trim(), // nome correto para o backend
+      vagas: Number(vagas),
+      semestres: Number(semestres),
+    };
 
-        setCursos(cursos.filter((c) => c.id_curso !== id));
+    try {
+      const response = await fetch("http://localhost:3001/cursos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(novoCurso),
+      });
+
+      if (!response.ok) {
+        // pega o erro do backend
+        const erro = await response.json(); // backend envia { erro: "mensagem" }
+        throw new Error(erro.erro || "Erro ao adicionar curso");
+      }
+
+      const cursoCriado = await response.json();
+      setCursos((prev) => [...prev, cursoCriado]);
+
+      // Limpa o formulário
+      setnome("");
+      setVagas("30");
+      setSemestres("8");
+
+      console.log("Curso criado:", cursoCriado);
+      alert("Curso adicionado com sucesso!");
+    } catch (err) {
+      console.error("Erro ao adicionar curso:", err.message);
+      alert("Erro ao adicionar curso: " + err.message); // <-- aqui aparece o erro
     }
+  }
+  async function removerCurso(id) {
+    if (!window.confirm("Deseja remover este curso?")) return;
 
-    return (
-        <div className="modal-backdrop">
-            <div className="modal">
-                <button className="btn-close" onClick={onClose}>×</button>
+    try {
+      const response = await fetch(`http://localhost:3001/cursos/${id}`, {
+        method: "DELETE",
+      });
 
-                <h2>Gerenciar Cursos</h2>
+      if (!response.ok) {
+        const erro = await response.text();
+        throw new Error(erro || "Erro ao remover curso");
+      }
 
-                <div className="form-grid">
-                    <div className="form-group">
-                        <label>Nome do curso</label>
-                        <input
-                            value={nomeCurso}
-                            onChange={(e) => setNomeCurso(e.target.value)}
-                            placeholder="Ex: Engenharia Ambiental"
-                        />
-                    </div>
+      // Atualiza estado local removendo o curso deletado
+      setCursos(cursos.filter((c) => c.id !== id));
 
-                    <div className="form-group">
-                        <label>Vagas</label>
-                        <input
-                            type="number"
-                            value={vagas}
-                            onChange={(e) => setVagas(e.target.value)}
-                            placeholder="40"
-                            step="10"
-                        />
-                    </div>
+      alert("Curso removido com sucesso!");
+    } catch (err) {
+      console.error("Erro ao remover curso:", err.message);
+      alert("Não foi possível remover o curso: " + err.message);
+    }
+  }
 
-                    <div className="form-group">
-                        <label>Semestres</label>
-                        <input
-                            type="number"
-                            value={semestres}
-                            onChange={(e) => setSemestres(e.target.value)}
-                            placeholder="10"
-                            step="2"
-                        />
-                    </div>
-                </div>
+  return (
+    <div className="modal-backdrop">
+      <div className="modal">
+        <button className="btn-close" onClick={onClose}>
+          ×
+        </button>
 
-                <button className="btn-primary" onClick={adicionarCurso}>
-                    Adicionar Curso
-                </button>
+        <h2>Gerenciar Cursos</h2>
 
-                <ul className="lista-salas">
-                    {cursos.map((curso) => (
-                        <li key={curso.id_curso} className="linha-sala">
-                            <span>
-                                {curso.nome_curso} — {curso.vagas} vagas — {curso.semestres} semestres
-                            </span>
+        <div className="form-grid">
+          <div className="form-group">
+            <label>Nome do curso</label>
+            <input
+              value={nome}
+              onChange={(e) => setnome(e.target.value)}
+              placeholder="Ex: Engenharia Ambiental"
+            />
+          </div>
 
-                            <button
-                                className="btn-delete"
-                                onClick={() => removerCurso(curso.id_curso)}
-                                title="Excluir"
-                            >
-                                ✕
-                            </button>
-                        </li>
-                    ))}
-                </ul>
-            </div>
+          <div className="form-group">
+            <label>Vagas</label>
+            <input
+              type="number"
+              value={vagas}
+              onChange={(e) => setVagas(e.target.value)}
+              placeholder="40"
+              step="10"
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Semestres</label>
+            <input
+              type="number"
+              value={semestres}
+              onChange={(e) => setSemestres(e.target.value)}
+              placeholder="10"
+              step="2"
+            />
+          </div>
         </div>
-    );
+
+        <button className="btn-primary" onClick={adicionarCurso}>
+          Adicionar Curso
+        </button>
+
+        <ul className="lista-salas">
+          {cursos.map((curso) => (
+            <li key={curso.id} className="linha-sala">
+              <span>
+                {curso.nome} — {curso.vagas} vagas — {curso.semestres} semestres
+              </span>
+              <button
+                className="btn-delete"
+                onClick={() => removerCurso(curso.id)}
+                title="Excluir"
+              >
+                ✕
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
 }

@@ -27,6 +27,15 @@ router.post("/", async (req, res) => {
       .status(400)
       .json({ erro: "Campos nome, vagas e semestres são obrigatórios" });
   }
+  // antes de inserir, verifica se já existe
+  const cursoExistente = await pool.query(
+    "SELECT * FROM cursos WHERE nome = $1",
+    [nome],
+  );
+
+  if (cursoExistente.rows.length > 0) {
+    return res.status(400).json({ erro: "Curso com este nome já existe" });
+  }
 
   try {
     const result = await pool.query(

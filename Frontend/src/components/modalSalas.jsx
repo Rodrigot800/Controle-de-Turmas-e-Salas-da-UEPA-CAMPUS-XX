@@ -7,13 +7,6 @@ export default function ModalSalas({ salas, setSalas, onClose }) {
     const [capacidade, setCapacidade] = useState("30");
     const [piso, setPiso] = useState("térreo");
 
-    function gerarProximoId(lista) {
-        if (lista.length === 0) return 1;
-
-        const maiorId = Math.max(...lista.map(item => item.id));
-        return maiorId + 1;
-    }
-
     function validarEntrada() {
         if (nome.trim() === "" || nome.length < 2) {
             alert("Por favor, insira um nome válido para a sala.");
@@ -34,49 +27,79 @@ export default function ModalSalas({ salas, setSalas, onClose }) {
     }
 
 
-    function adicionarSala() {
-        if (!validarEntrada()) return;
-        if (nome.trim() === "") {
-            alert("O nome da sala é obrigatório.");
-            return;
-        } 
+    async function adicionarSala() {
+    if (!validarEntrada()) return;
 
-        const salaExiste = salas.some(
-            sala => sala.nome.toLowerCase() === nome.trim().toLowerCase()
-        );
+    const novaSala = {
+        nome: nome.trim(),
+        tipoSala: tipo,       // Nome do campo precisa bater com a coluna no banco
+        capacidade: Number(capacidade),
+        piso: piso,
+    };
 
-        if (salaExiste) {
-            alert("Já existe uma sala com esse nome. Por favor, escolha outro nome.");
-            return;
-        }
-
-        const novaSala = {
-            id: gerarProximoId(salas),
-            nome,
-            tipo,
-            capacidade,
-            piso,
-        };
-
-        setSalas((salasAtuais) => {
-            const atualizadas = [...salasAtuais, novaSala];
-            console.log("SALAS APÓS ADICIONAR:", atualizadas);
-            return atualizadas;
+    try {
+        // Chamada ao backend
+        const response = await fetch("http://localhost:3001/salas", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(novaSala),
         });
 
+        if (!response.ok) {
+            const erro = await response.text();
+            throw new Error(erro || "Erro ao adicionar sala");
+        }
+
+        const salaCriada = await response.json(); // Retorna a sala criada com ID
+
+        // Atualiza o estado local
+        setSalas((salasAtuais) => [...salasAtuais, salaCriada]);
+
+        // Limpa formulário
         setNome("");
-        
+        setCapacidade("30");
+        setTipo("comum");
+        setPiso("térreo");
+
+        console.log("Sala adicionada com sucesso:", salaCriada);
+        alert("Sala adicionada com sucesso!");
+
+    } catch (err) {
+        console.error("Erro ao adicionar sala:", err);
+        alert("Não foi possível adicionar a sala: " + err.message);
     }
 
-    function removerSala(id) {
+    }
+
+    async function removerSala(id) {
         const confirmar = window.confirm("Tem certeza que deseja excluir esta sala?");
         if (!confirmar) return;
 
-        const novasSalas = salas.filter((sala) => sala.id !== id);
-        setSalas(novasSalas);
+        try {
+            // Chamada ao backend para deletar
+            const response = await fetch(`http://localhost:3001/salas/${id}`, {
+                method: "DELETE",
+            });
 
-        console.log("SALAS APÓS EXCLUSÃO:", novasSalas);
-    }
+            if (!response.ok) {
+                const erro = await response.text();
+                throw new Error(erro || "Erro ao deletar sala");
+            }
+
+            // Atualiza estado local
+            const novasSalas = salas.filter((sala) => sala.id !== id);
+            setSalas(novasSalas);
+
+            console.log("Sala removida com sucesso:", id);
+            alert("Sala removida com sucesso!");
+
+        } catch (err) {
+            console.error("Erro ao remover sala:", err);
+            alert("Não foi possível remover a sala: " + err.message);
+        }
+        }
 
     return (
         <div className="modal-backdrop">
