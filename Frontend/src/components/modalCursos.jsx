@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import "./modalCursos.css";
 
 export default function ModalCursos({ cursos, setCursos, onClose }) {
-  const [cursos, setCursos] = useState([]);
 
   useEffect(() => {
     fetch("http://localhost:3001/cursos")

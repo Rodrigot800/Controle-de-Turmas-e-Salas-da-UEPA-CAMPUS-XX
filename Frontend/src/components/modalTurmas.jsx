@@ -1,12 +1,31 @@
-import { useState } from "react";
+import { useState,useEffect  } from "react";
 import "./modalTurmas.css";
 
 export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
+
+  useEffect(() => {
+  carregarTurmas();
+}, []);
+
+async function carregarTurmas() {
+  try {
+    const response = await fetch("http://localhost:3001/turmas");
+    const data = await response.json();
+
+    console.log("Turmas vindas do banco:", data);
+
+    setTurmas(data);
+  } catch (err) {
+    console.error("Erro ao carregar turmas:", err);
+  }
+}
+
   const [nome, setNome] = useState("");
   const [cursoId, setCursoId] = useState("");
   const [turno, setTurno] = useState("");
   const [semestreInicio, setSemestreInicio] = useState(1);
   const [anoInicio, setAnoInicio] = useState(new Date().getFullYear());
+
 
   function validarEntrada() {
     if (!nome || nome.trim().length < 2) {
@@ -35,27 +54,6 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
     }
     return true;
   }
-  async function carregarTurmas() {
-    try {
-      const response = await fetch("http://localhost:3001/turmas");
-      const turmasData = await response.json();
-
-      // Converte os campos para camelCase
-      const turmasConvertidas = turmasData.map((t) => ({
-        id: t.id,
-        nome: t.nome,
-        cursoId: t.curso_id,
-        semestreInicio: t.semestre_inicio,
-        anoInicio: t.ano_inicio,
-        turno: t.turno,
-      }));
-
-      setTurmas(turmasConvertidas);
-    } catch (err) {
-      console.error("Erro ao carregar turmas:", err.message);
-    }
-  }
-
   async function adicionarTurma() {
     if (!validarEntrada()) return;
 
@@ -124,9 +122,10 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
 
 
   function nomeCurso(cursoId) {
-    const curso = cursos.find((c) => c.id_curso === cursoId);
-    return curso ? curso.nome_curso : "Curso não encontrado";
-  }
+  const curso = cursos.find((c) => c.id === cursoId);
+  return curso ? curso.nome : "Curso não encontrado";
+}
+  console.log("Turmas:", turmas);
 
   return (
     <div className="modal-backdrop">
@@ -150,8 +149,8 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
               onChange={(e) => setCursoId(e.target.value)}
             >
               {cursos.map((curso) => (
-                <option key={curso.id_curso} value={curso.id_curso}>
-                  {curso.nome_curso}
+                <option key={curso.id} value={curso.id}>
+                  {curso.nome}
                 </option>
               ))}
             </select>
@@ -193,11 +192,11 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
 
         <ul className="lista">
           {turmas.map((turma) => (
-            <li key={turma.id}>
-              <span>
-                {turma.nome} {turma.anoInicio} — {turma.turno} —{" "}
-                {turma.semestreInicio}º — {nomeCurso(turma.cursoId)}
-              </span>
+          <li key={turma.id}>
+            <span>
+              {turma.nome} {turma.ano_inicio} — {turma.turno} —{" "}
+              {turma.semestre_inicio}º — {nomeCurso(turma.curso_id)}
+            </span>
               <button
                 className="btn-delete"
                 onClick={() => removerTurma(turma.id)}

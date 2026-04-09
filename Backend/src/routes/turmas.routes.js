@@ -3,18 +3,30 @@ const router = express.Router();
 const pool = require("../db/pool"); 
 
 
-// ===========================
-// Listar todos as Turmas
-// ===========================
+// Buscar turmas
 router.get("/", async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM turmas ORDER BY id ASC");
+    const result = await pool.query(`
+      SELECT 
+        turmas.id,
+        turmas.nome,
+        turmas.curso_id,
+        turmas.semestre_inicio,
+        turmas.ano_inicio,
+        turmas.turno,
+        cursos.nome AS curso_nome
+      FROM turmas
+      JOIN cursos ON turmas.curso_id = cursos.id
+      ORDER BY turmas.nome
+    `);
+
     res.json(result.rows);
-  } catch (err) {
-    console.error("Erro ao listar cursos:", err.message);
-    res.status(500).json({ erro: "Erro ao listar cursos" });
+  } catch (error) {
+    console.error("Erro ao buscar turmas:", error);
+    res.status(500).json({ erro: "Erro ao buscar turmas" });
   }
 });
+
 
 // ===========================
 // Criar novo turma

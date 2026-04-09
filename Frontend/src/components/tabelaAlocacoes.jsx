@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState,useEffect } from "react";
 
 export default function TabelaAlocacoes({
     salas = [],
@@ -6,6 +6,42 @@ export default function TabelaAlocacoes({
     cursos = [],
     alocacoes = []
 }) {
+
+    
+
+    useEffect(() => {
+    carregarDados();
+    }, []);
+
+    
+    async function carregarDados() {
+    try {
+        const [salasRes, turmasRes, cursosRes, alocacoesRes] = await Promise.all([
+            fetch("http://localhost:3001/salas"),
+            fetch("http://localhost:3001/turmas"),
+            fetch("http://localhost:3001/cursos"),
+            fetch("http://localhost:3001/alocacoes")
+        ]);
+
+        const salasData = await salasRes.json();
+        const turmasData = await turmasRes.json();
+        const cursosData = await cursosRes.json();
+        const alocacoesData = await alocacoesRes.json();
+
+        console.log("Salas:", salasData);
+        console.log("Turmas:", turmasData);
+        console.log("Cursos:", cursosData);
+        console.log("Alocações:", alocacoesData);
+
+        setSalas(salasData);
+        setTurmas(turmasData);
+        setCursos(cursosData);
+        setAlocacoes(alocacoesData);
+
+    } catch (error) {
+        console.error("Erro ao carregar dados:", error);
+    }
+}
 
     const [anoSelecionado, setAnoSelecionado] = useState(2026);
     const [semestreSelecionado, setSemestreSelecionado] = useState(1);
