@@ -1,18 +1,15 @@
 import { useState,useEffect } from "react";
 
-export default function TabelaAlocacoes({
-    salas = [],
-    turmas = [],
-    cursos = [],
-    alocacoes = []
-}) {
+export default function TabelaAlocacoes() {
 
-    
+    const [salas, setSalas] = useState([]);
+    const [turmas, setTurmas] = useState([]);
+    const [cursos, setCursos] = useState([]);
+    const [alocacoes, setAlocacoes] = useState([]);
 
     useEffect(() => {
-    carregarDados();
+        carregarDados();
     }, []);
-
     
     async function carregarDados() {
     try {
@@ -52,151 +49,172 @@ export default function TabelaAlocacoes({
 
     function turmaEstaAtiva(turma) {
 
-        const curso = cursos.find(c => Number(c.id_curso) === Number(turma.cursoId));
+    const curso = cursos.find(
+        c => Number(c.id) === Number(turma.curso_id)
+    );
 
-        if (!curso) return false;
+    if (!curso) return false;
 
-        const inicio = semestreAbsoluto(turma.anoInicio, turma.semestre);
-        const fim = inicio + Number(curso.semestres) - 1;
+    const inicio = semestreAbsoluto(
+        turma.ano_inicio,
+        turma.semestre_inicio
+    );
 
-        const atual = semestreAbsoluto(anoSelecionado, semestreSelecionado);
+    const fim = inicio + Number(curso.semestres) - 1;
 
-        return atual >= inicio && atual <= fim;
-    }
+    const atual = semestreAbsoluto(
+        anoSelecionado,
+        semestreSelecionado
+    );
 
-    function turmaPorSalaETurno(salaId, turno) {
+    return atual >= inicio && atual <= fim;
+}
 
-        const alocacao = alocacoes.find(a => {
+   function turmaPorSalaETurno(salaId, turno) {
 
-            if (
-                Number(a.salaId) !== Number(salaId) ||
-                a.turno !== turno
-            ) return false;
+    const alocacoesFiltradas = alocacoes.filter(a =>
+        Number(a.sala_id) === Number(salaId) &&
+        a.turno?.toLowerCase() === turno.toLowerCase()
+    );
 
-            // definitiva sempre vale
-            if (a.timeAlocacao === "definitivo") return true;
+    // prioridade 1: temporário
+    let alocacao = alocacoesFiltradas.find(a =>
+        a.time_alocacao === "temporario" &&
+        Number(a.ano_temp) === Number(anoSelecionado) &&
+        Number(a.semestre_temp) === Number(semestreSelecionado)
+    );
 
-            // temporária só vale no semestre selecionado
-            if (a.timeAlocacao === "temporario") {
-                return (
-                    Number(a.anoAlocacaoTemp) === Number(anoSelecionado) &&
-                    Number(a.semestreAlocacaoTemp) === Number(semestreSelecionado)
-                );
-            }
-
-            return false;
-        });
-
-        if (!alocacao) return null;
-
-        const turma = turmas.find(
-            t => Number(t.id) === Number(alocacao.turmaId)
+    // prioridade 2: definitivo
+    if (!alocacao) {
+        alocacao = alocacoesFiltradas.find(
+            a => a.time_alocacao === "definitivo"
         );
-
-        if (!turma) return null;
-
-        return turmaEstaAtiva(turma) ? turma : null;
     }
-    return (
-        <div className="container mt-4">
 
-            {/* FILTROS */}
-            <div className="d-flex justify-content-end gap-2 mb-3">
+    if (!alocacao) return null;
 
-                <select
-                    className="form-select w-auto"
-                    value={anoSelecionado}
-                    onChange={e => setAnoSelecionado(e.target.value)}
-                >
-                    {[2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031].map(ano => (
-                        <option key={ano} value={ano}>
-                            {ano}
-                        </option>
-                    ))}
-                </select>
+    const turma = turmas.find(
+        t => Number(t.id) === Number(alocacao.turma_id)
+    );
+    console.log("Turma encontrada:", turma, "Ativa:", turmaEstaAtiva(turma));
+    if (!turma) return null;
 
-                <select
-                    className="form-select w-auto"
-                    value={semestreSelecionado}
-                    onChange={e => setSemestreSelecionado(e.target.value)}
-                >
-                    <option value={1}>1º Semestre</option>
-                    <option value={2}>2º Semestre</option>
-                </select>
+    return turmaEstaAtiva(turma) ? turma : null;
+    }
+    
 
-            </div>
+   return (
+    <div className="container mt-4">
 
-            {/* TABELA */}
-            <div className="table-responsive">
+        {/* FILTROS */}
+        <div className="d-flex justify-content-end gap-2 mb-3">
 
-                <table className="table table-striped table-hover table-bordered align-middle text-center">
+            <select
+                className="form-select w-auto"
+                value={anoSelecionado}
+                onChange={e => setAnoSelecionado(e.target.value)}
+            >
+                {[2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031].map(ano => (
+                    <option key={ano} value={ano}>
+                        {ano}
+                    </option>
+                ))}
+            </select>
 
-                    <thead className="table-dark">
-                        <tr>
-                            <th>Sala</th>
-                            <th>Manhã</th>
-                            <th>Tarde</th>
-                            <th>Noite</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-
-                        {salas.map(sala => {
-
-                            const turmaManha = turmaPorSalaETurno(sala.id, "Manhã");
-                            const turmaTarde = turmaPorSalaETurno(sala.id, "Tarde");
-                            const turmaNoite = turmaPorSalaETurno(sala.id, "Noite");
-
-                            return (
-                                <tr key={sala.id}>
-
-                                    <td className="fw-bold">
-                                        {sala.nome}
-                                    </td>
-
-                                    <td>
-                                        {turmaManha
-                                            ? <span className="text-primary fw-semibold">
-                                                {turmaManha.nome} ({turmaManha.anoInicio})
-                                            </span>
-                                            : <span className="text-success fw-semibold">
-                                                Livre
-                                            </span>}
-                                    </td>
-
-                                    <td>
-                                        {turmaTarde
-                                            ? <span className="text-primary fw-semibold">
-                                                {turmaTarde.nome} ({turmaTarde.anoInicio})
-                                            </span>
-                                            : <span className="text-success fw-semibold">
-                                                Livre
-                                            </span>}
-                                    </td>
-
-                                    <td>
-                                        {turmaNoite
-                                            ? <span className="text-primary fw-semibold">
-                                                {turmaNoite.nome} ({turmaNoite.anoInicio})
-                                            </span>
-                                            : <span className="text-success fw-semibold">
-                                                Livre
-                                            </span>}
-                                    </td>
-
-                                </tr>
-                            );
-                        })}
-
-                    </tbody>
-
-                </table>
-
-            </div>
+            <select
+                className="form-select w-auto"
+                value={semestreSelecionado}
+                onChange={e => setSemestreSelecionado(e.target.value)}
+            >
+                <option value={1}>1º Semestre</option>
+                <option value={2}>2º Semestre</option>
+            </select>
 
         </div>
-    );
+
+        {/* TABELA */}
+        <div className="table-responsive">
+
+            <table className="table table-striped table-hover table-bordered align-middle text-center">
+
+                <thead className="table-dark">
+                    <tr>
+                        <th>Sala</th>
+                        <th>Manhã</th>
+                        <th>Tarde</th>
+                        <th>Noite</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {salas.map(sala => {
+
+                        const turmaManha = turmaPorSalaETurno(sala.id, "manhã");
+                        const turmaTarde = turmaPorSalaETurno(sala.id, "tarde");
+                        const turmaNoite = turmaPorSalaETurno(sala.id, "noite");
+
+                        return (
+                            <tr key={sala.id}>
+
+                                <td className="fw-bold">
+                                    {sala.nome}
+                                </td>
+
+                                <td>
+                                    {turmaManha
+                                        ? (
+                                            <span className="text-primary fw-semibold">
+                                                {turmaManha.nome}  ({turmaManha.ano_inicio}.{turmaManha.semestre_inicio})
+                                            </span>
+                                        )
+                                        : (
+                                            <span className="text-success fw-semibold">
+                                                Livre
+                                            </span>
+                                        )}
+                                </td>
+
+                                <td>
+                                    {turmaTarde
+                                        ? (
+                                            <span className="text-primary fw-semibold">
+                                                {turmaTarde.nome}  ({turmaTarde.ano_inicio}.{turmaTarde.semestre_inicio})
+                                            </span>
+                                        )
+                                        : (
+                                            <span className="text-success fw-semibold">
+                                                Livre
+                                            </span>
+                                        )}
+                                </td>
+
+                                <td>
+                                    {turmaNoite
+                                        ? (
+                                            <span className="text-primary fw-semibold">
+                                                {turmaNoite.nome} ({turmaNoite.ano_inicio}.{turmaNoite.semestre_inicio})
+                                            </span>
+                                        )
+                                        : (
+                                            <span className="text-success fw-semibold">
+                                                Livre
+                                            </span>
+                                        )}
+                                </td>
+
+                            </tr>
+                        );
+                    })}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+);
 }
 
 const th = {
