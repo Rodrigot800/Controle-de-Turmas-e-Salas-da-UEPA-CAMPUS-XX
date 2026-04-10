@@ -181,24 +181,42 @@ export default function ModalSalas({ salas, setSalas, onClose }) {
           Adicionar Sala
         </button>
 
-        <ul className="lista-salas">
-          {salas.map((sala) => (
-            <li key={sala.id} className="linha-sala">
-              <span>
-                {sala.nome} | Cap: {sala.capacidade} | Piso: {sala.piso} |{" "}
-                {sala.tipoSala}
-              </span>
+        <div className="table-container">
+          <table className="table-salas">
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Capacidade</th>
+                <th>Piso</th>
+                <th>Tipo</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
 
-              <button
-                className="btn-delete"
-                onClick={() => removerSala(sala.id)}
-                title="Excluir sala"
-              >
-                X
-              </button>
-            </li>
-          ))}
-        </ul>
+            <tbody>
+              {salas.map((sala) => (
+                <tr key={sala.id}>
+                  <td>{sala.nome}</td>
+                  <td>{sala.capacidade}</td>
+                  <td>{sala.piso}</td>
+                  <td>
+                    <span className={`tag ${sala.tipoSala}`}>
+                      {sala.tipoSala}
+                    </span>
+                  </td>
+                  <td>
+                    <button
+                      className="btn-delete"
+                      onClick={() => removerSala(sala.id)}
+                    >
+                      Excluir
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
