@@ -114,7 +114,7 @@ export default function TabelaAlocacoes() {
                 value={anoSelecionado}
                 onChange={e => setAnoSelecionado(e.target.value)}
             >
-                {[2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031].map(ano => (
+                {[2021,2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031].map(ano => (
                     <option key={ano} value={ano}>
                         {ano}
                     </option>
