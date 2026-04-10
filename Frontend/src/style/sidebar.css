@@ -1,0 +1,19 @@
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.sidebar-header img {
+    width: 100px;
+    height: auto;
+    object-fit: contain;
+    margin: auto;
+}
+
+.sidebar-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: white;
+}

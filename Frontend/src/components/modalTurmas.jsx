@@ -1,5 +1,5 @@
 import { useState,useEffect  } from "react";
-import "./modalTurmas.css";
+import "../style/modalTurmas.css";
 
 export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
 

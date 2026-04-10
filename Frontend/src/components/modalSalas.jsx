@@ -1,5 +1,5 @@
 import { useState,useEffect } from "react";
-import "./modalSalas.css";
+import "../style/modalSalas.css";
 
 
 export default function ModalSalas({ salas, setSalas, onClose }) {

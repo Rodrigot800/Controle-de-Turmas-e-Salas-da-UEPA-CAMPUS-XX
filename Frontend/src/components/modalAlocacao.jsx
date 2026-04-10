@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import "./modalAlocacao.css";
+import "../style/modalAlocacao.css";
 
 export default function ModalAlocacoes({
   turmas,

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import "./modalCursos.css";
+import "../style/modalCursos.css";
 
 export default function ModalCursos({ cursos, setCursos, onClose }) {
 
