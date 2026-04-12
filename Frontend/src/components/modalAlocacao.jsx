@@ -61,7 +61,7 @@ async function carregarAlocacoes() {
 
   const [turmaId, setTurmaId] = useState("");
   const [salaId, setSalaId] = useState("");
-  const [turno, setTurno] = useState("");
+  const [turno, setTurno] = useState("Manhã");
   function selecionarTurma(id) {
     setTurmaId(id);
 

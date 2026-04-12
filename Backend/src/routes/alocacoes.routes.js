@@ -92,6 +92,9 @@ router.post("/", async (req, res) => {
 
     // 4. verificar conflito REAL
     for (const a of alocacoes.rows) {
+      // ignorar turnos diferentes
+      if (a.turno !== turno) continue;
+
       let existenteInicio, existenteFim;
 
       if (a.time_alocacao === "temporario") {
