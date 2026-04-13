@@ -115,7 +115,7 @@ function App() {
               alocacoes={alocacoes}
             />
 
-            {/* 🔥 MODAIS (FICAM AQUI DENTRO DO GERENCIAMENTO) */}
+            {/* MODAIS (FICAM AQUI DENTRO DO GERENCIAMENTO) */}
 
             {modalSalasAberto && (
               <ModalSalas

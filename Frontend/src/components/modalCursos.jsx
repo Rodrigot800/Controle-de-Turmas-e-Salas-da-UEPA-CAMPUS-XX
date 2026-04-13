@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import "../style/modalCursos.css";
+import API_BASE from "../config/api";
 
 export default function ModalCursos({ cursos, setCursos, onClose }) {
 
   useEffect(() => {
-    fetch("http://localhost:3001/cursos")
+    fetch(`${API_BASE}/cursos`)
       .then((res) => res.json())
       .then((data) => {
         console.log("Cursos do banco:", data);
@@ -42,7 +43,7 @@ export default function ModalCursos({ cursos, setCursos, onClose }) {
     };
 
     try {
-      const response = await fetch("http://localhost:3001/cursos", {
+      const response = await fetch(`${API_BASE}/cursos`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(novoCurso),
@@ -73,7 +74,7 @@ export default function ModalCursos({ cursos, setCursos, onClose }) {
     if (!window.confirm("Deseja remover este curso?")) return;
 
     try {
-      const response = await fetch(`http://localhost:3001/cursos/${id}`, {
+      const response = await fetch(`${API_BASE}/cursos/${id}`, {
         method: "DELETE",
       });
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import "../style/modalAlocacao.css";
+import API_BASE from "../config/api";
 
 export default function ModalAlocacoes({
   turmas,
@@ -20,7 +21,7 @@ useEffect(() => {
 
 async function carregarTurmas() {
   try {
-    const response = await fetch("http://localhost:3001/turmas");
+    const response = await fetch(`${API_BASE}/turmas`);
     const data = await response.json();
 
     console.log("Turmas da API:", data);
@@ -32,7 +33,7 @@ async function carregarTurmas() {
 
 async function carregarSalas() {
   try {
-    const response = await fetch("http://localhost:3001/salas");
+    const response = await fetch(`${API_BASE}/salas`);
     const data = await response.json();
 
     console.log("Salas da API:", data);
@@ -44,7 +45,7 @@ async function carregarSalas() {
 
 async function carregarAlocacoes() {
   try {
-    const response = await fetch("http://localhost:3001/alocacoes");
+    const response = await fetch(`${API_BASE}/alocacoes`);
     const data = await response.json();
 
     console.log("Alocações da API:", data);
@@ -129,7 +130,7 @@ async function carregarAlocacoes() {
       semestreTemp: timeAlocacao === "temporario" ? Number(semestreTemp) : null,
     };
     try {
-      const response = await fetch("http://localhost:3001/alocacoes", {
+      const response = await fetch(`${API_BASE}/alocacoes`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -165,7 +166,7 @@ async function carregarAlocacoes() {
     if (!window.confirm("Deseja remover esta alocação?")) return;
 
     try {
-      const response = await fetch(`http://localhost:3001/alocacoes/${id}`, {
+      const response = await fetch(`${API_BASE}/alocacoes/${id}`, {
         method: "DELETE",
       });
 

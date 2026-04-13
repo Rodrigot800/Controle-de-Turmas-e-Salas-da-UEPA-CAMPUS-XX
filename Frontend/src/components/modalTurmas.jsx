@@ -1,5 +1,6 @@
 import { useState,useEffect  } from "react";
 import "../style/modalTurmas.css";
+import API_BASE from "../config/api";
 
 export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
 
@@ -9,7 +10,7 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
 
 async function carregarTurmas() {
   try {
-    const response = await fetch("http://localhost:3001/turmas");
+    const response = await fetch(`${API_BASE}/turmas`);
     const data = await response.json();
 
     console.log("Turmas vindas do banco:", data);
@@ -66,7 +67,7 @@ async function carregarTurmas() {
     };
 
     try {
-      const response = await fetch("http://localhost:3001/turmas", {
+      const response = await fetch(`${API_BASE}/turmas`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(novaTurma),
@@ -100,7 +101,7 @@ async function carregarTurmas() {
 
     try {
       // Requisição DELETE para o backend
-      const response = await fetch(`http://localhost:3001/turmas/${id}`, {
+      const response = await fetch(`${API_BASE}/turmas/${id}`, {
         method: "DELETE",
       });
 

@@ -1,5 +1,6 @@
 import { useState,useEffect } from "react";
 import "../style/modalSalas.css";
+import API_BASE from "../config/api";
 
 
 export default function ModalSalas({ salas, setSalas, onClose }) {
@@ -9,7 +10,7 @@ export default function ModalSalas({ salas, setSalas, onClose }) {
 
   async function carregarSalas() {
     try {
-      const response = await fetch("http://localhost:3001/salas");
+      const response = await fetch(`${API_BASE}/salas`);
       const data = await response.json();
 
       console.log("Salas vindas do banco:", data); 
@@ -56,7 +57,7 @@ export default function ModalSalas({ salas, setSalas, onClose }) {
 
     try {
       // Chamada ao backend
-      const response = await fetch("http://localhost:3001/salas", {
+      const response = await fetch(`${API_BASE}/salas`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -96,7 +97,7 @@ export default function ModalSalas({ salas, setSalas, onClose }) {
 
     try {
       // Chamada ao backend para deletar
-      const response = await fetch(`http://localhost:3001/salas/${id}`, {
+      const response = await fetch(`${API_BASE}/salas/${id}`, {
         method: "DELETE",
       });
 

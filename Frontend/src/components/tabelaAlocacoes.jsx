@@ -1,4 +1,5 @@
 import { useState,useEffect } from "react";
+import API_BASE from "../config/api";
 
 export default function TabelaAlocacoes() {
 
@@ -14,10 +15,10 @@ export default function TabelaAlocacoes() {
     async function carregarDados() {
     try {
         const [salasRes, turmasRes, cursosRes, alocacoesRes] = await Promise.all([
-            fetch("http://localhost:3001/salas"),
-            fetch("http://localhost:3001/turmas"),
-            fetch("http://localhost:3001/cursos"),
-            fetch("http://localhost:3001/alocacoes")
+            fetch(`${API_BASE}/salas`),
+            fetch(`${API_BASE}/turmas`),
+            fetch(`${API_BASE}/cursos`),
+            fetch(`${API_BASE}/alocacoes`)
         ]);
 
         const salasData = await salasRes.json();
