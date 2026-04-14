@@ -1,54 +1,8 @@
-import { useState, useEffect } from "react";
-import API_BASE from "../config/api";
+import { useState } from "react";
 
-export default function TabelaAlocacoes() {
-  // ─── Estados ───────────────────────────────────────────────────────────────
-  const [salas, setSalas] = useState([]); // Lista de salas do banco
-  const [turmas, setTurmas] = useState([]); // Lista de turmas do banco
-  const [cursos, setCursos] = useState([]); // Lista de cursos do banco
-  const [alocacoes, setAlocacoes] = useState([]); // Lista de alocações (quem está em qual sala/turno)
-
-  // Carrega os dados assim que o componente é montado na tela
-  useEffect(() => {
-    carregarDados();
-  }, []); // [] = executa só uma vez, na montagem
-
-  // ─── Carregamento de dados ─────────────────────────────────────────────────
-  async function carregarDados() {
-    try {
-      // Faz as 4 requisições ao backend ao mesmo tempo (em paralelo)
-      // Promise.all é mais eficiente do que fazer um fetch por vez
-      const [salasRes, turmasRes, cursosRes, alocacoesRes] = await Promise.all([
-        fetch(`${API_BASE}/salas`),
-        fetch(`${API_BASE}/turmas`),
-        fetch(`${API_BASE}/cursos`),
-        fetch(`${API_BASE}/alocacoes`),
-      ]);
-
-        // Converte todas as respostas de JSON para objetos JavaScript
-      const [salasData, turmasData, cursosData, alocacoesData] = await Promise.all([
-        salasRes.json(),
-        turmasRes.json(),
-        cursosRes.json(),
-        alocacoesRes.json(),
-      ]);
-
-      // ⚠️ Remover em produção — use import.meta.env.DEV para proteger
-      console.log("Salas:", salasData);
-      console.log("Turmas:", turmasData);
-      console.log("Cursos:", cursosData);
-      console.log("Alocações:", alocacoesData);
-
-      // Salva os dados nos estados para a tabela renderizar
-      setSalas(salasData);
-      setTurmas(turmasData);
-      setCursos(cursosData);
-      setAlocacoes(alocacoesData);
-    } catch (error) {
-      // Se qualquer um dos 4 fetchs falhar, cai aqui
-      console.error("Erro ao carregar dados:", error);
-    }
-  }
+export default function TabelaAlocacoes({ salas, turmas, cursos, alocacoes }) {
+  // Os dados agora vêm via props do App.jsx
+  // Não mais carregados localmente
 
   // ─── Filtros de semestre ───────────────────────────────────────────────────
   // Ano e semestre selecionados pelo usuário nos selects da tabela

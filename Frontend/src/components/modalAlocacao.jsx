@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import "../style/modalAlocacao.css";
 import "../style/modal.shared.css";
 import AlertModal from "./AlertModal";
@@ -11,53 +11,18 @@ export default function ModalAlocacoes({
   alocacoes,
   setAlocacoes,
   onClose,
-  onDataChange,
 }) {
   const anoAtual = new Date().getFullYear();
   const semestreAtual = new Date().getMonth() < 6 ? 1 : 2;
 
-  const [turmasData, setTurmasData] = useState([]);
-  const [salasData, setSalasData] = useState([]);
   const [turmaId, setTurmaId] = useState("");
   const [salaId, setSalaId] = useState("");
   const [turno, setTurno] = useState("manhã");
   const [timeAlocacao, setTimeAlocacao] = useState("definitivo");
   const [anoTemp, setAnoTemp] = useState(anoAtual);
   const [semestreTemp, setSemestreTemp] = useState(semestreAtual);
-  const [carregando, setCarregando] = useState(true);
-  const [modoOffline, setModoOffline] = useState(false);
   const [pesquisa, setPesquisa] = useState("");
   const { alert, showAlert, showConfirm, error, success } = useAlert();
-
-  useEffect(() => {
-    carregarDados();
-  }, []);
-
-  async function carregarDados() {
-    try {
-      const [turmasRes, salasRes, alocacoesRes] = await Promise.all([
-        fetch(`${API_BASE}/turmas`),
-        fetch(`${API_BASE}/salas`),
-        fetch(`${API_BASE}/alocacoes`),
-      ]);
-
-      const [turmasJson, salasJson, alocacoesJson] = await Promise.all([
-        turmasRes.json(),
-        salasRes.json(),
-        alocacoesRes.json(),
-      ]);
-
-      setTurmasData(turmasJson);
-      setSalasData(salasJson);
-      setAlocacoes(alocacoesJson);
-      setModoOffline(false);
-    } catch (err) {
-      console.error("Erro ao carregar dados:", err);
-      setModoOffline(true);
-    } finally {
-      setCarregando(false);
-    }
-  }
 
   function selecionarTurma(id) {
     setTurmaId(id);
@@ -201,14 +166,6 @@ export default function ModalAlocacoes({
         </div>
 
         <div className="modal-body">
-          {/* Banner offline */}
-          {modoOffline && (
-            <div className="offline-badge">
-              <span className="offline-dot" />
-              API indisponível — exibindo dados locais
-            </div>
-          )}
-
           {/* Formulário */}
           <div className="form-grid">
             <div className="form-group full">
@@ -218,7 +175,7 @@ export default function ModalAlocacoes({
                 onChange={(e) => selecionarTurma(e.target.value)}
               >
                 <option value="">Selecione a turma</option>
-                {turmasData.map((t) => (
+                {turmas.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.nome} — {t.ano_inicio}
                   </option>
@@ -233,7 +190,7 @@ export default function ModalAlocacoes({
                 onChange={(e) => setSalaId(e.target.value)}
               >
                 <option value="">Selecione a sala</option>
-                {salasData.map((s) => (
+                {salas.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.nome} ({s.tipoSala})
                   </option>
@@ -307,16 +264,14 @@ export default function ModalAlocacoes({
           )}
 
           {/* Lista */}
-          {carregando ? (
-            <p className="lista-feedback">Carregando alocações...</p>
-          ) : alocacoes.length === 0 ? (
+          {alocacoes.length === 0 ? (
             <p className="lista-feedback">Nenhuma alocação cadastrada.</p>
           ) : alocacoesFiltradas.length === 0 ? (
             <p className="lista-feedback">Nenhuma alocação encontrada.</p>
           ) : (
             <ul className="lista-alocacoes">
               {alocacoesFiltradas.map((a) => {
-                const turma = turmasData.find((t) => t.id === a.turma_id);
+                const turma = turmas.find((t) => t.id === a.turma_id);
 
                 return (
                   <li key={a.id} className="item-alocacao">

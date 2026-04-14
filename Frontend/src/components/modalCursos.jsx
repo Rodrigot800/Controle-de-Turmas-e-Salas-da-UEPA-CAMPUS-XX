@@ -1,37 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import "../style/modalCursos.css";
 import "../style/modal.shared.css";
 import AlertModal from "./AlertModal";
 import { useAlert } from "../hooks/useAlert";
 import API_BASE from "../config/api";
 
-export default function ModalCursos({ cursos, setCursos, onClose, onDataChange }) {
+export default function ModalCursos({ cursos, setCursos, onClose }) {
   const [nome, setNome] = useState("");
   const [vagas, setVagas] = useState(40);
   const [semestres, setSemestres] = useState(8);
-  const [carregando, setCarregando] = useState(true);
-  const [modoOffline, setModoOffline] = useState(false);
   const [pesquisa, setPesquisa] = useState("");
   const { alert, showAlert, showConfirm, error, success } = useAlert();
-
-  useEffect(() => {
-    carregarCursos();
-  }, []);
-
-  async function carregarCursos() {
-    try {
-      const response = await fetch(`${API_BASE}/cursos`);
-      if (!response.ok) throw new Error("Erro na resposta da API");
-      const data = await response.json();
-      setCursos(data);
-      setModoOffline(false);
-    } catch (err) {
-      console.error("Erro ao buscar cursos:", err);
-      setModoOffline(true);
-    } finally {
-      setCarregando(false);
-    }
-  }
 
   function validarEntrada() {
     if (nome.trim() === "" || nome.length < 2) {
@@ -58,14 +37,6 @@ export default function ModalCursos({ cursos, setCursos, onClose, onDataChange }
       semestres: Number(semestres),
     };
 
-    if (modoOffline) {
-      const cursoTemp = { ...novoCurso, id: Date.now() };
-      setCursos((prev) => [...prev, cursoTemp]);
-      showAlert("Curso adicionado apenas localmente (modo offline).", "Modo Offline");
-      limparFormulario();
-      return;
-    }
-
     try {
       const response = await fetch(`${API_BASE}/cursos`, {
         method: "POST",
@@ -82,7 +53,6 @@ export default function ModalCursos({ cursos, setCursos, onClose, onDataChange }
       setCursos((prev) => [...prev, cursoCriado]);
       limparFormulario();
       success("Curso adicionado com sucesso!");
-      onDataChange?.();
     } catch (err) {
       console.error("Erro ao adicionar curso:", err.message);
       error("Erro ao adicionar curso: " + err.message);
@@ -93,12 +63,6 @@ export default function ModalCursos({ cursos, setCursos, onClose, onDataChange }
     showConfirm(
       "Esta ação não pode ser desfeita.",
       async () => {
-        if (modoOffline) {
-          setCursos((prev) => prev.filter((c) => c.id !== id));
-          showAlert("Curso removido apenas localmente (modo offline).", "Modo Offline");
-          return;
-        }
-
         try {
           const response = await fetch(`${API_BASE}/cursos/${id}`, {
             method: "DELETE",
@@ -108,7 +72,6 @@ export default function ModalCursos({ cursos, setCursos, onClose, onDataChange }
 
           setCursos((prev) => prev.filter((c) => c.id !== id));
           success("Curso removido com sucesso!");
-          onDataChange?.();
         } catch (err) {
           console.error("Erro ao remover curso:", err.message);
           error("Não foi possível remover o curso: " + err.message);
@@ -144,14 +107,6 @@ export default function ModalCursos({ cursos, setCursos, onClose, onDataChange }
         </div>
 
         <div className="modal-body">
-          {/* Banner offline */}
-          {modoOffline && (
-            <div className="offline-badge">
-              <span className="offline-dot" />
-              API indisponível — exibindo dados locais
-            </div>
-          )}
-
           {/* Formulário */}
           <div className="form-grid">
             <div className="form-group full">
@@ -207,9 +162,7 @@ export default function ModalCursos({ cursos, setCursos, onClose, onDataChange }
           )}
 
           {/* Lista */}
-          {carregando ? (
-            <p className="lista-feedback">Carregando cursos...</p>
-          ) : cursos.length === 0 ? (
+          {cursos.length === 0 ? (
             <p className="lista-feedback">Nenhum curso cadastrado.</p>
           ) : cursosFiltrados.length === 0 ? (
             <p className="lista-feedback">Nenhum curso encontrado.</p>

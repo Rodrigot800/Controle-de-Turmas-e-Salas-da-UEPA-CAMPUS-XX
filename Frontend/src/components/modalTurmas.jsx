@@ -1,39 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import "../style/modalTurmas.css";
 import "../style/modal.shared.css";
 import AlertModal from "./AlertModal";
 import { useAlert } from "../hooks/useAlert";
 import API_BASE from "../config/api";
 
-export default function ModalTurmas({ turmas, setTurmas, cursos, onClose, onDataChange }) {
+export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
   const [nome, setNome] = useState("");
   const [cursoId, setCursoId] = useState("");
   const [turno, setTurno] = useState("");
   const [semestreInicio, setSemestreInicio] = useState(1);
   const [anoInicio, setAnoInicio] = useState(new Date().getFullYear());
-  const [carregando, setCarregando] = useState(true);
-  const [modoOffline, setModoOffline] = useState(false);
   const [pesquisa, setPesquisa] = useState("");
   const { alert, showAlert, showConfirm, error, success } = useAlert();
-
-  useEffect(() => {
-    carregarTurmas();
-  }, []);
-
-  async function carregarTurmas() {
-    try {
-      const response = await fetch(`${API_BASE}/turmas`);
-      if (!response.ok) throw new Error("Erro na resposta da API");
-      const data = await response.json();
-      setTurmas(data);
-      setModoOffline(false);
-    } catch (err) {
-      console.error("Erro ao carregar turmas:", err);
-      setModoOffline(true);
-    } finally {
-      setCarregando(false);
-    }
-  }
 
   function validarEntrada() {
     if (!nome || nome.trim().length < 2) {
@@ -70,14 +49,6 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose, onData
       turno,
     };
 
-    if (modoOffline) {
-      const turmaTemp = { ...novaTurma, id: Date.now(), curso_id: novaTurma.cursoId, ano_inicio: novaTurma.anoInicio, semestre_inicio: novaTurma.semestreInicio };
-      setTurmas((prev) => [...prev, turmaTemp]);
-      showAlert("Turma adicionada apenas localmente (modo offline).", "Modo Offline");
-      limparFormulario();
-      return;
-    }
-
     try {
       const response = await fetch(`${API_BASE}/turmas`, {
         method: "POST",
@@ -91,7 +62,6 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose, onData
       setTurmas((prev) => [...prev, turmaCriada]);
       limparFormulario();
       success("Turma adicionada com sucesso!");
-      onDataChange?.();
     } catch (err) {
       console.error("Erro ao adicionar turma:", err.message);
       error("Erro ao adicionar turma: " + err.message);
@@ -102,12 +72,6 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose, onData
     showConfirm(
       "Esta ação não pode ser desfeita.",
       async () => {
-        if (modoOffline) {
-          setTurmas((prev) => prev.filter((t) => t.id !== id));
-          showAlert("Turma removida apenas localmente (modo offline).", "Modo Offline");
-          return;
-        }
-
         try {
           const response = await fetch(`${API_BASE}/turmas/${id}`, {
             method: "DELETE",
@@ -117,7 +81,6 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose, onData
 
           setTurmas((prev) => prev.filter((t) => t.id !== id));
           success("Turma removida com sucesso!");
-          onDataChange?.();
         } catch (err) {
           console.error("Erro ao remover turma:", err.message);
           error("Não foi possível remover a turma: " + err.message);
@@ -162,13 +125,6 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose, onData
         </div>
 
         <div className="modal-body">
-          {/* Banner offline */}
-          {modoOffline && (
-            <div className="offline-badge">
-              <span className="offline-dot" />
-              API indisponível — exibindo dados locais
-            </div>
-          )}
 
           {/* Formulário */}
           <div className="form-grid">
@@ -250,9 +206,7 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose, onData
           )}
 
           {/* Lista */}
-          {carregando ? (
-            <p className="lista-feedback">Carregando turmas...</p>
-          ) : turmas.length === 0 ? (
+          {turmas.length === 0 ? (
             <p className="lista-feedback">Nenhuma turma cadastrada.</p>
           ) : turmasFiltradas.length === 0 ? (
             <p className="lista-feedback">Nenhuma turma encontrada.</p>

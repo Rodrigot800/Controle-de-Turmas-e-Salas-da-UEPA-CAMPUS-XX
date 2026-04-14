@@ -15,41 +15,35 @@ function App() {
   const [modalTurmasAberto, setModalTurmasAberto] = useState(false);
   const [modalAlocacoesAberto, setModalAlocacoesAberto] = useState(false);
 
-  const [salas, setSalas] = useState(() => {
-    const salvo = localStorage.getItem("salas");
-    return salvo ? JSON.parse(salvo) : [];
-  });
+  const [salas, setSalas] = useState([]);
+  const [cursos, setCursos] = useState([]);
+  const [turmas, setTurmas] = useState([]);
+  const [alocacoes, setAlocacoes] = useState([]);
 
+  // ============================================================
+  // CARREGAMENTO INICIAL DOS DADOS DA API
+  // ============================================================
   useEffect(() => {
-    localStorage.setItem("salas", JSON.stringify(salas));
-  }, [salas]);
+    carregarDados();
+  }, []);
 
-  const [cursos, setCursos] = useState(() => {
-    const salvo = localStorage.getItem("cursos");
-    return salvo ? JSON.parse(salvo) : [];
-  });
+  async function carregarDados() {
+    try {
+      const [salasRes, cursosRes, turmasRes, alocacoesRes] = await Promise.all([
+        fetch("http://localhost:3001/salas"),
+        fetch("http://localhost:3001/cursos"),
+        fetch("http://localhost:3001/turmas"),
+        fetch("http://localhost:3001/alocacoes"),
+      ]);
 
-  useEffect(() => {
-    localStorage.setItem("cursos", JSON.stringify(cursos));
-  }, [cursos]);
-
-  const [turmas, setTurmas] = useState(() => {
-    const salvo = localStorage.getItem("turmas");
-    return salvo ? JSON.parse(salvo) : [];
-  });
-
-  useEffect(() => {
-    localStorage.setItem("turmas", JSON.stringify(turmas));
-  }, [turmas]);
-
-  const [alocacoes, setAlocacoes] = useState(() => {
-    const salvo = localStorage.getItem("alocacoes");
-    return salvo ? JSON.parse(salvo) : [];
-  });
-
-  useEffect(() => {
-    localStorage.setItem("alocacoes", JSON.stringify(alocacoes));
-  }, [alocacoes]);
+      if (salasRes.ok) setSalas(await salasRes.json());
+      if (cursosRes.ok) setCursos(await cursosRes.json());
+      if (turmasRes.ok) setTurmas(await turmasRes.json());
+      if (alocacoesRes.ok) setAlocacoes(await alocacoesRes.json());
+    } catch (err) {
+      console.error("Erro ao carregar dados iniciais:", err);
+    }
+  }
 
   // ============================================================
   // SINCRONIZAÇÃO AUTOMÁTICA: Quando Salas/Turmas/Cursos mudam,
@@ -67,19 +61,6 @@ function App() {
       setAlocacoes(alocacoesValidas);
     }
   }, [salas, turmas]); // Dispara quando salas ou turmas mudam
-
-  // Função auxiliar para recarregar alocações após operações
-  const recarregarAlocacoes = async () => {
-    try {
-      const response = await fetch("http://localhost:3001/alocacoes");
-      if (response.ok) {
-        const data = await response.json();
-        setAlocacoes(data);
-      }
-    } catch (err) {
-      console.error("Erro ao recarregar alocações:", err);
-    }
-  };
 
   return (
     <div className="app-layout">
@@ -152,7 +133,6 @@ function App() {
                 salas={salas}
                 setSalas={setSalas}
                 onClose={() => setModalSalasAberto(false)}
-                onDataChange={recarregarAlocacoes}
               />
             )}
 
@@ -161,7 +141,6 @@ function App() {
                 cursos={cursos}
                 setCursos={setCursos}
                 onClose={() => setModalCursosAberto(false)}
-                onDataChange={recarregarAlocacoes}
               />
             )}
 
@@ -171,7 +150,6 @@ function App() {
                 setTurmas={setTurmas}
                 cursos={cursos}
                 onClose={() => setModalTurmasAberto(false)}
-                onDataChange={recarregarAlocacoes}
               />
             )}
 
@@ -182,7 +160,6 @@ function App() {
                 alocacoes={alocacoes}
                 setAlocacoes={setAlocacoes}
                 onClose={() => setModalAlocacoesAberto(false)}
-                onDataChange={recarregarAlocacoes}
               />
             )}
           </>

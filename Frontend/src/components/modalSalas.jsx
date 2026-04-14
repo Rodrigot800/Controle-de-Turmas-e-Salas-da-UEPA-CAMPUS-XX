@@ -1,38 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import "../style/modalSalas.css";
 import "../style/modal.shared.css";
 import AlertModal from "./AlertModal";
 import { useAlert } from "../hooks/useAlert";
 import API_BASE from "../config/api";
 
-export default function ModalSalas({ salas, setSalas, onClose, onDataChange }) {
+export default function ModalSalas({ salas, setSalas, onClose }) {
   const [nome, setNome] = useState("");
   const [tipoSala, setTipoSala] = useState("comum");
   const [capacidade, setCapacidade] = useState(30);
   const [piso, setPiso] = useState("térreo");
-  const [carregando, setCarregando] = useState(true);
-  const [modoOffline, setModoOffline] = useState(false);
   const [pesquisa, setPesquisa] = useState("");
   const { alert, showAlert, showConfirm, error, success } = useAlert();
-
-  useEffect(() => {
-    carregarSalas();
-  }, []);
-
-  async function carregarSalas() {
-    try {
-      const response = await fetch(`${API_BASE}/salas`);
-      if (!response.ok) throw new Error("Erro na resposta da API");
-      const data = await response.json();
-      setSalas(data);
-      setModoOffline(false);
-    } catch (err) {
-      console.error("Erro ao carregar salas:", err);
-      setModoOffline(true);
-    } finally {
-      setCarregando(false);
-    }
-  }
 
   function validarEntrada() {
     if (nome.trim() === "" || nome.length < 2) {
@@ -60,14 +39,6 @@ export default function ModalSalas({ salas, setSalas, onClose, onDataChange }) {
       piso,
     };
 
-    if (modoOffline) {
-      const salaTemp = { ...novaSala, id: Date.now() };
-      setSalas((prev) => [...prev, salaTemp]);
-      showAlert("Sala adicionada apenas localmente (modo offline).", "Modo Offline");
-      limparFormulario();
-      return;
-    }
-
     try {
       const response = await fetch(`${API_BASE}/salas`, {
         method: "POST",
@@ -81,8 +52,6 @@ export default function ModalSalas({ salas, setSalas, onClose, onDataChange }) {
       setSalas((prev) => [...prev, salaCriada]);
       limparFormulario();
       success("Sala adicionada com sucesso!");
-      // Notifica o componente pai que dados foram alterados
-      onDataChange?.();
     } catch (err) {
       console.error("Erro ao adicionar sala:", err);
       error("Não foi possível adicionar a sala: " + err.message);
@@ -93,12 +62,6 @@ export default function ModalSalas({ salas, setSalas, onClose, onDataChange }) {
     showConfirm(
       "Esta ação não pode ser desfeita.",
       async () => {
-        if (modoOffline) {
-          setSalas((prev) => prev.filter((s) => s.id !== id));
-          showAlert("Sala removida apenas localmente (modo offline).", "Modo Offline");
-          return;
-        }
-
         try {
           const response = await fetch(`${API_BASE}/salas/${id}`, {
             method: "DELETE",
@@ -108,8 +71,6 @@ export default function ModalSalas({ salas, setSalas, onClose, onDataChange }) {
 
           setSalas((prev) => prev.filter((s) => s.id !== id));
           success("Sala removida com sucesso!");
-          // Notifica o componente pai que dados foram alterados
-          onDataChange?.();
         } catch (err) {
           console.error("Erro ao remover sala:", err);
           error("Não foi possível remover a sala: " + err.message);
@@ -148,14 +109,6 @@ export default function ModalSalas({ salas, setSalas, onClose, onDataChange }) {
         </div>
 
         <div className="modal-body">
-          {/* Banner offline */}
-          {modoOffline && (
-            <div className="offline-badge">
-              <span className="offline-dot" />
-              API indisponível — exibindo dados locais
-            </div>
-          )}
-
           {/* Formulário */}
           <div className="form-grid">
             <div className="form-group full">
@@ -221,9 +174,7 @@ export default function ModalSalas({ salas, setSalas, onClose, onDataChange }) {
           )}
 
           {/* Lista */}
-          {carregando ? (
-            <p className="lista-feedback">Carregando salas...</p>
-          ) : salas.length === 0 ? (
+          {salas.length === 0 ? (
             <p className="lista-feedback">Nenhuma sala cadastrada.</p>
           ) : salasFiltradas.length === 0 ? (
             <p className="lista-feedback">Nenhuma sala encontrada.</p>
