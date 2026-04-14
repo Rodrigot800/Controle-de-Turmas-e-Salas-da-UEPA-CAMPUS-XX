@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import "../style/modalAlocacao.css";
+import "../style/modal.shared.css";
 import API_BASE from "../config/api";
 
 export default function ModalAlocacoes({
@@ -9,67 +10,54 @@ export default function ModalAlocacoes({
   setAlocacoes,
   onClose,
 }) {
+  const anoAtual = new Date().getFullYear();
+  const semestreAtual = new Date().getMonth() < 6 ? 1 : 2;
 
-const [turmasData, setTurmas] = useState([]);
-const [salasData, setSalas] = useState([]);
-
-useEffect(() => {
-  carregarTurmas();
-  carregarSalas();
-  carregarAlocacoes();
-}, []);
-
-async function carregarTurmas() {
-  try {
-    const response = await fetch(`${API_BASE}/turmas`);
-    const data = await response.json();
-
-    console.log("Turmas da API:", data);
-    setTurmas(data);
-  } catch (err) {
-    console.error("Erro ao carregar turmas:", err);
-  }
-}
-
-async function carregarSalas() {
-  try {
-    const response = await fetch(`${API_BASE}/salas`);
-    const data = await response.json();
-
-    console.log("Salas da API:", data);
-    setSalas(data);
-  } catch (err) {
-    console.error("Erro ao carregar salas:", err);
-  }
-}
-
-async function carregarAlocacoes() {
-  try {
-    const response = await fetch(`${API_BASE}/alocacoes`);
-    const data = await response.json();
-
-    console.log("Alocações da API:", data);
-    setAlocacoes(data);
-  } catch (err) {
-    console.error("Erro ao carregar alocações:", err);
-  }
-}
-  const [timeAlocacao, setTimeAlocacao] = useState("definitivo");
-  var anoAtual = new Date().getFullYear();
-  const [anoTemp, setAnoTemp] = useState(anoAtual);
-  var semestreAtual = new Date().getMonth() < 6 ? 1 : 2;
-  const [semestreTemp, setSemestreTemp] = useState(semestreAtual);
-
+  const [turmasData, setTurmasData] = useState([]);
+  const [salasData, setSalasData] = useState([]);
   const [turmaId, setTurmaId] = useState("");
   const [salaId, setSalaId] = useState("");
-  const [turno, setTurno] = useState("Manhã");
+  const [turno, setTurno] = useState("manhã");
+  const [timeAlocacao, setTimeAlocacao] = useState("definitivo");
+  const [anoTemp, setAnoTemp] = useState(anoAtual);
+  const [semestreTemp, setSemestreTemp] = useState(semestreAtual);
+  const [carregando, setCarregando] = useState(true);
+  const [modoOffline, setModoOffline] = useState(false);
+
+  useEffect(() => {
+    carregarDados();
+  }, []);
+
+  async function carregarDados() {
+    try {
+      const [turmasRes, salasRes, alocacoesRes] = await Promise.all([
+        fetch(`${API_BASE}/turmas`),
+        fetch(`${API_BASE}/salas`),
+        fetch(`${API_BASE}/alocacoes`),
+      ]);
+
+      const [turmasJson, salasJson, alocacoesJson] = await Promise.all([
+        turmasRes.json(),
+        salasRes.json(),
+        alocacoesRes.json(),
+      ]);
+
+      setTurmasData(turmasJson);
+      setSalasData(salasJson);
+      setAlocacoes(alocacoesJson);
+      setModoOffline(false);
+    } catch (err) {
+      console.error("Erro ao carregar dados:", err);
+      setModoOffline(true);
+    } finally {
+      setCarregando(false);
+    }
+  }
+
   function selecionarTurma(id) {
     setTurmaId(id);
-
     const turma = turmas.find((t) => t.id === Number(id));
-    if (turma) {
-      setTurno(turma.turno); // turno vem da turma
-    }
+    if (turma) setTurno(turma.turno);
   }
 
   function validarEntrada() {
@@ -85,11 +73,9 @@ async function carregarAlocacoes() {
       alert("Por favor, selecione um turno.");
       return false;
     }
-    if (timeAlocacao === "temporario") {
-      if (!anoTemp) {
-        alert("Informe o ano da alocação temporária.");
-        return false;
-      }
+    if (timeAlocacao === "temporario" && !anoTemp) {
+      alert("Informe o ano da alocação temporária.");
+      return false;
     }
     return true;
   }
@@ -97,30 +83,24 @@ async function carregarAlocacoes() {
   async function adicionarAlocacao() {
     if (!validarEntrada()) return;
 
-    // Validação local
     const alocacaoExiste = alocacoes.some((a) => {
-      if (a.salaId !== Number(salaId) || a.turno !== turno) return false;
-
-      if (a.timeAlocacao === "definitivo") return true;
-
-      if (timeAlocacao === "temporario" && a.timeAlocacao === "temporario") {
+      if (Number(a.sala_id) !== Number(salaId) || a.turno !== turno)
+        return false;
+      if (a.time_alocacao === "definitivo") return true;
+      if (timeAlocacao === "temporario" && a.time_alocacao === "temporario") {
         return (
-          a.anoAlocacaoTemp === Number(anoTemp) &&
-          a.semestreAlocacaoTemp === Number(semestreTemp)
+          Number(a.ano_temp) === Number(anoTemp) &&
+          Number(a.semestre_temp) === Number(semestreTemp)
         );
       }
-
       return false;
     });
 
     if (alocacaoExiste) {
-      alert(
-        "Já existe uma alocação para esta sala e turno. Por favor, escolha outra sala ou turno.",
-      );
+      alert("Já existe uma alocação para esta sala e turno.");
       return;
     }
 
-    // Cria objeto para enviar ao backend
     const novaAlocacao = {
       turmaId: Number(turmaId),
       salaId: Number(salaId),
@@ -129,39 +109,26 @@ async function carregarAlocacoes() {
       anoTemp: timeAlocacao === "temporario" ? Number(anoTemp) : null,
       semestreTemp: timeAlocacao === "temporario" ? Number(semestreTemp) : null,
     };
+
     try {
       const response = await fetch(`${API_BASE}/alocacoes`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(novaAlocacao),
       });
 
-      if (!response.ok) {
-        const erro = await response.text();
-        throw new Error(erro || "Erro ao adicionar alocação");
-      }
+      if (!response.ok) throw new Error(await response.text());
 
       const alocacaoCriada = await response.json();
-
-      // Atualiza estado local
       setAlocacoes((prev) => [...prev, alocacaoCriada]);
-
-      // Limpa formulário
-      setTurmaId("");
-      setSalaId("");
-      setTurno("");
-      setTimeAlocacao("definitivo");
-      setAnoTemp(anoAtual);
-      setSemestreTemp(semestreAtual);
-
+      limparFormulario();
       alert("Alocação adicionada com sucesso!");
     } catch (err) {
       console.error("Erro ao adicionar alocação:", err.message);
       alert("Erro ao adicionar alocação: " + err.message);
     }
   }
+
   async function removerAlocacao(id) {
     if (!window.confirm("Deseja remover esta alocação?")) return;
 
@@ -169,148 +136,181 @@ async function carregarAlocacoes() {
       const response = await fetch(`${API_BASE}/alocacoes/${id}`, {
         method: "DELETE",
       });
-
-      if (!response.ok) {
-        const erro = await response.text();
-        throw new Error(erro || "Erro ao remover alocação");
-      }
-
-      // Atualiza estado local
-      setAlocacoes(alocacoes.filter((a) => a.id !== id));
-
+      if (!response.ok) throw new Error(await response.text());
+      setAlocacoes((prev) => prev.filter((a) => a.id !== id));
       alert("Alocação removida com sucesso!");
     } catch (err) {
       console.error("Erro ao remover alocação:", err.message);
       alert("Não foi possível remover a alocação: " + err.message);
     }
   }
-  function nomeTurma(id) {
-    const t = turmas.find((t) => t.id === id);
-    return t ? t.nome : "Turma não encontrada";
+
+  function limparFormulario() {
+    setTurmaId("");
+    setSalaId("");
+    setTurno("manhã");
+    setTimeAlocacao("definitivo");
+    setAnoTemp(anoAtual);
+    setSemestreTemp(semestreAtual);
   }
 
-function nomeSala(id) {
-  const s = salas.find((s) => s.id === Number(id));
-  return s 
-    ? `${s.nome} (${s.tipoSala}) - ${s.capacidade} lugares`
-    : "Sala não encontrada";
-}
-  console.log("SALAS:", salasData);
-  console.log("ALOCACOES ATUAIS:", alocacoes);
- return (
-  <div className="modal-backdrop">
-    <div className="modal">
-      <button className="btn-close" onClick={onClose}>
-        ×
-      </button>
+  function nomeTurma(id) {
+    const t = turmas.find((t) => t.id === id);
+    return t ? t.nome : "—";
+  }
 
-      <h2>Alocar Turma em Sala</h2>
+  function nomeSala(id) {
+    const s = salas.find((s) => s.id === Number(id));
+    return s ? `${s.nome} (${s.tipoSala})` : "—";
+  }
 
-      <div className="form-grid">
-        <div>
-          <label>Turma</label>
-          <select
-            value={turmaId}
-            onChange={(e) => selecionarTurma(e.target.value)}
-          >
-            <option value="">Selecione a turma</option>
-            {turmasData.map((turma) => (
-              <option key={turma.id} value={turma.id}>
-                {turma.nome} {turma.ano_inicio}
-              </option>
-            ))}
-          </select>
+  return (
+    <div className="modal-backdrop">
+      <div className="modal">
+        {/* Header */}
+        <div className="modal-header">
+          <h2>Alocar turma em sala</h2>
+          <div className="header-right">
+            <span className="modal-badge">{alocacoes.length} alocações</span>
+            <button className="btn-close-icon" onClick={onClose}>
+              ×
+            </button>
+          </div>
         </div>
 
-        <div>
-          <label>Sala</label>
-          <select value={salaId} onChange={(e) => setSalaId(e.target.value)}>
-            <option value="">Selecione a sala</option>
-            {salasData.map((sala) => (
-              <option key={sala.id} value={sala.id}>
-                {sala.nome} ({sala.tipoSala})
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label>Turno</label>
-          <select value={turno} onChange={(e) => setTurno(e.target.value)}>
-            <option value="Manhã">Manhã</option>
-            <option value="Tarde">Tarde</option>
-            <option value="Noite">Noite</option>
-          </select>
-        </div>
-
-        <div>
-          <label>Tipo de Alocação</label>
-          <select
-            value={timeAlocacao}
-            onChange={(e) => setTimeAlocacao(e.target.value)}
-          >
-            <option value="definitivo">Definitivo</option>
-            <option value="temporario">Temporário</option>
-          </select>
-        </div>
-
-        {timeAlocacao === "temporario" && (
-          <div className="form-grid">
-            <div>
-              <label>Ano</label>
-              <input
-                type="number"
-                value={anoTemp}
-                onChange={(e) => setAnoTemp(e.target.value)}
-              />
+        <div className="modal-body">
+          {/* Banner offline */}
+          {modoOffline && (
+            <div className="offline-badge">
+              <span className="offline-dot" />
+              API indisponível — exibindo dados locais
             </div>
+          )}
 
-            <div>
-              <label>Semestre</label>
+          {/* Formulário */}
+          <div className="form-grid">
+            <div className="form-group full">
+              <label>Turma</label>
               <select
-                value={semestreTemp}
-                onChange={(e) => setSemestreTemp(e.target.value)}
+                value={turmaId}
+                onChange={(e) => selecionarTurma(e.target.value)}
               >
-                <option value={1}>1º</option>
-                <option value={2}>2º</option>
+                <option value="">Selecione a turma</option>
+                {turmasData.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.nome} — {t.ano_inicio}
+                  </option>
+                ))}
               </select>
             </div>
+
+            <div className="form-group full">
+              <label>Sala</label>
+              <select
+                value={salaId}
+                onChange={(e) => setSalaId(e.target.value)}
+              >
+                <option value="">Selecione a sala</option>
+                {salasData.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.nome} ({s.tipoSala})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Turno</label>
+              <select value={turno} onChange={(e) => setTurno(e.target.value)}>
+                <option value="manhã">Manhã</option>
+                <option value="tarde">Tarde</option>
+                <option value="noite">Noite</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Tipo de alocação</label>
+              <select
+                value={timeAlocacao}
+                onChange={(e) => setTimeAlocacao(e.target.value)}
+              >
+                <option value="definitivo">Definitivo</option>
+                <option value="temporario">Temporário</option>
+              </select>
+            </div>
+
+            {/* Campos extras só para temporário */}
+            {timeAlocacao === "temporario" && (
+              <div className="temp-box">
+                <span className="temp-label">Período temporário</span>
+                <div className="form-group">
+                  <label>Ano</label>
+                  <input
+                    type="number"
+                    value={anoTemp}
+                    onChange={(e) => setAnoTemp(Number(e.target.value))}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Semestre</label>
+                  <select
+                    value={semestreTemp}
+                    onChange={(e) => setSemestreTemp(Number(e.target.value))}
+                  >
+                    <option value={1}>1º semestre</option>
+                    <option value={2}>2º semestre</option>
+                  </select>
+                </div>
+              </div>
+            )}
           </div>
-        )}
+
+          <button className="btn-primary" onClick={adicionarAlocacao}>
+            + Alocar turma
+          </button>
+
+          <div className="modal-divider" />
+
+          {/* Lista */}
+          {carregando ? (
+            <p className="lista-feedback">Carregando alocações...</p>
+          ) : alocacoes.length === 0 ? (
+            <p className="lista-feedback">Nenhuma alocação cadastrada.</p>
+          ) : (
+            <ul className="lista-alocacoes">
+              {alocacoes.map((a) => (
+                <li key={a.id} className="item-alocacao">
+                  <div className="item-info">
+                    <span className="item-nome">
+                      {nomeTurma(a.turma_id)} (
+                      {turmasData.find((t) => t.id === a.turma_id)
+                        ?.ano_inicio || "N/A"}
+                      )
+                    </span>
+                    <div className="item-meta">
+                      <span className="pill sala">{nomeSala(a.sala_id)}</span>
+                      <span className="pill turno">{a.turno}</span>
+                      {a.time_alocacao === "temporario" ? (
+                        <span className="pill temporario">
+                          {a.ano_temp}.{a.semestre_temp}
+                        </span>
+                      ) : (
+                        <span className="pill definitivo">Definitivo</span>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    className="btn-delete"
+                    onClick={() => removerAlocacao(a.id)}
+                  >
+                    Excluir
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
-
-      <button className="btn-primary" onClick={adicionarAlocacao}>
-        Alocar
-      </button>
-
-      <ul className="lista-salas">
-  {alocacoes.map((a) => (
-    <li key={a.id} className="linha-sala">
-      <span>
-        {nomeTurma(a.turma_id)} (
-        {turmasData.find((t) => t.id === a.turma_id)?.ano_inicio || "N/A"})
-        {" — "}
-        {nomeSala(a.sala_id)}
-        {" — "}
-        {a.turno}
-        {a.time_alocacao === "temporario" && (
-          <span style={{ marginLeft: 8, color: "#666" }}>
-            [{a.ano_temp}.{a.semestre_temp}]
-          </span>
-        )}
-      </span>
-
-      <button
-        className="btn-delete"
-        onClick={() => removerAlocacao(a.id)}
-        title="Remover"
-      >
-        ✕
-      </button>
-    </li>
-  ))}
-</ul>
     </div>
-  </div>
   );
 }

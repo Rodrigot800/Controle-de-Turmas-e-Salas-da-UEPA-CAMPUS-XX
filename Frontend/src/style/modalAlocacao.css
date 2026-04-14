@@ -1,0 +1,5 @@
+@import "./modal.shared.css";
+
+.modal {
+    width: 650px;
+}

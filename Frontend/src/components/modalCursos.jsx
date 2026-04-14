@@ -1,46 +1,67 @@
 import { useState, useEffect } from "react";
 import "../style/modalCursos.css";
+import "../style/modal.shared.css";
+
 import API_BASE from "../config/api";
 
 export default function ModalCursos({ cursos, setCursos, onClose }) {
+  const [nome, setNome] = useState("");
+  const [vagas, setVagas] = useState(40);
+  const [semestres, setSemestres] = useState(8);
+  const [carregando, setCarregando] = useState(true);
+  const [modoOffline, setModoOffline] = useState(false);
 
   useEffect(() => {
-    fetch(`${API_BASE}/cursos`)
-      .then((res) => res.json())
-      .then((data) => {
-        console.log("Cursos do banco:", data);
-        setCursos(data);
-      })
-      .catch((error) => console.error("Erro ao buscar cursos:", error));
+    carregarCursos();
   }, []);
 
-  const [nome, setnome] = useState("");
-  const [vagas, setVagas] = useState("30");
-  const [semestres, setSemestres] = useState("8");
+  async function carregarCursos() {
+    try {
+      const response = await fetch(`${API_BASE}/cursos`);
+      if (!response.ok) throw new Error("Erro na resposta da API");
+      const data = await response.json();
+      setCursos(data);
+      setModoOffline(false);
+    } catch (err) {
+      console.error("Erro ao buscar cursos:", err);
+      setModoOffline(true);
+    } finally {
+      setCarregando(false);
+    }
+  }
 
   function validarEntrada() {
     if (nome.trim() === "" || nome.length < 2) {
       alert("Por favor, insira um nome válido para o curso.");
       return false;
     }
-    if (vagas <= 0 || Number(vagas) === false) {
+    if (vagas <= 0 || isNaN(vagas)) {
       alert("Por favor, insira uma quantidade válida de vagas.");
       return false;
     }
-    if (semestres <= 0 || Number(semestres) === false) {
+    if (semestres <= 0 || isNaN(semestres)) {
       alert("Por favor, insira uma quantidade válida de semestres.");
       return false;
     }
     return true;
   }
+
   async function adicionarCurso() {
     if (!validarEntrada()) return;
 
     const novoCurso = {
-      nome: nome.trim(), // nome correto para o backend
+      nome: nome.trim(),
       vagas: Number(vagas),
       semestres: Number(semestres),
     };
+
+    if (modoOffline) {
+      const cursoTemp = { ...novoCurso, id: Date.now() };
+      setCursos((prev) => [...prev, cursoTemp]);
+      alert("⚠️ Modo offline: curso adicionado apenas localmente.");
+      limparFormulario();
+      return;
+    }
 
     try {
       const response = await fetch(`${API_BASE}/cursos`, {
@@ -50,42 +71,37 @@ export default function ModalCursos({ cursos, setCursos, onClose }) {
       });
 
       if (!response.ok) {
-        // pega o erro do backend
-        const erro = await response.json(); // backend envia { erro: "mensagem" }
+        const erro = await response.json();
         throw new Error(erro.erro || "Erro ao adicionar curso");
       }
 
       const cursoCriado = await response.json();
       setCursos((prev) => [...prev, cursoCriado]);
-
-      // Limpa o formulário
-      setnome("");
-      setVagas("30");
-      setSemestres("8");
-
-      console.log("Curso criado:", cursoCriado);
+      limparFormulario();
       alert("Curso adicionado com sucesso!");
     } catch (err) {
       console.error("Erro ao adicionar curso:", err.message);
-      alert("Erro ao adicionar curso: " + err.message); // <-- aqui aparece o erro
+      alert("Erro ao adicionar curso: " + err.message);
     }
   }
+
   async function removerCurso(id) {
     if (!window.confirm("Deseja remover este curso?")) return;
+
+    if (modoOffline) {
+      setCursos((prev) => prev.filter((c) => c.id !== id));
+      alert("⚠️ Modo offline: curso removido apenas localmente.");
+      return;
+    }
 
     try {
       const response = await fetch(`${API_BASE}/cursos/${id}`, {
         method: "DELETE",
       });
 
-      if (!response.ok) {
-        const erro = await response.text();
-        throw new Error(erro || "Erro ao remover curso");
-      }
+      if (!response.ok) throw new Error(await response.text());
 
-      // Atualiza estado local removendo o curso deletado
-      setCursos(cursos.filter((c) => c.id !== id));
-
+      setCursos((prev) => prev.filter((c) => c.id !== id));
       alert("Curso removido com sucesso!");
     } catch (err) {
       console.error("Erro ao remover curso:", err.message);
@@ -93,68 +109,105 @@ export default function ModalCursos({ cursos, setCursos, onClose }) {
     }
   }
 
+  function limparFormulario() {
+    setNome("");
+    setVagas(40);
+    setSemestres(8);
+  }
+
   return (
     <div className="modal-backdrop">
       <div className="modal">
-        <button className="btn-close" onClick={onClose}>
-          ×
-        </button>
-
-        <h2>Gerenciar Cursos</h2>
-
-        <div className="form-grid">
-          <div className="form-group">
-            <label>Nome do curso</label>
-            <input
-              value={nome}
-              onChange={(e) => setnome(e.target.value)}
-              placeholder="Ex: Engenharia Ambiental"
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Vagas</label>
-            <input
-              type="number"
-              value={vagas}
-              onChange={(e) => setVagas(e.target.value)}
-              placeholder="40"
-              step="10"
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Semestres</label>
-            <input
-              type="number"
-              value={semestres}
-              onChange={(e) => setSemestres(e.target.value)}
-              placeholder="10"
-              step="2"
-            />
+        {/* Header */}
+        <div className="modal-header">
+          <h2>Gerenciar cursos</h2>
+          <div className="header-right">
+            <span className="modal-badge">{cursos.length} cadastrados</span>
+            <button className="btn-close-icon" onClick={onClose}>
+              ×
+            </button>
           </div>
         </div>
 
-        <button className="btn-primary" onClick={adicionarCurso}>
-          Adicionar Curso
-        </button>
+        <div className="modal-body">
+          {/* Banner offline */}
+          {modoOffline && (
+            <div className="offline-badge">
+              <span className="offline-dot" />
+              API indisponível — exibindo dados locais
+            </div>
+          )}
 
-        <ul className="lista-salas">
-          {cursos.map((curso) => (
-            <li key={curso.id} className="linha-sala">
-              <span>
-                {curso.nome} — {curso.vagas} vagas — {curso.semestres} semestres
-              </span>
-              <button
-                className="btn-delete"
-                onClick={() => removerCurso(curso.id)}
-                title="Excluir"
-              >
-                ✕
-              </button>
-            </li>
-          ))}
-        </ul>
+          {/* Formulário */}
+          <div className="form-grid">
+            <div className="form-group full">
+              <label>Nome do curso</label>
+              <input
+                type="text"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                placeholder="Ex: Engenharia Ambiental"
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Vagas</label>
+              <input
+                type="number"
+                value={vagas}
+                onChange={(e) => setVagas(Number(e.target.value))}
+                step="10"
+                min="1"
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Semestres</label>
+              <input
+                type="number"
+                value={semestres}
+                onChange={(e) => setSemestres(Number(e.target.value))}
+                step="2"
+                min="1"
+              />
+            </div>
+          </div>
+
+          <button className="btn-primary" onClick={adicionarCurso}>
+            + Adicionar curso
+          </button>
+
+          <div className="modal-divider" />
+
+          {/* Lista */}
+          {carregando ? (
+            <p className="lista-feedback">Carregando cursos...</p>
+          ) : cursos.length === 0 ? (
+            <p className="lista-feedback">Nenhum curso cadastrado.</p>
+          ) : (
+            <ul className="lista-cursos">
+              {cursos.map((curso) => (
+                <li key={curso.id} className="item-curso">
+                  <div className="item-info">
+                    <span className="item-nome">{curso.nome}</span>
+                    <div className="item-meta">
+                      <span className="pill vagas">{curso.vagas} vagas</span>
+                      <span className="pill semestres">
+                        {curso.semestres} semestres
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    className="btn-delete"
+                    onClick={() => removerCurso(curso.id)}
+                  >
+                    Excluir
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
     </div>
   );
