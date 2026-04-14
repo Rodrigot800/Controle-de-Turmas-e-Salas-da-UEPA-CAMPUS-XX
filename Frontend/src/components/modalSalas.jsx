@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import "../style/modalSalas.css";
 import "../style/modal.shared.css";
+import AlertModal from "./AlertModal";
+import { useAlert } from "../hooks/useAlert";
 import API_BASE from "../config/api";
 
-export default function ModalSalas({ salas, setSalas, onClose }) {
+export default function ModalSalas({ salas, setSalas, onClose, onDataChange }) {
   const [nome, setNome] = useState("");
   const [tipoSala, setTipoSala] = useState("comum");
   const [capacidade, setCapacidade] = useState(30);
@@ -11,6 +13,7 @@ export default function ModalSalas({ salas, setSalas, onClose }) {
   const [carregando, setCarregando] = useState(true);
   const [modoOffline, setModoOffline] = useState(false);
   const [pesquisa, setPesquisa] = useState("");
+  const { alert, showAlert, showConfirm, error, success } = useAlert();
 
   useEffect(() => {
     carregarSalas();
@@ -33,15 +36,15 @@ export default function ModalSalas({ salas, setSalas, onClose }) {
 
   function validarEntrada() {
     if (nome.trim() === "" || nome.length < 2) {
-      alert("Por favor, insira um nome válido para a sala.");
+      error("Por favor, insira um nome válido para a sala.");
       return false;
     }
     if (capacidade <= 0 || isNaN(capacidade)) {
-      alert("Por favor, insira uma capacidade válida.");
+      error("Por favor, insira uma capacidade válida.");
       return false;
     }
     if (piso.trim() === "") {
-      alert("Por favor, insira o piso da sala.");
+      error("Por favor, insira o piso da sala.");
       return false;
     }
     return true;
@@ -60,7 +63,7 @@ export default function ModalSalas({ salas, setSalas, onClose }) {
     if (modoOffline) {
       const salaTemp = { ...novaSala, id: Date.now() };
       setSalas((prev) => [...prev, salaTemp]);
-      alert("⚠️ Modo offline: sala adicionada apenas localmente.");
+      showAlert("Sala adicionada apenas localmente (modo offline).", "Modo Offline");
       limparFormulario();
       return;
     }
@@ -77,35 +80,44 @@ export default function ModalSalas({ salas, setSalas, onClose }) {
       const salaCriada = await response.json();
       setSalas((prev) => [...prev, salaCriada]);
       limparFormulario();
-      alert("Sala adicionada com sucesso!");
+      success("Sala adicionada com sucesso!");
+      // Notifica o componente pai que dados foram alterados
+      onDataChange?.();
     } catch (err) {
       console.error("Erro ao adicionar sala:", err);
-      alert("Não foi possível adicionar a sala: " + err.message);
+      error("Não foi possível adicionar a sala: " + err.message);
     }
   }
 
   async function removerSala(id) {
-    if (!window.confirm("Tem certeza que deseja excluir esta sala?")) return;
+    showConfirm(
+      "Esta ação não pode ser desfeita.",
+      async () => {
+        if (modoOffline) {
+          setSalas((prev) => prev.filter((s) => s.id !== id));
+          showAlert("Sala removida apenas localmente (modo offline).", "Modo Offline");
+          return;
+        }
 
-    if (modoOffline) {
-      setSalas((prev) => prev.filter((s) => s.id !== id));
-      alert("⚠️ Modo offline: sala removida apenas localmente.");
-      return;
-    }
+        try {
+          const response = await fetch(`${API_BASE}/salas/${id}`, {
+            method: "DELETE",
+          });
 
-    try {
-      const response = await fetch(`${API_BASE}/salas/${id}`, {
-        method: "DELETE",
-      });
+          if (!response.ok) throw new Error(await response.text());
 
-      if (!response.ok) throw new Error(await response.text());
-
-      setSalas((prev) => prev.filter((s) => s.id !== id));
-      alert("Sala removida com sucesso!");
-    } catch (err) {
-      console.error("Erro ao remover sala:", err);
-      alert("Não foi possível remover a sala: " + err.message);
-    }
+          setSalas((prev) => prev.filter((s) => s.id !== id));
+          success("Sala removida com sucesso!");
+          // Notifica o componente pai que dados foram alterados
+          onDataChange?.();
+        } catch (err) {
+          console.error("Erro ao remover sala:", err);
+          error("Não foi possível remover a sala: " + err.message);
+        }
+      },
+      null,
+      "Excluir sala?"
+    );
   }
 
   function limparFormulario() {
@@ -241,6 +253,17 @@ export default function ModalSalas({ salas, setSalas, onClose }) {
           )}
         </div>
       </div>
+
+      <AlertModal
+        visible={alert.visible}
+        type={alert.type}
+        title={alert.title}
+        message={alert.message}
+        confirmText={alert.confirmText}
+        cancelText={alert.cancelText}
+        onConfirm={alert.onConfirm}
+        onCancel={alert.onCancel}
+      />
     </div>
   );
 }

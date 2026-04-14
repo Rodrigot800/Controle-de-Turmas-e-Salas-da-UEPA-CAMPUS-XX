@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import "../style/modalAlocacao.css";
 import "../style/modal.shared.css";
+import AlertModal from "./AlertModal";
+import { useAlert } from "../hooks/useAlert";
 import API_BASE from "../config/api";
 
 export default function ModalAlocacoes({
@@ -9,6 +11,7 @@ export default function ModalAlocacoes({
   alocacoes,
   setAlocacoes,
   onClose,
+  onDataChange,
 }) {
   const anoAtual = new Date().getFullYear();
   const semestreAtual = new Date().getMonth() < 6 ? 1 : 2;
@@ -24,6 +27,7 @@ export default function ModalAlocacoes({
   const [carregando, setCarregando] = useState(true);
   const [modoOffline, setModoOffline] = useState(false);
   const [pesquisa, setPesquisa] = useState("");
+  const { alert, showAlert, showConfirm, error, success } = useAlert();
 
   useEffect(() => {
     carregarDados();
@@ -63,19 +67,19 @@ export default function ModalAlocacoes({
 
   function validarEntrada() {
     if (!turmaId) {
-      alert("Por favor, selecione uma turma.");
+      error("Por favor, selecione uma turma.");
       return false;
     }
     if (!salaId) {
-      alert("Por favor, selecione uma sala.");
+      error("Por favor, selecione uma sala.");
       return false;
     }
     if (!turno) {
-      alert("Por favor, selecione um turno.");
+      error("Por favor, selecione um turno.");
       return false;
     }
     if (timeAlocacao === "temporario" && !anoTemp) {
-      alert("Informe o ano da alocação temporária.");
+      error("Informe o ano da alocação temporária.");
       return false;
     }
     return true;
@@ -98,7 +102,7 @@ export default function ModalAlocacoes({
     });
 
     if (alocacaoExiste) {
-      alert("Já existe uma alocação para esta sala e turno.");
+      error("Já existe uma alocação para esta sala e turno.");
       return;
     }
 
@@ -123,27 +127,32 @@ export default function ModalAlocacoes({
       const alocacaoCriada = await response.json();
       setAlocacoes((prev) => [...prev, alocacaoCriada]);
       limparFormulario();
-      alert("Alocação adicionada com sucesso!");
+      success("Alocação adicionada com sucesso!");
     } catch (err) {
       console.error("Erro ao adicionar alocação:", err.message);
-      alert("Erro ao adicionar alocação: " + err.message);
+      error("Erro ao adicionar alocação: " + err.message);
     }
   }
 
   async function removerAlocacao(id) {
-    if (!window.confirm("Deseja remover esta alocação?")) return;
-
-    try {
-      const response = await fetch(`${API_BASE}/alocacoes/${id}`, {
-        method: "DELETE",
-      });
-      if (!response.ok) throw new Error(await response.text());
-      setAlocacoes((prev) => prev.filter((a) => a.id !== id));
-      alert("Alocação removida com sucesso!");
-    } catch (err) {
-      console.error("Erro ao remover alocação:", err.message);
-      alert("Não foi possível remover a alocação: " + err.message);
-    }
+    showConfirm(
+      "Esta ação não pode ser desfeita.",
+      async () => {
+        try {
+          const response = await fetch(`${API_BASE}/alocacoes/${id}`, {
+            method: "DELETE",
+          });
+          if (!response.ok) throw new Error(await response.text());
+          setAlocacoes((prev) => prev.filter((a) => a.id !== id));
+          success("Alocação removida com sucesso!");
+        } catch (err) {
+          console.error("Erro ao remover alocação:", err.message);
+          error("Não foi possível remover a alocação: " + err.message);
+        }
+      },
+      null,
+      "Excluir alocação?"
+    );
   }
 
   function limparFormulario() {
@@ -344,6 +353,17 @@ export default function ModalAlocacoes({
           )}
         </div>
       </div>
+
+      <AlertModal
+        visible={alert.visible}
+        type={alert.type}
+        title={alert.title}
+        message={alert.message}
+        confirmText={alert.confirmText}
+        cancelText={alert.cancelText}
+        onConfirm={alert.onConfirm}
+        onCancel={alert.onCancel}
+      />
     </div>
   );
 }

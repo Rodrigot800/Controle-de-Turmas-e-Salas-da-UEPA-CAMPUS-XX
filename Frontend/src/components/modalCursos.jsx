@@ -1,16 +1,18 @@
 import { useState, useEffect } from "react";
 import "../style/modalCursos.css";
 import "../style/modal.shared.css";
-
+import AlertModal from "./AlertModal";
+import { useAlert } from "../hooks/useAlert";
 import API_BASE from "../config/api";
 
-export default function ModalCursos({ cursos, setCursos, onClose }) {
+export default function ModalCursos({ cursos, setCursos, onClose, onDataChange }) {
   const [nome, setNome] = useState("");
   const [vagas, setVagas] = useState(40);
   const [semestres, setSemestres] = useState(8);
   const [carregando, setCarregando] = useState(true);
   const [modoOffline, setModoOffline] = useState(false);
   const [pesquisa, setPesquisa] = useState("");
+  const { alert, showAlert, showConfirm, error, success } = useAlert();
 
   useEffect(() => {
     carregarCursos();
@@ -33,15 +35,15 @@ export default function ModalCursos({ cursos, setCursos, onClose }) {
 
   function validarEntrada() {
     if (nome.trim() === "" || nome.length < 2) {
-      alert("Por favor, insira um nome válido para o curso.");
+      error("Por favor, insira um nome válido para o curso.");
       return false;
     }
     if (vagas <= 0 || isNaN(vagas)) {
-      alert("Por favor, insira uma quantidade válida de vagas.");
+      error("Por favor, insira uma quantidade válida de vagas.");
       return false;
     }
     if (semestres <= 0 || isNaN(semestres)) {
-      alert("Por favor, insira uma quantidade válida de semestres.");
+      error("Por favor, insira uma quantidade válida de semestres.");
       return false;
     }
     return true;
@@ -59,7 +61,7 @@ export default function ModalCursos({ cursos, setCursos, onClose }) {
     if (modoOffline) {
       const cursoTemp = { ...novoCurso, id: Date.now() };
       setCursos((prev) => [...prev, cursoTemp]);
-      alert("⚠️ Modo offline: curso adicionado apenas localmente.");
+      showAlert("Curso adicionado apenas localmente (modo offline).", "Modo Offline");
       limparFormulario();
       return;
     }
@@ -79,35 +81,42 @@ export default function ModalCursos({ cursos, setCursos, onClose }) {
       const cursoCriado = await response.json();
       setCursos((prev) => [...prev, cursoCriado]);
       limparFormulario();
-      alert("Curso adicionado com sucesso!");
+      success("Curso adicionado com sucesso!");
+      onDataChange?.();
     } catch (err) {
       console.error("Erro ao adicionar curso:", err.message);
-      alert("Erro ao adicionar curso: " + err.message);
+      error("Erro ao adicionar curso: " + err.message);
     }
   }
 
   async function removerCurso(id) {
-    if (!window.confirm("Deseja remover este curso?")) return;
+    showConfirm(
+      "Esta ação não pode ser desfeita.",
+      async () => {
+        if (modoOffline) {
+          setCursos((prev) => prev.filter((c) => c.id !== id));
+          showAlert("Curso removido apenas localmente (modo offline).", "Modo Offline");
+          return;
+        }
 
-    if (modoOffline) {
-      setCursos((prev) => prev.filter((c) => c.id !== id));
-      alert("⚠️ Modo offline: curso removido apenas localmente.");
-      return;
-    }
+        try {
+          const response = await fetch(`${API_BASE}/cursos/${id}`, {
+            method: "DELETE",
+          });
 
-    try {
-      const response = await fetch(`${API_BASE}/cursos/${id}`, {
-        method: "DELETE",
-      });
+          if (!response.ok) throw new Error(await response.text());
 
-      if (!response.ok) throw new Error(await response.text());
-
-      setCursos((prev) => prev.filter((c) => c.id !== id));
-      alert("Curso removido com sucesso!");
-    } catch (err) {
-      console.error("Erro ao remover curso:", err.message);
-      alert("Não foi possível remover o curso: " + err.message);
-    }
+          setCursos((prev) => prev.filter((c) => c.id !== id));
+          success("Curso removido com sucesso!");
+          onDataChange?.();
+        } catch (err) {
+          console.error("Erro ao remover curso:", err.message);
+          error("Não foi possível remover o curso: " + err.message);
+        }
+      },
+      null,
+      "Excluir curso?"
+    );
   }
 
   function limparFormulario() {
@@ -229,6 +238,17 @@ export default function ModalCursos({ cursos, setCursos, onClose }) {
           )}
         </div>
       </div>
+
+      <AlertModal
+        visible={alert.visible}
+        type={alert.type}
+        title={alert.title}
+        message={alert.message}
+        confirmText={alert.confirmText}
+        cancelText={alert.cancelText}
+        onConfirm={alert.onConfirm}
+        onCancel={alert.onCancel}
+      />
     </div>
   );
 }

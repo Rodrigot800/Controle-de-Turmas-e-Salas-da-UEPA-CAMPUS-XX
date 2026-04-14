@@ -51,6 +51,36 @@ function App() {
     localStorage.setItem("alocacoes", JSON.stringify(alocacoes));
   }, [alocacoes]);
 
+  // ============================================================
+  // SINCRONIZAÇÃO AUTOMÁTICA: Quando Salas/Turmas/Cursos mudam,
+  // recarrega as alocações removendo referências inválidas
+  // ============================================================
+  useEffect(() => {
+    // Remove alocações órfãs (que referenciam entidades deletadas)
+    const alocacoesValidas = alocacoes.filter((a) => {
+      const turmaMantida = turmas.some((t) => t.id === a.turma_id);
+      const salaMantida = salas.some((s) => s.id === a.sala_id);
+      return turmaMantida && salaMantida;
+    });
+
+    if (alocacoesValidas.length !== alocacoes.length) {
+      setAlocacoes(alocacoesValidas);
+    }
+  }, [salas, turmas]); // Dispara quando salas ou turmas mudam
+
+  // Função auxiliar para recarregar alocações após operações
+  const recarregarAlocacoes = async () => {
+    try {
+      const response = await fetch("http://localhost:3001/alocacoes");
+      if (response.ok) {
+        const data = await response.json();
+        setAlocacoes(data);
+      }
+    } catch (err) {
+      console.error("Erro ao recarregar alocações:", err);
+    }
+  };
+
   return (
     <div className="app-layout">
       <Sidebar menuAtivo={menuAtivo} setMenuAtivo={setMenuAtivo} />
@@ -122,6 +152,7 @@ function App() {
                 salas={salas}
                 setSalas={setSalas}
                 onClose={() => setModalSalasAberto(false)}
+                onDataChange={recarregarAlocacoes}
               />
             )}
 
@@ -130,6 +161,7 @@ function App() {
                 cursos={cursos}
                 setCursos={setCursos}
                 onClose={() => setModalCursosAberto(false)}
+                onDataChange={recarregarAlocacoes}
               />
             )}
 
@@ -139,6 +171,7 @@ function App() {
                 setTurmas={setTurmas}
                 cursos={cursos}
                 onClose={() => setModalTurmasAberto(false)}
+                onDataChange={recarregarAlocacoes}
               />
             )}
 
@@ -149,6 +182,7 @@ function App() {
                 alocacoes={alocacoes}
                 setAlocacoes={setAlocacoes}
                 onClose={() => setModalAlocacoesAberto(false)}
+                onDataChange={recarregarAlocacoes}
               />
             )}
           </>

@@ -1,0 +1,173 @@
+/* FUNDO ESCURO */
+.alert-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.50);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+/* MODAL DE ALERTA */
+.alert-modal {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ÍCONE */
+.alert-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.alert-modal.alert-success .alert-icon {
+    background: #d1fae5;
+    color: #059669;
+}
+
+.alert-modal.alert-error .alert-icon {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.alert-modal.alert-warning .alert-icon {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.alert-modal.alert-info .alert-icon {
+    background: #dbeafe;
+    color: #2563eb;
+}
+
+.alert-modal.alert-confirm .alert-icon {
+    background: #f3e8ff;
+    color: #7c3aed;
+}
+
+/* CONTEÚDO */
+.alert-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.alert-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #111;
+}
+
+.alert-message {
+    margin: 0;
+    font-size: 14px;
+    color: #6b7280;
+    line-height: 1.5;
+}
+
+/* BOTÕES */
+.alert-buttons {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    margin-top: 8px;
+}
+
+.btn-ok,
+.btn-confirm,
+.btn-cancel {
+    flex: 1;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    outline: none;
+}
+
+.btn-ok {
+    background: #2563eb;
+    color: white;
+}
+
+.btn-ok:hover {
+    background: #1e40af;
+}
+
+.btn-ok.btn-success {
+    background: #059669;
+}
+
+.btn-ok.btn-success:hover {
+    background: #047857;
+}
+
+.btn-ok.btn-error {
+    background: #dc2626;
+}
+
+.btn-ok.btn-error:hover {
+    background: #b91c1c;
+}
+
+.btn-ok.btn-warning {
+    background: #d97706;
+}
+
+.btn-ok.btn-warning:hover {
+    background: #b45309;
+}
+
+.btn-confirm {
+    background: #2563eb;
+    color: white;
+}
+
+.btn-confirm:hover {
+    background: #1e40af;
+}
+
+.btn-cancel {
+    background: #f3f4f6;
+    color: #6b7280;
+    border: 1px solid #d1d5db;
+}
+
+.btn-cancel:hover {
+    background: #e5e7eb;
+    color: #111;
+}

@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import "../style/modalTurmas.css";
 import "../style/modal.shared.css";
-
+import AlertModal from "./AlertModal";
+import { useAlert } from "../hooks/useAlert";
 import API_BASE from "../config/api";
 
-export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
+export default function ModalTurmas({ turmas, setTurmas, cursos, onClose, onDataChange }) {
   const [nome, setNome] = useState("");
   const [cursoId, setCursoId] = useState("");
   const [turno, setTurno] = useState("");
@@ -13,6 +14,7 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
   const [carregando, setCarregando] = useState(true);
   const [modoOffline, setModoOffline] = useState(false);
   const [pesquisa, setPesquisa] = useState("");
+  const { alert, showAlert, showConfirm, error, success } = useAlert();
 
   useEffect(() => {
     carregarTurmas();
@@ -35,23 +37,23 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
 
   function validarEntrada() {
     if (!nome || nome.trim().length < 2) {
-      alert("Por favor, insira um nome válido para a turma.");
+      error("Por favor, insira um nome válido para a turma.");
       return false;
     }
     if (!cursoId) {
-      alert("Por favor, selecione um curso.");
+      error("Por favor, selecione um curso.");
       return false;
     }
     if (!turno) {
-      alert("Por favor, selecione um turno.");
+      error("Por favor, selecione um turno.");
       return false;
     }
     if (semestreInicio !== 1 && semestreInicio !== 2) {
-      alert("Por favor, selecione um semestre válido (1º ou 2º).");
+      error("Por favor, selecione um semestre válido (1º ou 2º).");
       return false;
     }
     if (!anoInicio || anoInicio < 2000 || anoInicio > new Date().getFullYear() + 5) {
-      alert("Por favor, insira um ano de início válido.");
+      error("Por favor, insira um ano de início válido.");
       return false;
     }
     return true;
@@ -71,7 +73,7 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
     if (modoOffline) {
       const turmaTemp = { ...novaTurma, id: Date.now(), curso_id: novaTurma.cursoId, ano_inicio: novaTurma.anoInicio, semestre_inicio: novaTurma.semestreInicio };
       setTurmas((prev) => [...prev, turmaTemp]);
-      alert("⚠️ Modo offline: turma adicionada apenas localmente.");
+      showAlert("Turma adicionada apenas localmente (modo offline).", "Modo Offline");
       limparFormulario();
       return;
     }
@@ -88,35 +90,42 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
       const turmaCriada = await response.json();
       setTurmas((prev) => [...prev, turmaCriada]);
       limparFormulario();
-      alert("Turma adicionada com sucesso!");
+      success("Turma adicionada com sucesso!");
+      onDataChange?.();
     } catch (err) {
       console.error("Erro ao adicionar turma:", err.message);
-      alert("Erro ao adicionar turma: " + err.message);
+      error("Erro ao adicionar turma: " + err.message);
     }
   }
 
   async function removerTurma(id) {
-    if (!window.confirm("Deseja remover esta turma?")) return;
+    showConfirm(
+      "Esta ação não pode ser desfeita.",
+      async () => {
+        if (modoOffline) {
+          setTurmas((prev) => prev.filter((t) => t.id !== id));
+          showAlert("Turma removida apenas localmente (modo offline).", "Modo Offline");
+          return;
+        }
 
-    if (modoOffline) {
-      setTurmas((prev) => prev.filter((t) => t.id !== id));
-      alert("⚠️ Modo offline: turma removida apenas localmente.");
-      return;
-    }
+        try {
+          const response = await fetch(`${API_BASE}/turmas/${id}`, {
+            method: "DELETE",
+          });
 
-    try {
-      const response = await fetch(`${API_BASE}/turmas/${id}`, {
-        method: "DELETE",
-      });
+          if (!response.ok) throw new Error(await response.text());
 
-      if (!response.ok) throw new Error(await response.text());
-
-      setTurmas((prev) => prev.filter((t) => t.id !== id));
-      alert("Turma removida com sucesso!");
-    } catch (err) {
-      console.error("Erro ao remover turma:", err.message);
-      alert("Não foi possível remover a turma: " + err.message);
-    }
+          setTurmas((prev) => prev.filter((t) => t.id !== id));
+          success("Turma removida com sucesso!");
+          onDataChange?.();
+        } catch (err) {
+          console.error("Erro ao remover turma:", err.message);
+          error("Não foi possível remover a turma: " + err.message);
+        }
+      },
+      null,
+      "Excluir turma?"
+    );
   }
 
   function limparFormulario() {
@@ -275,6 +284,17 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
           )}
         </div>
       </div>
+
+      <AlertModal
+        visible={alert.visible}
+        type={alert.type}
+        title={alert.title}
+        message={alert.message}
+        confirmText={alert.confirmText}
+        cancelText={alert.cancelText}
+        onConfirm={alert.onConfirm}
+        onCancel={alert.onCancel}
+      />
     </div>
   );
 }
