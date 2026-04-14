@@ -23,7 +23,29 @@
     display: flex;
     flex-direction: column;
     overflow-y: auto;
+    overflow-x: hidden;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    scrollbar-width: thin;
+    scrollbar-color: #d1d5db #f9fafb;
+}
+
+.modal::-webkit-scrollbar {
+    width: 6px;
+}
+
+.modal::-webkit-scrollbar-track {
+    background: #f9fafb;
+    border-radius: 10px;
+}
+
+.modal::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 6px;
+    border: 2px solid #f9fafb;
+}
+
+.modal::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
 }
 
 /* HEADER */
@@ -192,27 +214,44 @@
 /* LISTAS E TABELAS */
 .lista-turmas,
 .lista-cursos,
-.lista-alocacoes {
+.lista-alocacoes,
+.lista-salas {
     list-style: none;
     padding: 0;
-    margin: 0;
-    max-height: 400px;
-    overflow-y: auto;
+    margin: 0 -16px;
+    width: calc(100% + 32px);
 }
 
 .item-turma,
 .item-curso,
-.item-alocacao {
+.item-alocacao,
+.item-sala {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 0;
-    border-bottom: 1px solid #f5f5f5;
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.15s ease;
+}
+
+.item-turma:nth-child(even),
+.item-curso:nth-child(even),
+.item-alocacao:nth-child(even),
+.item-sala:nth-child(even) {
+    background: #f9fafb;
+}
+
+.item-turma:hover,
+.item-curso:hover,
+.item-alocacao:hover,
+.item-sala:hover {
+    background: #eff6ff !important;
 }
 
 .item-turma:last-child,
 .item-curso:last-child,
-.item-alocacao:last-child {
+.item-alocacao:last-child,
+.item-sala:last-child {
     border-bottom: none;
 }
 
@@ -276,7 +315,6 @@
 
 /* TABELAS */
 .table-container {
-    overflow-x: auto;
     margin: 0;
 }
 
@@ -288,31 +326,55 @@
     font-size: 13px;
 }
 
+.table-salas thead,
+.table-turmas thead,
+.table-cursos thead {
+    background: #fafafa;
+}
+
 .table-salas th,
 .table-turmas th,
 .table-cursos th {
     text-align: left;
-    padding: 8px 10px;
-    color: #9ca3af;
+    padding: 12px 10px;
+    color: #6b7280;
     font-weight: 600;
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.table-salas tbody tr,
+.table-turmas tbody tr,
+.table-cursos tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+.table-salas tbody tr:nth-child(odd),
+.table-turmas tbody tr:nth-child(odd),
+.table-cursos tbody tr:nth-child(odd) {
+    background: #ffffff;
+}
+
+.table-salas tbody tr:nth-child(even),
+.table-turmas tbody tr:nth-child(even),
+.table-cursos tbody tr:nth-child(even) {
+    background: #f9fafb;
 }
 
 .table-salas td,
 .table-turmas td,
 .table-cursos td {
-    padding: 10px;
-    border-bottom: 1px solid #f5f5f5;
+    padding: 12px 10px;
+    border-bottom: 1px solid #f0f0f0;
     color: #111;
 }
 
-.table-salas tr:hover td,
-.table-turmas tr:hover td,
-.table-cursos tr:hover td {
-    background: #fafafa;
+.table-salas tbody tr:hover,
+.table-turmas tbody tr:hover,
+.table-cursos tbody tr:hover {
+    background: #eff6ff !important;
 }
 
 .tag {

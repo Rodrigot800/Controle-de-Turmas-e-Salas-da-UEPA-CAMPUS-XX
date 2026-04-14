@@ -208,50 +208,37 @@ export default function ModalSalas({ salas, setSalas, onClose }) {
             </div>
           )}
 
-          {/* Tabela */}
-          <div className="table-container">
-            {carregando ? (
-              <p className="tabela-feedback">Carregando salas...</p>
-            ) : salas.length === 0 ? (
-              <p className="tabela-feedback">Nenhuma sala cadastrada.</p>
-            ) : salasFiltradas.length === 0 ? (
-              <p className="tabela-feedback">Nenhuma sala encontrada.</p>
-            ) : (
-              <table className="table-salas">
-                <thead>
-                  <tr>
-                    <th>Nome</th>
-                    <th>Cap.</th>
-                    <th>Piso</th>
-                    <th>Tipo</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {salasFiltradas.map((sala) => (
-                    <tr key={sala.id}>
-                      <td>{sala.nome}</td>
-                      <td>{sala.capacidade}</td>
-                      <td>{sala.piso}</td>
-                      <td>
-                        <span className={`tag ${sala.tipoSala}`}>
-                          {sala.tipoSala}
-                        </span>
-                      </td>
-                      <td>
-                        <button
-                          className="btn-delete"
-                          onClick={() => removerSala(sala.id)}
-                        >
-                          Excluir
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
+          {/* Lista */}
+          {carregando ? (
+            <p className="lista-feedback">Carregando salas...</p>
+          ) : salas.length === 0 ? (
+            <p className="lista-feedback">Nenhuma sala cadastrada.</p>
+          ) : salasFiltradas.length === 0 ? (
+            <p className="lista-feedback">Nenhuma sala encontrada.</p>
+          ) : (
+            <ul className="lista-salas">
+              {salasFiltradas.map((sala) => (
+                <li key={sala.id} className="item-sala">
+                  <div className="item-info">
+                    <span className="item-nome">{sala.nome}</span>
+                    <div className="item-meta">
+                      <span className="pill capacidade">{sala.capacidade} lugares</span>
+                      <span className="pill piso">{sala.piso}</span>
+                      <span className={`tag ${sala.tipoSala}`}>
+                        {sala.tipoSala}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    className="btn-delete"
+                    onClick={() => removerSala(sala.id)}
+                  >
+                    Excluir
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
     </div>
