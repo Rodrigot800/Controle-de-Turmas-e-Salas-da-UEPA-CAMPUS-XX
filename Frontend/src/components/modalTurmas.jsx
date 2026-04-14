@@ -12,6 +12,7 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
   const [anoInicio, setAnoInicio] = useState(new Date().getFullYear());
   const [carregando, setCarregando] = useState(true);
   const [modoOffline, setModoOffline] = useState(false);
+  const [pesquisa, setPesquisa] = useState("");
 
   useEffect(() => {
     carregarTurmas();
@@ -131,6 +132,12 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
     return curso ? curso.nome : "—";
   }
 
+  const turmasFiltradas = turmas.filter((turma) =>
+    turma.nome.toLowerCase().includes(pesquisa.toLowerCase()) ||
+    nomeCurso(turma.curso_id).toLowerCase().includes(pesquisa.toLowerCase()) ||
+    turma.turno.toLowerCase().includes(pesquisa.toLowerCase())
+  );
+
   return (
     <div className="modal-backdrop">
       <div className="modal modal-turmas">
@@ -220,14 +227,29 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
 
           <div className="modal-divider" />
 
+          {/* Barra de pesquisa */}
+          {turmas.length > 0 && (
+            <div className="search-box">
+              <input
+                type="text"
+                placeholder="Pesquisar turmas..."
+                value={pesquisa}
+                onChange={(e) => setPesquisa(e.target.value)}
+                className="search-input"
+              />
+            </div>
+          )}
+
           {/* Lista */}
           {carregando ? (
             <p className="lista-feedback">Carregando turmas...</p>
           ) : turmas.length === 0 ? (
             <p className="lista-feedback">Nenhuma turma cadastrada.</p>
+          ) : turmasFiltradas.length === 0 ? (
+            <p className="lista-feedback">Nenhuma turma encontrada.</p>
           ) : (
             <ul className="lista-turmas">
-              {turmas.map((turma) => (
+              {turmasFiltradas.map((turma) => (
                 <li key={turma.id} className="item-turma">
                   <div className="item-info">
                     <span className="item-nome">{turma.nome}</span>

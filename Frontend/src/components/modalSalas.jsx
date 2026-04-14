@@ -10,6 +10,7 @@ export default function ModalSalas({ salas, setSalas, onClose }) {
   const [piso, setPiso] = useState("térreo");
   const [carregando, setCarregando] = useState(true);
   const [modoOffline, setModoOffline] = useState(false);
+  const [pesquisa, setPesquisa] = useState("");
 
   useEffect(() => {
     carregarSalas();
@@ -114,6 +115,12 @@ export default function ModalSalas({ salas, setSalas, onClose }) {
     setPiso("térreo");
   }
 
+  const salasFiltradas = salas.filter((sala) =>
+    sala.nome.toLowerCase().includes(pesquisa.toLowerCase()) ||
+    sala.piso.toLowerCase().includes(pesquisa.toLowerCase()) ||
+    sala.tipoSala.toLowerCase().includes(pesquisa.toLowerCase())
+  );
+
   return (
     <div className="modal-backdrop">
       <div className="modal">
@@ -188,12 +195,27 @@ export default function ModalSalas({ salas, setSalas, onClose }) {
 
           <div className="modal-divider" />
 
+          {/* Barra de pesquisa */}
+          {salas.length > 0 && (
+            <div className="search-box">
+              <input
+                type="text"
+                placeholder="Pesquisar salas..."
+                value={pesquisa}
+                onChange={(e) => setPesquisa(e.target.value)}
+                className="search-input"
+              />
+            </div>
+          )}
+
           {/* Tabela */}
           <div className="table-container">
             {carregando ? (
               <p className="tabela-feedback">Carregando salas...</p>
             ) : salas.length === 0 ? (
               <p className="tabela-feedback">Nenhuma sala cadastrada.</p>
+            ) : salasFiltradas.length === 0 ? (
+              <p className="tabela-feedback">Nenhuma sala encontrada.</p>
             ) : (
               <table className="table-salas">
                 <thead>
@@ -206,7 +228,7 @@ export default function ModalSalas({ salas, setSalas, onClose }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {salas.map((sala) => (
+                  {salasFiltradas.map((sala) => (
                     <tr key={sala.id}>
                       <td>{sala.nome}</td>
                       <td>{sala.capacidade}</td>

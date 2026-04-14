@@ -10,6 +10,7 @@ export default function ModalCursos({ cursos, setCursos, onClose }) {
   const [semestres, setSemestres] = useState(8);
   const [carregando, setCarregando] = useState(true);
   const [modoOffline, setModoOffline] = useState(false);
+  const [pesquisa, setPesquisa] = useState("");
 
   useEffect(() => {
     carregarCursos();
@@ -115,6 +116,10 @@ export default function ModalCursos({ cursos, setCursos, onClose }) {
     setSemestres(8);
   }
 
+  const cursosFiltrados = cursos.filter((curso) =>
+    curso.nome.toLowerCase().includes(pesquisa.toLowerCase())
+  );
+
   return (
     <div className="modal-backdrop">
       <div className="modal">
@@ -179,14 +184,29 @@ export default function ModalCursos({ cursos, setCursos, onClose }) {
 
           <div className="modal-divider" />
 
+          {/* Barra de pesquisa */}
+          {cursos.length > 0 && (
+            <div className="search-box">
+              <input
+                type="text"
+                placeholder="Pesquisar cursos..."
+                value={pesquisa}
+                onChange={(e) => setPesquisa(e.target.value)}
+                className="search-input"
+              />
+            </div>
+          )}
+
           {/* Lista */}
           {carregando ? (
             <p className="lista-feedback">Carregando cursos...</p>
           ) : cursos.length === 0 ? (
             <p className="lista-feedback">Nenhum curso cadastrado.</p>
+          ) : cursosFiltrados.length === 0 ? (
+            <p className="lista-feedback">Nenhum curso encontrado.</p>
           ) : (
             <ul className="lista-cursos">
-              {cursos.map((curso) => (
+              {cursosFiltrados.map((curso) => (
                 <li key={curso.id} className="item-curso">
                   <div className="item-info">
                     <span className="item-nome">{curso.nome}</span>

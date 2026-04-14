@@ -167,6 +167,28 @@
     margin: 16px 0;
 }
 
+/* BARRA DE PESQUISA */
+.search-box {
+    margin-bottom: 16px;
+}
+
+.search-input {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 14px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    background: #f9fafb;
+    transition: all 0.2s ease;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #2563eb;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
 /* LISTAS E TABELAS */
 .lista-turmas,
 .lista-cursos,
