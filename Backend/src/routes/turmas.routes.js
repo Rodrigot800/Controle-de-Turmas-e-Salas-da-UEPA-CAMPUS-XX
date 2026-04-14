@@ -79,4 +79,37 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+// ===========================
+// Editar turma por ID
+// ===========================
+router.put("/:id", async (req, res) => {
+  const { id } = req.params;
+  const { nome, cursoId, semestreInicio, anoInicio, turno } = req.body;
+
+  if (!nome || !cursoId || !semestreInicio || !anoInicio || !turno) {
+    return res.status(400).json({
+      erro: "Campos nome, cursoId, semestreInicio, anoInicio e turno são obrigatórios",
+    });
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE turmas 
+       SET nome = $1, curso_id = $2, semestre_inicio = $3, ano_inicio = $4, turno = $5 
+       WHERE id = $6 
+       RETURNING *`,
+      [nome, Number(cursoId), Number(semestreInicio), Number(anoInicio), turno, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ erro: "Turma não encontrada" });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("Erro ao editar turma:", err.message);
+    res.status(500).json({ erro: "Erro ao editar turma" });
+  }
+});
+
 module.exports = router;

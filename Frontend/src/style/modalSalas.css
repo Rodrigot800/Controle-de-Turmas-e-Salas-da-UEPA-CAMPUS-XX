@@ -3,3 +3,71 @@
 .modal {
     width: 560px;
 }
+
+/* Banner de modo edição */
+.edit-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 13px;
+    color: #1d4ed8;
+    margin-bottom: 1rem;
+}
+
+.edit-banner-cancel {
+    background: none;
+    border: none;
+    font-size: 12px;
+    color: #1d4ed8;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0;
+}
+
+.edit-banner-cancel:hover {
+    color: #1e40af;
+}
+
+/* Botão salvar (destaque azul) */
+.btn-save {
+    background: #1d4ed8 !important;
+}
+
+.btn-save:hover {
+    background: #1e40af !important;
+}
+
+/* Ações lado a lado */
+.item-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+/* Botão editar */
+.btn-edit {
+    background: none;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 3px 10px;
+    font-size: 12px;
+    color: #6b7280;
+    cursor: pointer;
+}
+
+.btn-edit:hover {
+    border-color: #1d4ed8;
+    color: #1d4ed8;
+}
+
+/* Destaque na linha sendo editada */
+.item-editando {
+    background: #eff6ff;
+    border-radius: 8px;
+    padding-left: 8px;
+    padding-right: 8px;
+}

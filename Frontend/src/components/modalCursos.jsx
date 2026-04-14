@@ -10,6 +10,10 @@ export default function ModalCursos({ cursos, setCursos, onClose }) {
   const [vagas, setVagas] = useState(40);
   const [semestres, setSemestres] = useState(8);
   const [pesquisa, setPesquisa] = useState("");
+
+  // Estados de edição
+  const [editandoId, setEditandoId] = useState(null);
+
   const { alert, showAlert, showConfirm, error, success } = useAlert();
 
   function validarEntrada() {
@@ -28,8 +32,63 @@ export default function ModalCursos({ cursos, setCursos, onClose }) {
     return true;
   }
 
+  // Preenche o formulário com os dados do curso e entra em modo edição
+  function iniciarEdicao(curso) {
+    setEditandoId(curso.id);
+    setNome(curso.nome);
+    setVagas(curso.vagas);
+    setSemestres(curso.semestres);
+    // Scroll suave pro topo do formulário
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function cancelarEdicao() {
+    setEditandoId(null);
+    limparFormulario();
+  }
+
+  async function salvarEdicao() {
+    if (!validarEntrada()) return;
+
+    const cursoAtualizado = {
+      nome: nome.trim(),
+      vagas: Number(vagas),
+      semestres: Number(semestres),
+    };
+
+    try {
+      const response = await fetch(`${API_BASE}/cursos/${editandoId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(cursoAtualizado),
+      });
+
+      if (!response.ok) throw new Error(await response.text());
+
+      const cursoEditado = await response.json();
+
+      // Substitui o curso antigo pelo editado no estado
+      setCursos((prev) =>
+        prev.map((c) => (c.id === editandoId ? cursoEditado : c)),
+      );
+
+      setEditandoId(null);
+      limparFormulario();
+      success("Curso atualizado com sucesso!");
+    } catch (err) {
+      console.error("Erro ao editar curso:", err);
+      error("Não foi possível editar o curso: " + err.message);
+    }
+  }
+
   async function adicionarCurso() {
     if (!validarEntrada()) return;
+
+    // Se está editando, salva a edição em vez de adicionar
+    if (editandoId) {
+      salvarEdicao();
+      return;
+    }
 
     const novoCurso = {
       nome: nome.trim(),
@@ -97,16 +156,25 @@ export default function ModalCursos({ cursos, setCursos, onClose }) {
       <div className="modal">
         {/* Header */}
         <div className="modal-header">
-          <h2>Gerenciar cursos</h2>
-          <div className="header-right">
+          <div className="modal-header-left">
+            <h2>{editandoId ? "Editar curso" : "Gerenciar cursos"}</h2>
             <span className="modal-badge">{cursos.length} cadastrados</span>
-            <button className="btn-close-icon" onClick={onClose}>
-              ×
-            </button>
           </div>
+          <button className="btn-close-icon" onClick={onClose}>
+            ×
+          </button>
         </div>
 
         <div className="modal-body">
+          {/* Banner de modo edição */}
+          {editandoId && (
+            <div className="edit-banner">
+              <span>Editando curso — preencha os campos e salve</span>
+              <button className="edit-banner-cancel" onClick={cancelarEdicao}>
+                Cancelar
+              </button>
+            </div>
+          )}
           {/* Formulário */}
           <div className="form-grid">
             <div className="form-group full">
@@ -142,9 +210,16 @@ export default function ModalCursos({ cursos, setCursos, onClose }) {
             </div>
           </div>
 
-          <button className="btn-primary" onClick={adicionarCurso}>
-            + Adicionar curso
-          </button>
+          {/* Botão muda conforme o modo */}
+          {editandoId ? (
+            <button className="btn-primary btn-save" onClick={salvarEdicao}>
+              Salvar alterações
+            </button>
+          ) : (
+            <button className="btn-primary" onClick={adicionarCurso}>
+              + Adicionar curso
+            </button>
+          )}
 
           <div className="modal-divider" />
 
@@ -169,7 +244,10 @@ export default function ModalCursos({ cursos, setCursos, onClose }) {
           ) : (
             <ul className="lista-cursos">
               {cursosFiltrados.map((curso) => (
-                <li key={curso.id} className="item-curso">
+                <li
+                  key={curso.id}
+                  className={`item-curso ${editandoId === curso.id ? "item-editando" : ""}`}
+                >
                   <div className="item-info">
                     <span className="item-nome">{curso.nome}</span>
                     <div className="item-meta">
@@ -179,12 +257,20 @@ export default function ModalCursos({ cursos, setCursos, onClose }) {
                       </span>
                     </div>
                   </div>
-                  <button
-                    className="btn-delete"
-                    onClick={() => removerCurso(curso.id)}
-                  >
-                    Excluir
-                  </button>
+                  <div className="item-actions">
+                    <button
+                      className="btn-edit"
+                      onClick={() => iniciarEdicao(curso)}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      className="btn-delete"
+                      onClick={() => removerCurso(curso.id)}
+                    >
+                      Excluir
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>

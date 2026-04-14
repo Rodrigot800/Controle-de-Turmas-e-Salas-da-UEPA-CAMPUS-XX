@@ -74,4 +74,37 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+// ===========================
+// Editar curso por ID
+// ===========================
+router.put("/:id", async (req, res) => {
+  const { id } = req.params;
+  const { nome, vagas, semestres } = req.body;
+
+  if (!nome || !vagas || !semestres) {
+    return res.status(400).json({
+      erro: "Campos nome, vagas e semestres são obrigatórios",
+    });
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE cursos 
+       SET nome = $1, vagas = $2, semestres = $3 
+       WHERE id = $4 
+       RETURNING *`,
+      [nome, Number(vagas), Number(semestres), id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ erro: "Curso não encontrado" });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("Erro ao editar curso:", err.message);
+    res.status(500).json({ erro: "Erro ao editar curso" });
+  }
+});
+
 module.exports = router;

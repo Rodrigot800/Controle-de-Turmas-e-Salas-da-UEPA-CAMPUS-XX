@@ -22,6 +22,10 @@ export default function ModalAlocacoes({
   const [anoTemp, setAnoTemp] = useState(anoAtual);
   const [semestreTemp, setSemestreTemp] = useState(semestreAtual);
   const [pesquisa, setPesquisa] = useState("");
+
+  // Estados de edição
+  const [editandoId, setEditandoId] = useState(null);
+
   const { alert, showAlert, showConfirm, error, success } = useAlert();
 
   function selecionarTurma(id) {
@@ -50,24 +54,67 @@ export default function ModalAlocacoes({
     return true;
   }
 
+  // Preenche o formulário com os dados da alocação e entra em modo edição
+  function iniciarEdicao(alocacao) {
+    setEditandoId(alocacao.id);
+    setTurmaId(alocacao.turma_id);
+    setSalaId(alocacao.sala_id);
+    setTurno(alocacao.turno);
+    setTimeAlocacao(alocacao.time_alocacao);
+    setAnoTemp(alocacao.ano_temp || anoAtual);
+    setSemestreTemp(alocacao.semestre_temp || semestreAtual);
+    // Scroll suave pro topo do formulário
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function cancelarEdicao() {
+    setEditandoId(null);
+    limparFormulario();
+  }
+
+  async function salvarEdicao() {
+    if (!validarEntrada()) return;
+
+    const alocacaoAtualizada = {
+      turmaId: Number(turmaId),
+      salaId: Number(salaId),
+      turno,
+      timeAlocacao,
+      anoTemp: timeAlocacao === "temporario" ? Number(anoTemp) : null,
+      semestreTemp: timeAlocacao === "temporario" ? Number(semestreTemp) : null,
+    };
+
+    try {
+      const response = await fetch(`${API_BASE}/alocacoes/${editandoId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(alocacaoAtualizada),
+      });
+
+      if (!response.ok) throw new Error(await response.text());
+
+      const alocacaoEditada = await response.json();
+
+      // Substitui a alocação antiga pela editada no estado
+      setAlocacoes((prev) =>
+        prev.map((a) => (a.id === editandoId ? alocacaoEditada : a)),
+      );
+
+      setEditandoId(null);
+      limparFormulario();
+      success("Alocação atualizada com sucesso!");
+    } catch (err) {
+      console.error("Erro ao editar alocação:", err);
+      error("Não foi possível editar a alocação: " + err.message);
+    }
+  }
+
   async function adicionarAlocacao() {
     if (!validarEntrada()) return;
 
-    const alocacaoExiste = alocacoes.some((a) => {
-      if (Number(a.sala_id) !== Number(salaId) || a.turno !== turno)
-        return false;
-      if (a.time_alocacao === "definitivo") return true;
-      if (timeAlocacao === "temporario" && a.time_alocacao === "temporario") {
-        return (
-          Number(a.ano_temp) === Number(anoTemp) &&
-          Number(a.semestre_temp) === Number(semestreTemp)
-        );
-      }
-      return false;
-    });
-
-    if (alocacaoExiste) {
-      error("Já existe uma alocação para esta sala e turno.");
+    // Se está editando, salva a edição em vez de adicionar
+    if (editandoId) {
+      salvarEdicao();
       return;
     }
 
@@ -156,16 +203,25 @@ export default function ModalAlocacoes({
       <div className="modal">
         {/* Header */}
         <div className="modal-header">
-          <h2>Alocar turma em sala</h2>
-          <div className="header-right">
+          <div className="modal-header-left">
+            <h2>{editandoId ? "Editar alocação" : "Alocar turma em sala"}</h2>
             <span className="modal-badge">{alocacoes.length} alocações</span>
-            <button className="btn-close-icon" onClick={onClose}>
-              ×
-            </button>
           </div>
+          <button className="btn-close-icon" onClick={onClose}>
+            ×
+          </button>
         </div>
 
         <div className="modal-body">
+          {/* Banner de modo edição */}
+          {editandoId && (
+            <div className="edit-banner">
+              <span>Editando alocação — preencha os campos e salve</span>
+              <button className="edit-banner-cancel" onClick={cancelarEdicao}>
+                Cancelar
+              </button>
+            </div>
+          )}
           {/* Formulário */}
           <div className="form-grid">
             <div className="form-group full">
@@ -244,9 +300,16 @@ export default function ModalAlocacoes({
             )}
           </div>
 
-          <button className="btn-primary" onClick={adicionarAlocacao}>
-            + Alocar turma
-          </button>
+          {/* Botão muda conforme o modo */}
+          {editandoId ? (
+            <button className="btn-primary btn-save" onClick={salvarEdicao}>
+              Salvar alterações
+            </button>
+          ) : (
+            <button className="btn-primary" onClick={adicionarAlocacao}>
+              + Alocar turma
+            </button>
+          )}
 
           <div className="modal-divider" />
 
@@ -274,7 +337,10 @@ export default function ModalAlocacoes({
                 const turma = turmas.find((t) => t.id === a.turma_id);
 
                 return (
-                  <li key={a.id} className="item-alocacao">
+                  <li
+                    key={a.id}
+                    className={`item-alocacao ${editandoId === a.id ? "item-editando" : ""}`}
+                  >
                     <div className="item-info">
                       <span className="item-nome">
                         {nomeTurma(a.turma_id)} ({turma?.ano_inicio || "N/A"})
@@ -295,12 +361,20 @@ export default function ModalAlocacoes({
                       </div>
                     </div>
 
-                    <button
-                      className="btn-delete"
-                      onClick={() => removerAlocacao(a.id)}
-                    >
-                      Excluir
-                    </button>
+                    <div className="item-actions">
+                      <button
+                        className="btn-edit"
+                        onClick={() => iniciarEdicao(a)}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        className="btn-delete"
+                        onClick={() => removerAlocacao(a.id)}
+                      >
+                        Excluir
+                      </button>
+                    </div>
                   </li>
                 );
               })}

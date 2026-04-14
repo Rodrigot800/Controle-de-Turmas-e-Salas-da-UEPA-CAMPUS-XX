@@ -12,6 +12,10 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
   const [semestreInicio, setSemestreInicio] = useState(1);
   const [anoInicio, setAnoInicio] = useState(new Date().getFullYear());
   const [pesquisa, setPesquisa] = useState("");
+
+  // Estados de edição
+  const [editandoId, setEditandoId] = useState(null);
+
   const { alert, showAlert, showConfirm, error, success } = useAlert();
 
   function validarEntrada() {
@@ -38,8 +42,67 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
     return true;
   }
 
+  // Preenche o formulário com os dados da turma e entra em modo edição
+  function iniciarEdicao(turma) {
+    setEditandoId(turma.id);
+    setNome(turma.nome);
+    setCursoId(turma.curso_id);
+    setTurno(turma.turno);
+    setSemestreInicio(turma.semestre_inicio);
+    setAnoInicio(turma.ano_inicio);
+    // Scroll suave pro topo do formulário
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function cancelarEdicao() {
+    setEditandoId(null);
+    limparFormulario();
+  }
+
+  async function salvarEdicao() {
+    if (!validarEntrada()) return;
+
+    const turmaAtualizada = {
+      nome: nome.trim(),
+      cursoId: Number(cursoId),
+      semestreInicio: Number(semestreInicio),
+      anoInicio: Number(anoInicio),
+      turno,
+    };
+
+    try {
+      const response = await fetch(`${API_BASE}/turmas/${editandoId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(turmaAtualizada),
+      });
+
+      if (!response.ok) throw new Error(await response.text());
+
+      const turmaEditada = await response.json();
+
+      // Substitui a turma antiga pela editada no estado
+      setTurmas((prev) =>
+        prev.map((t) => (t.id === editandoId ? turmaEditada : t)),
+      );
+
+      setEditandoId(null);
+      limparFormulario();
+      success("Turma atualizada com sucesso!");
+    } catch (err) {
+      console.error("Erro ao editar turma:", err);
+      error("Não foi possível editar a turma: " + err.message);
+    }
+  }
+
   async function adicionarTurma() {
     if (!validarEntrada()) return;
+
+    // Se está editando, salva a edição em vez de adicionar
+    if (editandoId) {
+      salvarEdicao();
+      return;
+    }
 
     const novaTurma = {
       nome: nome.trim(),
@@ -115,16 +178,25 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
       <div className="modal modal-turmas">
         {/* Header */}
         <div className="modal-header">
-          <h2>Gerenciar turmas</h2>
-          <div className="header-right">
+          <div className="modal-header-left">
+            <h2>{editandoId ? "Editar turma" : "Gerenciar turmas"}</h2>
             <span className="modal-badge">{turmas.length} cadastradas</span>
-            <button className="btn-close-icon" onClick={onClose}>
-              ×
-            </button>
           </div>
+          <button className="btn-close-icon" onClick={onClose}>
+            ×
+          </button>
         </div>
 
         <div className="modal-body">
+          {/* Banner de modo edição */}
+          {editandoId && (
+            <div className="edit-banner">
+              <span>Editando turma — preencha os campos e salve</span>
+              <button className="edit-banner-cancel" onClick={cancelarEdicao}>
+                Cancelar
+              </button>
+            </div>
+          )}
 
           {/* Formulário */}
           <div className="form-grid">
@@ -186,9 +258,16 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
             </div>
           </div>
 
-          <button className="btn-primary" onClick={adicionarTurma}>
-            + Adicionar turma
-          </button>
+          {/* Botão muda conforme o modo */}
+          {editandoId ? (
+            <button className="btn-primary btn-save" onClick={salvarEdicao}>
+              Salvar alterações
+            </button>
+          ) : (
+            <button className="btn-primary" onClick={adicionarTurma}>
+              + Adicionar turma
+            </button>
+          )}
 
           <div className="modal-divider" />
 
@@ -213,7 +292,10 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
           ) : (
             <ul className="lista-turmas">
               {turmasFiltradas.map((turma) => (
-                <li key={turma.id} className="item-turma">
+                <li
+                  key={turma.id}
+                  className={`item-turma ${editandoId === turma.id ? "item-editando" : ""}`}
+                >
                   <div className="item-info">
                     <span className="item-nome">{turma.nome}</span>
                     <div className="item-meta">
@@ -226,12 +308,20 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
                       </span>
                     </div>
                   </div>
-                  <button
-                    className="btn-delete"
-                    onClick={() => removerTurma(turma.id)}
-                  >
-                    Excluir
-                  </button>
+                  <div className="item-actions">
+                    <button
+                      className="btn-edit"
+                      onClick={() => iniciarEdicao(turma)}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      className="btn-delete"
+                      onClick={() => removerTurma(turma.id)}
+                    >
+                      Excluir
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>

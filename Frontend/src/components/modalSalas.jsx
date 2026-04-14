@@ -11,6 +11,10 @@ export default function ModalSalas({ salas, setSalas, onClose }) {
   const [capacidade, setCapacidade] = useState(30);
   const [piso, setPiso] = useState("térreo");
   const [pesquisa, setPesquisa] = useState("");
+
+  // Estados de edição
+  const [editandoId, setEditandoId] = useState(null);
+
   const { alert, showAlert, showConfirm, error, success } = useAlert();
 
   function validarEntrada() {
@@ -27,6 +31,57 @@ export default function ModalSalas({ salas, setSalas, onClose }) {
       return false;
     }
     return true;
+  }
+
+  // Preenche o formulário com os dados da sala e entra em modo edição
+  function iniciarEdicao(sala) {
+    setEditandoId(sala.id);
+    setNome(sala.nome);
+    setTipoSala(sala.tipoSala);
+    setCapacidade(sala.capacidade);
+    setPiso(sala.piso);
+    // Scroll suave pro topo do formulário
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function cancelarEdicao() {
+    setEditandoId(null);
+    limparFormulario();
+  }
+
+  async function salvarEdicao() {
+    if (!validarEntrada()) return;
+
+    const salaAtualizada = {
+      nome: nome.trim(),
+      tipoSala,
+      capacidade: Number(capacidade),
+      piso,
+    };
+
+    try {
+      const response = await fetch(`${API_BASE}/salas/${editandoId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(salaAtualizada),
+      });
+
+      if (!response.ok) throw new Error(await response.text());
+
+      const salaEditada = await response.json();
+
+      // Substitui a sala antiga pela editada no estado
+      setSalas((prev) =>
+        prev.map((s) => (s.id === editandoId ? salaEditada : s)),
+      );
+
+      setEditandoId(null);
+      limparFormulario();
+      success("Sala atualizada com sucesso!");
+    } catch (err) {
+      console.error("Erro ao editar sala:", err);
+      error("Não foi possível editar a sala: " + err.message);
+    }
   }
 
   async function adicionarSala() {
@@ -77,7 +132,7 @@ export default function ModalSalas({ salas, setSalas, onClose }) {
         }
       },
       null,
-      "Excluir sala?"
+      "Excluir sala?",
     );
   }
 
@@ -88,10 +143,11 @@ export default function ModalSalas({ salas, setSalas, onClose }) {
     setPiso("térreo");
   }
 
-  const salasFiltradas = salas.filter((sala) =>
-    sala.nome.toLowerCase().includes(pesquisa.toLowerCase()) ||
-    sala.piso.toLowerCase().includes(pesquisa.toLowerCase()) ||
-    sala.tipoSala.toLowerCase().includes(pesquisa.toLowerCase())
+  const salasFiltradas = salas.filter(
+    (sala) =>
+      sala.nome.toLowerCase().includes(pesquisa.toLowerCase()) ||
+      sala.piso.toLowerCase().includes(pesquisa.toLowerCase()) ||
+      sala.tipoSala.toLowerCase().includes(pesquisa.toLowerCase()),
   );
 
   return (
@@ -100,7 +156,7 @@ export default function ModalSalas({ salas, setSalas, onClose }) {
         {/* Header */}
         <div className="modal-header">
           <div className="modal-header-left">
-            <h2>Gerenciar salas</h2>
+            <h2>{editandoId ? "Editar sala" : "Gerenciar salas"}</h2>
             <span className="modal-badge">{salas.length} cadastradas</span>
           </div>
           <button className="btn-close-icon" onClick={onClose}>
@@ -109,6 +165,16 @@ export default function ModalSalas({ salas, setSalas, onClose }) {
         </div>
 
         <div className="modal-body">
+          {/* Banner de modo edição */}
+          {editandoId && (
+            <div className="edit-banner">
+              <span>Editando sala — preencha os campos e salve</span>
+              <button className="edit-banner-cancel" onClick={cancelarEdicao}>
+                Cancelar
+              </button>
+            </div>
+          )}
+
           {/* Formulário */}
           <div className="form-grid">
             <div className="form-group full">
@@ -154,9 +220,16 @@ export default function ModalSalas({ salas, setSalas, onClose }) {
             </div>
           </div>
 
-          <button className="btn-primary" onClick={adicionarSala}>
-            + Adicionar sala
-          </button>
+          {/* Botão muda conforme o modo */}
+          {editandoId ? (
+            <button className="btn-primary btn-save" onClick={salvarEdicao}>
+              Salvar alterações
+            </button>
+          ) : (
+            <button className="btn-primary" onClick={adicionarSala}>
+              + Adicionar sala
+            </button>
+          )}
 
           <div className="modal-divider" />
 
@@ -181,23 +254,36 @@ export default function ModalSalas({ salas, setSalas, onClose }) {
           ) : (
             <ul className="lista-salas">
               {salasFiltradas.map((sala) => (
-                <li key={sala.id} className="item-sala">
+                <li
+                  key={sala.id}
+                  className={`item-sala ${editandoId === sala.id ? "item-editando" : ""}`}
+                >
                   <div className="item-info">
                     <span className="item-nome">{sala.nome}</span>
                     <div className="item-meta">
-                      <span className="pill capacidade">{sala.capacidade} lugares</span>
+                      <span className="pill capacidade">
+                        {sala.capacidade} lugares
+                      </span>
                       <span className="pill piso">piso: {sala.piso}</span>
                       <span className={`tag ${sala.tipoSala}`}>
                         {sala.tipoSala}
                       </span>
                     </div>
                   </div>
-                  <button
-                    className="btn-delete"
-                    onClick={() => removerSala(sala.id)}
-                  >
-                    Excluir
-                  </button>
+                  <div className="item-actions">
+                    <button
+                      className="btn-edit"
+                      onClick={() => iniciarEdicao(sala)}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      className="btn-delete"
+                      onClick={() => removerSala(sala.id)}
+                    >
+                      Excluir
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>

@@ -88,22 +88,24 @@ export default function TabelaAlocacoes({ salas, turmas, cursos, alocacoes }) {
     }
 
     // ── Prioridade 2: Definitivo ──────────────────────────────────────────
-    // Só chega aqui se não houver temporário no semestre selecionado
-    const alocacaoDefinitiva = alocacoesFiltradas.find(
-      (a) => a.time_alocacao === "definitivo",
-    );
+    // Busca alocação definitiva que esteja vigente no período selecionado
+    const alocacaoDefinitiva = alocacoesFiltradas.find((a) => {
+      if (a.time_alocacao !== "definitivo") return false;
+      
+      // Busca a turma e verifica se está no período letivo
+      const turma = turmas.find((t) => Number(t.id) === Number(a.turma_id));
+      if (!turma) return false;
+      
+      return turmaEstaAtiva(turma);
+    });
 
     // Sala livre neste turno
     if (!alocacaoDefinitiva) return null;
 
-    // Busca a turma da alocação definitiva
-    const turma = turmas.find(
+    // Retorna a turma da alocação definitiva que está ativa
+    return turmas.find(
       (t) => Number(t.id) === Number(alocacaoDefinitiva.turma_id),
-    );
-    if (!turma) return null;
-
-    // Só exibe a turma definitiva se ela ainda estiver no período letivo
-    return turmaEstaAtiva(turma) ? turma : null;
+    ) || null;
   }
   return (
     <div className="container mt-4">
