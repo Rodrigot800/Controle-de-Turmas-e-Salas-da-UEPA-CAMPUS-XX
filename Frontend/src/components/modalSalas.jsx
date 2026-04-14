@@ -223,7 +223,7 @@ export default function ModalSalas({ salas, setSalas, onClose }) {
                     <span className="item-nome">{sala.nome}</span>
                     <div className="item-meta">
                       <span className="pill capacidade">{sala.capacidade} lugares</span>
-                      <span className="pill piso">{sala.piso}</span>
+                      <span className="pill piso">piso: {sala.piso}</span>
                       <span className={`tag ${sala.tipoSala}`}>
                         {sala.tipoSala}
                       </span>
