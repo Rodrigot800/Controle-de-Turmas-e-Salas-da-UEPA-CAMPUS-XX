@@ -22,7 +22,7 @@ CREATE TABLE turmas (
   turno VARCHAR(20),
   FOREIGN KEY (curso_id) 
     REFERENCES cursos(id)
-    ON DELETE CASCADE
+    ON DELETE RESTRICT
 );
 
 CREATE TABLE alocacoes (
@@ -35,8 +35,8 @@ CREATE TABLE alocacoes (
   semestre_temp INTEGER,
   FOREIGN KEY (turma_id) 
     REFERENCES turmas(id)
-    ON DELETE CASCADE,
+    ON DELETE RESTRICT,
   FOREIGN KEY (sala_id) 
     REFERENCES salas(id)
-    ON DELETE CASCADE
+    ON DELETE RESTRICT
 );

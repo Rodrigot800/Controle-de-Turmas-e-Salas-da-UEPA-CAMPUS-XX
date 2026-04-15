@@ -26,7 +26,7 @@
 }
 
 .tabela-title {
-  font-size: 17px;
+  font-size: 24px;
   font-weight: 600;
   color: #111827;
   margin: 0;
@@ -97,7 +97,7 @@
   padding: 12px 14px;
   color: #6b7280;
   font-weight: 600;
-  font-size: 11px;
+  font-size: 14px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   background: #f8fafc;
@@ -127,8 +127,8 @@
 
 /* ── SALA ── */
 .sala-name {
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 16px;
+  font-weight: bold;
   color: #111827;
 }
 
@@ -218,7 +218,8 @@
 }
 
 .progress-mini.baixo {
-  background: #22c55e;
+  background: #ef4444;
+ 
 }
 
 .progress-mini.medio {
@@ -226,7 +227,7 @@
 }
 
 .progress-mini.alto {
-  background: #ef4444;
+  background: #22c55e;
 }
 
 .progress-label {
@@ -281,4 +282,158 @@
   .filter-select {
     width: 100%;
   }
+}
+
+/* ─── BARRA DE PESQUISA ─────────────────────────────────────────────────────── */
+.search-bar-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  flex-wrap: wrap;
+}
+
+/* Toggle Turma / Ano */
+.search-type-toggle {
+  display: flex;
+  background: #f1f5f9;
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.search-type-btn {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  background: transparent;
+  color: #64748b;
+  transition: all 0.2s ease;
+}
+
+.search-type-btn.active {
+  background: #ffffff;
+  color: #1e293b;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.search-type-btn:hover:not(.active) {
+  color: #334155;
+}
+
+/* Wrapper do input */
+.search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 220px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 10px;
+  width: 16px;
+  height: 16px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.search-input {
+  width: 100%;
+  padding: 8px 36px 8px 34px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: #1e293b;
+  background: #f8fafc;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+
+.search-input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  background: #fff;
+}
+
+.search-input::placeholder {
+  color: #94a3b8;
+}
+
+/* Botão ✕ limpar */
+.search-clear-btn {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #94a3b8;
+  font-size: 0.8rem;
+  padding: 2px 4px;
+  border-radius: 4px;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.search-clear-btn:hover {
+  color: #475569;
+}
+
+/* Contador de resultados */
+.search-results-count {
+  font-size: 0.78rem;
+  color: #64748b;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ─── ESTADO VAZIO ──────────────────────────────────────────────────────────── */
+.empty-search-row td {
+  padding: 48px 20px;
+}
+
+.empty-search-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  color: #94a3b8;
+}
+
+.empty-search-content svg {
+  width: 40px;
+  height: 40px;
+  color: #cbd5e1;
+}
+
+.empty-search-content p {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.empty-search-content strong {
+  color: #475569;
+}
+
+.empty-clear-btn {
+  margin-top: 4px;
+  padding: 6px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #fff;
+  color: #475569;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.empty-clear-btn:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
 }
