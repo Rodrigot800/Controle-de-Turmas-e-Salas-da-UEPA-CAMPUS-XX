@@ -1,0 +1,284 @@
+.tabela-container {
+  padding: 1.5rem 0;
+}
+
+/* ── CARD ── */
+.tabela-card {
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  padding: 18px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+/* ── HEADER ── */
+.tabela-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.tabela-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tabela-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.tabela-badge {
+  font-size: 12px;
+  color: #6b7280;
+  background: #f9fafb;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+}
+
+/* ── FILTROS ── */
+.tabela-filters {
+  display: flex;
+  gap: 8px;
+}
+
+.filter-select {
+  height: 34px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0 10px;
+  font-size: 13px;
+  color: #111827;
+  background: #fff;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.filter-select:hover {
+  border-color: #d1d5db;
+}
+
+.filter-select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+/* ── DIVISÓRIA ── */
+.tabela-divider {
+  height: 1px;
+  background: #f1f5f9;
+  margin-bottom: 1.25rem;
+}
+
+/* ── TABELA ── */
+.table-wrapper {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: white;
+}
+
+.tabela-alocacoes {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  background: white;
+}
+
+/* ── HEADER TABELA ── */
+.tabela-alocacoes thead th {
+  text-align: left;
+  padding: 12px 14px;
+  color: #6b7280;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: #f8fafc;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.tabela-alocacoes th.center,
+.tabela-alocacoes td.center {
+  text-align: center;
+}
+
+/* ── LINHAS ── */
+.tabela-alocacoes tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+  transition: all 0.15s ease;
+}
+
+.tabela-alocacoes tbody tr:hover {
+  background: #f8fafc;
+}
+
+.tabela-alocacoes td {
+  padding: 14px;
+  vertical-align: middle;
+  color: #111827;
+}
+
+/* ── SALA ── */
+.sala-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #111827;
+}
+
+/* ── TAGS DE TIPO ── */
+.tag {
+  font-size: 11px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-weight: 500;
+}
+
+.tag.comum {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.tag.laboratorio {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+.tag.informatica {
+  background: #f5f3ff;
+  color: #7c3aed;
+}
+
+/* ── CAPACIDADE ── */
+.capacidade-cell {
+  font-size: 13px;
+  color: #6b7280;
+  text-align: center;
+}
+
+/* ── CÉLULA DE TURNO ── */
+.turno-cell {
+  text-align: center;
+  min-width: 150px;
+}
+
+/* ── BOX DA TURMA ── */
+.turma-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 10px 12px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  transition: all 0.15s ease;
+}
+
+.turma-box:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.turma-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.turma-period {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+/* ── BARRA DE PROGRESSO ── */
+.turma-progress {
+  width: 100%;
+  height: 4px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-mini {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.progress-mini.baixo {
+  background: #22c55e;
+}
+
+.progress-mini.medio {
+  background: #f59e0b;
+}
+
+.progress-mini.alto {
+  background: #ef4444;
+}
+
+.progress-label {
+  font-size: 10px;
+  color: #9ca3af;
+  line-height: 1;
+}
+
+/* ── VAGA LIVRE ── */
+.vaga-livre {
+  display: inline-block;
+  padding: 5px 10px;
+  background: #f9fafb;
+  border: 1px dashed #e5e7eb;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+/* ── RESPONSIVIDADE ── */
+@media (max-width: 768px) {
+  .tabela-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .tabela-filters {
+    width: 100%;
+  }
+
+  .filter-select {
+    flex: 1;
+  }
+
+  .tabela-alocacoes thead th,
+  .tabela-alocacoes td {
+    padding: 8px;
+    font-size: 12px;
+  }
+
+  .turma-box {
+    padding: 6px 8px;
+  }
+}
+
+@media (max-width: 576px) {
+  .tabela-filters {
+    flex-direction: column;
+  }
+
+  .filter-select {
+    width: 100%;
+  }
+}

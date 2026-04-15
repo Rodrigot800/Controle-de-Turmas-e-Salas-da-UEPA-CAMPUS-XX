@@ -6,6 +6,7 @@ import ModalTurmas from "./components/modalTurmas";
 import ModalAlocacoes from "./components/modalAlocacao";
 import TabelaAlocacoes from "./components/tabelaAlocacoes";
 import Sidebar from "./components/sidebar";
+import API_BASE from "./config/api";
 import "./App.css";
 
 function App() {
@@ -30,10 +31,10 @@ function App() {
   async function carregarDados() {
     try {
       const [salasRes, cursosRes, turmasRes, alocacoesRes] = await Promise.all([
-        fetch("http://localhost:3001/salas"),
-        fetch("http://localhost:3001/cursos"),
-        fetch("http://localhost:3001/turmas"),
-        fetch("http://localhost:3001/alocacoes"),
+        fetch(`${API_BASE}/salas`),
+        fetch(`${API_BASE}/cursos`),
+        fetch(`${API_BASE}/turmas`),
+        fetch(`${API_BASE}/alocacoes`),
       ]);
 
       if (salasRes.ok) setSalas(await salasRes.json());

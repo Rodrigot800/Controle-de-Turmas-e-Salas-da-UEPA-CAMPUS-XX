@@ -1,4 +1,5 @@
 import { useState } from "react";
+import "../style/tabelaAlocacoes.css";
 
 export default function TabelaAlocacoes({ salas, turmas, cursos, alocacoes }) {
   // Os dados agora vêm via props do App.jsx
@@ -22,6 +23,24 @@ export default function TabelaAlocacoes({ salas, turmas, cursos, alocacoes }) {
    */
   function semestreAbsoluto(ano, semestre) {
     return Number(ano) * 2 + (Number(semestre) === 2 ? 1 : 0);
+  }
+
+  /**
+   * Calcula o percentual de conclusão de uma turma
+   * Exemplo: turma no 2º semestre de um curso de 4 semestres = 50%
+   */
+  function calcularPercentualTurma(turma) {
+    const curso = cursos.find((c) => Number(c.id) === Number(turma.curso_id));
+    if (!curso) return 0;
+
+    const inicio = semestreAbsoluto(turma.ano_inicio, turma.semestre_inicio);
+    const atual = semestreAbsoluto(anoSelecionado, semestreSelecionado);
+    const duracao = Number(curso.semestres);
+
+    const semestresCursados = atual - inicio + 1;
+    const percentual = Math.min(100, Math.max(0, (semestresCursados / duracao) * 100));
+    
+    return Math.round(percentual);
   }
 
   /**
@@ -107,93 +126,145 @@ export default function TabelaAlocacoes({ salas, turmas, cursos, alocacoes }) {
       (t) => Number(t.id) === Number(alocacaoDefinitiva.turma_id),
     ) || null;
   }
+
+  // ─── Cálculo de Estatísticas ───────────────────────────────────────────────
+  const turmasAlocadas = new Set();
+  const turmasLivres = salas.length * 3; // Total de vagas (3 turnos por sala)
+
+  let totalTurmasOcupadas = 0;
+  salas.forEach((sala) => {
+    [
+      turmaPorSalaETurno(sala.id, "manhã"),
+      turmaPorSalaETurno(sala.id, "tarde"),
+      turmaPorSalaETurno(sala.id, "noite"),
+    ].forEach((turma) => {
+      if (turma) {
+        turmasAlocadas.add(turma.id);
+        totalTurmasOcupadas++;
+      }
+    });
+  });
+
+  const totalVagas = turmasLivres;
+  const vagasLivres = totalVagas - totalTurmasOcupadas;
+  const percentualOcupacao = Math.round((totalTurmasOcupadas / totalVagas) * 100);
+
+  // Adicione essa função helper dentro do componente:
+  function corProgresso(percentual) {
+    if (percentual >= 80) return "alto";
+    if (percentual >= 50) return "medio";
+    return "baixo";
+  }
+
   return (
-    <div className="container mt-4">
-      {/* FILTROS */}
-      <div className="d-flex justify-content-end gap-2 mb-3">
-        <select
-          className="form-select w-auto"
-          value={anoSelecionado}
-          onChange={(e) => setAnoSelecionado(e.target.value)}
-        >
-          {[
-            2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031,
-          ].map((ano) => (
-            <option key={ano} value={ano}>
-              {ano}
-            </option>
-          ))}
-        </select>
+    <div className="tabela-container">
+      {/* ───────── CAIXA DA TABELA ───────── */}
+      <div className="tabela-card">
+        {/* HEADER DENTRO DA CAIXA */}
+        <div className="tabela-header">
+          <div className="tabela-header-left">
+            <h2 className="tabela-title">Alocações de Salas</h2>
+            <span className="tabela-badge">{salas.length} salas</span>
+          </div>
 
-        <select
-          className="form-select w-auto"
-          value={semestreSelecionado}
-          onChange={(e) => setSemestreSelecionado(e.target.value)}
-        >
-          <option value={1}>1º Semestre</option>
-          <option value={2}>2º Semestre</option>
-        </select>
-      </div>
+          <div className="tabela-filters">
+            <select
+              className="filter-select"
+              value={anoSelecionado}
+              onChange={(e) => setAnoSelecionado(Number(e.target.value))}
+            >
+              {[
+                2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030,
+                2031,
+              ].map((ano) => (
+                <option key={ano} value={ano}>
+                  {ano}
+                </option>
+              ))}
+            </select>
 
-      {/* TABELA */}
-      <div className="table-responsive">
-        <table className="table table-striped table-hover table-bordered align-middle text-center">
-          <thead className="table-dark">
-            <tr>
-              <th>Sala</th>
-              <th>Manhã</th>
-              <th>Tarde</th>
-              <th>Noite</th>
-            </tr>
-          </thead>
+            <select
+              className="filter-select"
+              value={semestreSelecionado}
+              onChange={(e) => setSemestreSelecionado(Number(e.target.value))}
+            >
+              <option value={1}>1º semestre</option>
+              <option value={2}>2º semestre</option>
+            </select>
+          </div>
+        </div>
 
-          <tbody>
-            {salas.map((sala) => {
-              const turmaManha = turmaPorSalaETurno(sala.id, "manhã");
-              const turmaTarde = turmaPorSalaETurno(sala.id, "tarde");
-              const turmaNoite = turmaPorSalaETurno(sala.id, "noite");
+        <div className="tabela-divider" />
 
-              return (
-                <tr key={sala.id}>
-                  <td className="fw-bold">{sala.nome}</td>
+        {/* TABELA */}
+        <div className="table-wrapper">
+          <table className="tabela-alocacoes">
+            <thead>
+              <tr>
+                <th>Sala</th>
+                <th>Tipo</th>
+                <th className="center">Manhã</th>
+                <th className="center">Tarde</th>
+                <th className="center">Noite</th>
+              </tr>
+            </thead>
 
-                  <td>
-                    {turmaManha ? (
-                      <span className="text-primary fw-semibold">
-                        {turmaManha.nome} ({turmaManha.ano_inicio}.
-                        {turmaManha.semestre_inicio})
+            <tbody>
+              {salas.map((sala) => {
+                const turmaManha = turmaPorSalaETurno(sala.id, "manhã");
+                const turmaTarde = turmaPorSalaETurno(sala.id, "tarde");
+                const turmaNoite = turmaPorSalaETurno(sala.id, "noite");
+
+                const renderTurno = (turma) => {
+                  if (!turma) {
+                    return <span className="vaga-livre">Livre</span>;
+                  }
+
+                  const pct = calcularPercentualTurma(turma);
+
+                  return (
+                    <div className="turma-box">
+                      <span className="turma-name">{turma.nome}</span>
+
+                      <span className="turma-period">
+                        {turma.ano_inicio}.{turma.semestre_inicio}
                       </span>
-                    ) : (
-                      <span className="text-success fw-semibold">Livre</span>
-                    )}
-                  </td>
 
-                  <td>
-                    {turmaTarde ? (
-                      <span className="text-primary fw-semibold">
-                        {turmaTarde.nome} ({turmaTarde.ano_inicio}.
-                        {turmaTarde.semestre_inicio})
-                      </span>
-                    ) : (
-                      <span className="text-success fw-semibold">Livre</span>
-                    )}
-                  </td>
+                      <div className="turma-progress">
+                        <div
+                          className={`progress-mini ${corProgresso(pct)}`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
 
-                  <td>
-                    {turmaNoite ? (
-                      <span className="text-primary fw-semibold">
-                        {turmaNoite.nome} ({turmaNoite.ano_inicio}.
-                        {turmaNoite.semestre_inicio})
+                      <span className="progress-label">{pct}%</span>
+                    </div>
+                  );
+                };
+
+                return (
+                  <tr key={sala.id}>
+                    <td>
+                      <span className="sala-name">{sala.nome}</span>
+                    </td>
+
+                    <td>
+                      <span className={`tag ${sala.tipoSala}`}>
+                        {sala.tipoSala}
                       </span>
-                    ) : (
-                      <span className="text-success fw-semibold">Livre</span>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    </td>
+
+                    <td className="turno-cell">{renderTurno(turmaManha)}</td>
+
+                    <td className="turno-cell">{renderTurno(turmaTarde)}</td>
+
+                    <td className="turno-cell">{renderTurno(turmaNoite)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
