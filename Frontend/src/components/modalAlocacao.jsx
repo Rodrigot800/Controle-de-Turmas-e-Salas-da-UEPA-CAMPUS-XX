@@ -12,61 +12,8 @@ export default function ModalAlocacoes({
   setAlocacoes,
   onClose,
 }) {
-<<<<<<< Updated upstream
   const anoAtual = new Date().getFullYear();
   const semestreAtual = new Date().getMonth() < 6 ? 1 : 2;
-=======
-
-const [turmasData, setTurmas] = useState([]);
-const [salasData, setSalas] = useState([]);
-
-useEffect(() => {
-  carregarTurmas();
-  carregarSalas();
-  carregarAlocacoes();
-}, []);
-
-async function carregarTurmas() {
-  try {
-    const response = await fetch("http://192.168.10.10:3001/turmas");
-    const data = await response.json();
-
-    console.log("Turmas da API:", data);
-    setTurmas(data);
-  } catch (err) {
-    console.error("Erro ao carregar turmas:", err);
-  }
-}
-
-async function carregarSalas() {
-  try {
-    const response = await fetch("http://192.168.10.10:3001/salas");
-    const data = await response.json();
-
-    console.log("Salas da API:", data);
-    setSalas(data);
-  } catch (err) {
-    console.error("Erro ao carregar salas:", err);
-  }
-}
-
-async function carregarAlocacoes() {
-  try {
-    const response = await fetch("http://192.168.10.10:3001/alocacoes");
-    const data = await response.json();
-
-    console.log("Alocações da API:", data);
-    setAlocacoes(data);
-  } catch (err) {
-    console.error("Erro ao carregar alocações:", err);
-  }
-}
-  const [timeAlocacao, setTimeAlocacao] = useState("definitivo");
-  var anoAtual = new Date().getFullYear();
-  const [anoTemp, setAnoTemp] = useState(anoAtual);
-  var semestreAtual = new Date().getMonth() < 6 ? 1 : 2;
-  const [semestreTemp, setSemestreTemp] = useState(semestreAtual);
->>>>>>> Stashed changes
 
   const [turmaId, setTurmaId] = useState("");
   const [salaId, setSalaId] = useState("");
@@ -181,11 +128,7 @@ async function carregarAlocacoes() {
     };
 
     try {
-<<<<<<< Updated upstream
       const response = await fetch(`${API_BASE}/alocacoes`, {
-=======
-      const response = await fetch("http://192.168.10.10:3001/alocacoes", {
->>>>>>> Stashed changes
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(novaAlocacao),
@@ -204,7 +147,6 @@ async function carregarAlocacoes() {
   }
 
   async function removerAlocacao(id) {
-<<<<<<< Updated upstream
     showConfirm(
       "Esta ação não pode ser desfeita.",
       async () => {
@@ -223,28 +165,6 @@ async function carregarAlocacoes() {
       null,
       "Excluir alocação?"
     );
-=======
-    if (!window.confirm("Deseja remover esta alocação?")) return;
-
-    try {
-      const response = await fetch(`http://192.168.10.10:3001/alocacoes/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        const erro = await response.text();
-        throw new Error(erro || "Erro ao remover alocação");
-      }
-
-      // Atualiza estado local
-      setAlocacoes(alocacoes.filter((a) => a.id !== id));
-
-      alert("Alocação removida com sucesso!");
-    } catch (err) {
-      console.error("Erro ao remover alocação:", err.message);
-      alert("Não foi possível remover a alocação: " + err.message);
-    }
->>>>>>> Stashed changes
   }
 
   function limparFormulario() {

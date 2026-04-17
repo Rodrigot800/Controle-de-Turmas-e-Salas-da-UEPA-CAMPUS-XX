@@ -6,26 +6,7 @@ import { useAlert } from "../hooks/useAlert";
 import API_BASE from "../config/api";
 
 export default function ModalSalas({ salas, setSalas, onClose }) {
-<<<<<<< Updated upstream
-=======
-  useEffect(() => {
-    carregarSalas();
-  }, []);
 
-  async function carregarSalas() {
-    try {
-      const response = await fetch("http://192.168.10.10:3001/salas");
-      const data = await response.json();
-
-      console.log("Salas vindas do banco:", data); 
-
-      setSalas(data);
-    } catch (err) {
-      console.error("Erro ao carregar salas:", err);
-    }
-  }
-
->>>>>>> Stashed changes
   const [nome, setNome] = useState("");
   const [tipoSala, setTipoSala] = useState("comum");
   const [capacidade, setCapacidade] = useState(30);
@@ -154,32 +135,7 @@ export default function ModalSalas({ salas, setSalas, onClose }) {
       null,
       "Excluir sala?",
     );
-<<<<<<< Updated upstream
-=======
-    if (!confirmar) return;
 
-    try {
-      // Chamada ao backend para deletar
-      const response = await fetch(`http://192.168.10.10:3001/salas/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        const erro = await response.text();
-        throw new Error(erro || "Erro ao deletar sala");
-      }
-
-      // Atualiza estado local
-      const novasSalas = salas.filter((sala) => sala.id !== id);
-      setSalas(novasSalas);
-
-      console.log("Sala removida com sucesso:", id);
-      alert("Sala removida com sucesso!");
-    } catch (err) {
-      console.error("Erro ao remover sala:", err);
-      alert("Não foi possível remover a sala: " + err.message);
-    }
->>>>>>> Stashed changes
   }
 
   function limparFormulario() {

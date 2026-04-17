@@ -113,11 +113,7 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
     };
 
     try {
-<<<<<<< Updated upstream
       const response = await fetch(`${API_BASE}/turmas`, {
-=======
-      const response = await fetch("http://192.168.10.10:3001/turmas", {
->>>>>>> Stashed changes
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(novaTurma),
@@ -144,15 +140,7 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
             method: "DELETE",
           });
 
-<<<<<<< Updated upstream
           if (!response.ok) throw new Error(await response.text());
-=======
-    try {
-      // Requisição DELETE para o backend
-      const response = await fetch(`http://192.168.10.10:3001/turmas/${id}`, {
-        method: "DELETE",
-      });
->>>>>>> Stashed changes
 
           setTurmas((prev) => prev.filter((t) => t.id !== id));
           success("Turma removida com sucesso!");
