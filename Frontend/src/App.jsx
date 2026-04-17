@@ -5,6 +5,8 @@ import ModalCursos from "./components/modalCursos";
 import ModalTurmas from "./components/modalTurmas";   
 import ModalAlocacoes from "./components/modalAlocacao";
 import TabelaAlocacoes from "./components/tabelaAlocacoes";
+import ModalConflitoAlocacao from "./components/modalConflitoAlocacao";
+
 import Sidebar from "./components/sidebar";
 import API_BASE from "./config/api";
 import "./App.css";
@@ -121,6 +123,12 @@ function App() {
             </div>
 
             <TabelaAlocacoes
+              salas={salas}
+              turmas={turmas}
+              cursos={cursos}
+              alocacoes={alocacoes}
+            />
+            <ModalConflitoAlocacao
               salas={salas}
               turmas={turmas}
               cursos={cursos}
