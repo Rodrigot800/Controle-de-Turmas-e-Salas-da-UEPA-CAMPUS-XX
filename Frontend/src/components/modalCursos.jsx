@@ -11,8 +11,20 @@ export default function ModalCursos({ cursos, setCursos, onClose }) {
   const [semestres, setSemestres] = useState(8);
   const [pesquisa, setPesquisa] = useState("");
 
+<<<<<<< Updated upstream
   // Estados de edição
   const [editandoId, setEditandoId] = useState(null);
+=======
+  useEffect(() => {
+    fetch("http://192.168.10.10:3001/cursos")
+      .then((res) => res.json())
+      .then((data) => {
+        console.log("Cursos do banco:", data);
+        setCursos(data);
+      })
+      .catch((error) => console.error("Erro ao buscar cursos:", error));
+  }, []);
+>>>>>>> Stashed changes
 
   const { alert, showAlert, showConfirm, error, success } = useAlert();
 

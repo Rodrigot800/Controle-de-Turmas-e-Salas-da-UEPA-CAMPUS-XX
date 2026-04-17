@@ -1,0 +1,135 @@
+INSERT INTO salas (nome, capacidade, tipo_sala, piso)
+VALUES 
+('Sala 1', 30, 'comum', '1'),
+('Sala 2', 30, 'comum', '1'),
+('Sala 3', 30, 'comum', '1'),
+('Sala 4A', 30, 'comum', '1'),
+('Sala 4B', 30, 'comum', '1'),
+('Sala 5', 30, 'comum', '1'),
+('Sala 6', 30, 'comum', '1'),
+('Sala 7', 30, 'comum', '1'),
+('Sala 8', 30, 'comum', '1'),
+('Sala 9', 30, 'comum', '1'),
+('Sala 10', 30, 'comum', '1'),
+
+('Sala 11', 30, 'comum', '2'),
+('Sala 12', 30, 'comum', '2'),
+('Sala 13', 30, 'comum', '2'),
+('Sala 14', 30, 'comum', '2'),
+('Sala 15', 30, 'comum', '2'),
+('Sala 16', 30, 'comum', '2'),
+('Sala 17', 30, 'comum', '2'),
+('Sala 18', 30, 'comum', '2'),
+('Sala 19', 30, 'comum', '2'),
+('Sala 20', 30, 'comum', '2'),
+
+('Sala 21', 30, 'comum', 'térreo'),
+('Sala 22', 30, 'comum', 'térreo'),
+('Sala 23', 30, 'comum', 'térreo'),
+('Sala 24', 30, 'comum', 'térreo');
+
+
+INSERT INTO cursos (nome, vagas, semestres) VALUES
+('Engenharia Florestal', 40, 10),
+('Engenharia de Produção', 40, 10),
+('Engenharia Ambiental e Sanitária', 40, 10),
+('Engenharia de Software', 30, 8),
+('Física', 30, 8),
+('Geografia', 30, 8),
+('Tecnologia de Alimentos', 30, 7);
+
+INSERT INTO turmas (nome, curso_id, semestre_inicio, ano_inicio, turno) VALUES
+
+-- Engenharia Ambiental e Sanitária (curso_id = 3)
+('EAS', 20, 1, 2021, 'Tarde'),
+('EAS', 20, 1, 2022, 'Manhã'),
+('EAS', 20, 1, 2023, 'Tarde'),
+('EAS', 20, 1, 2024, 'Manhã'),
+('EAS', 20, 1, 2025, 'Tarde'),
+
+-- Engenharia Florestal (curso_id = 1)
+('EF', 18, 1, 2021, 'Manhã'),
+('EF', 18, 1, 2022, 'Tarde'),
+('EF', 18, 1, 2023, 'Manhã'),
+('EF', 18, 1, 2024, 'Tarde'),
+('EF', 18, 1, 2025, 'Manhã'),
+
+-- Engenharia de Produção (curso_id = 19)
+('EP', 19, 1, 2021, 'Tarde'),
+('EP', 19, 1, 2022, 'Manhã'),
+('EP', 19, 1, 2023, 'Tarde'),
+('EP', 19, 1, 2024, 'Manhã'),
+('EP', 19, 1, 2025, 'Tarde'),
+
+-- Engenharia de Software (curso_id = 21)
+('BES', 21, 1, 2022, 'Tarde'),
+('BES', 21, 1, 2023, 'Manhã'),
+('BES', 21, 1, 2024, 'Tarde'),
+('BES', 21, 1, 2025, 'Manhã'),
+
+-- Física (curso_id = 22)
+('FÍSICA', 22, 1, 2023, 'Manhã'),
+('FÍSICA', 22, 1, 2024, 'Tarde'),
+('FÍSICA', 22, 1, 2025, 'Manhã'),
+
+-- Geografia (curso_id = 23)
+('GEOGRAFIA', 23, 1, 2022, 'Tarde'),
+('GEOGRAFIA', 23, 1, 2024, 'Manhã'),
+('GEOGRAFIA', 23, 1, 2025, 'Tarde'),
+
+-- Tecnologia de Alimentos (curso_id = 24)
+('TA', 24, 1, 2023, 'Manhã'),
+('TA', 24, 1, 2024, 'Tarde'),
+('TA', 24, 1, 2025, 'Manhã');
+
+INSERT INTO alocacoes (turma_id, sala_id, turno, time_alocacao, ano_temp, semestre_temp)
+VALUES
+
+-- Sala 149
+(33, 149, 'Manhã', 'definitivo', NULL, NULL),
+
+-- Sala 150
+(35, 150, 'Manhã', 'definitivo', NULL, NULL),
+(36, 150, 'Tarde', 'definitivo', NULL, NULL),
+
+-- Sala 151
+(25, 151, 'Manhã', 'definitivo', NULL, NULL),
+(30, 151, 'Tarde', 'definitivo', NULL, NULL),
+
+-- Sala 152
+(49, 152, 'Manhã', 'definitivo', NULL, NULL),
+
+-- Sala 153
+(51, 153, 'Manhã', 'definitivo', NULL, NULL),
+(50, 153, 'Tarde', 'definitivo', NULL, NULL),
+
+-- Sala 154
+(42, 154, 'Manhã', 'definitivo', NULL, NULL),
+(41, 154, 'Tarde', 'definitivo', NULL, NULL),
+
+-- Sala 155
+(40, 155, 'Manhã', 'definitivo', NULL, NULL),
+(39, 155, 'Tarde', 'definitivo', NULL, NULL),
+
+-- Sala 156
+(43, 156, 'Manhã', 'definitivo', NULL, NULL),
+(44, 156, 'Tarde', 'definitivo', NULL, NULL),
+
+-- Sala 157
+(27, 157, 'Manhã', 'definitivo', NULL, NULL),
+(32, 157, 'Tarde', 'definitivo', NULL, NULL),
+
+-- Sala 158
+(47, 158, 'Manhã', 'definitivo', NULL, NULL),
+(48, 158, 'Tarde', 'definitivo', NULL, NULL),
+
+-- Sala 159
+(37, 159, 'Manhã', 'definitivo', NULL, NULL),
+(28, 159, 'Tarde', 'definitivo', NULL, NULL),
+
+-- Sala 167
+(31, 167, 'Manhã', 'definitivo', NULL, NULL),
+
+-- Sala 172
+(45, 172, 'Manhã', 'definitivo', NULL, NULL),
+(26, 172, 'Tarde', 'definitivo', NULL, NULL);

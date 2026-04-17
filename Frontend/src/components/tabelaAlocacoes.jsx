@@ -10,10 +10,25 @@ export default function TabelaAlocacoes({ salas, turmas, cursos, alocacoes }) {
   const [termoPesquisa, setTermoPesquisa] = useState("");
   const [tipoPesquisa, setTipoPesquisa] = useState("turma"); // "turma" | "ano"
 
+<<<<<<< Updated upstream
   // ─── Funções auxiliares ────────────────────────────────────────────────────
   function semestreAbsoluto(ano, semestre) {
     return Number(ano) * 2 + (Number(semestre) === 2 ? 1 : 0);
   }
+=======
+    useEffect(() => {
+        carregarDados();
+    }, []);
+    
+    async function carregarDados() {
+    try {
+        const [salasRes, turmasRes, cursosRes, alocacoesRes] = await Promise.all([
+            fetch("http://192.168.10.10:3001/salas"),
+            fetch("http://192.168.10.10:3001/turmas"),
+            fetch("http://192.168.10.10:3001/cursos"),
+            fetch("http://192.168.10.10:3001/alocacoes")
+        ]);
+>>>>>>> Stashed changes
 
   function calcularPercentualTurma(turma) {
     const curso = cursos.find((c) => Number(c.id) === Number(turma.curso_id));
