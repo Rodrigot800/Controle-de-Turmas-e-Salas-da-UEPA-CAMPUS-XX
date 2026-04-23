@@ -24,13 +24,6 @@ app.get('/', (req, res) => {
     res.send('Hello World!')
 })
 
-<<<<<<< Updated upstream
 app.listen(3001, "0.0.0.0", () => {
   console.log("Server is running on port 3001");
-=======
-const PORT = 3001
-
-app.listen(3001, "0.0.0.0", () => {
-  console.log("Server running on port 3001");
->>>>>>> Stashed changes
 });

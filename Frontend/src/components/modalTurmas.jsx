@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import "../style/modalTurmas.css";
 import "../style/modal.shared.css";
 import AlertModal from "./AlertModal";
@@ -16,11 +16,13 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
   // Estados de edição
   const [editandoId, setEditandoId] = useState(null);
 
+  const modalRef = useRef(null);
+
   const { alert, showAlert, showConfirm, error, success } = useAlert();
 
   function validarEntrada() {
     if (!nome || nome.trim().length < 2) {
-      error("Por favor, insira um nome válido para a turma.");
+      error("Por favor, insira um nome válido para the turma.");
       return false;
     }
     if (!cursoId) {
@@ -50,8 +52,10 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
     setTurno(turma.turno);
     setSemestreInicio(turma.semestre_inicio);
     setAnoInicio(turma.ano_inicio);
-    // Scroll suave pro topo do formulário
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    
+    if (modalRef.current) {
+      modalRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
   }
 
   function cancelarEdicao() {
@@ -91,7 +95,7 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
       success("Turma atualizada com sucesso!");
     } catch (err) {
       console.error("Erro ao editar turma:", err);
-      error("Não foi possível editar a turma: " + err.message);
+      error("Não foi possível editar the turma: " + err.message);
     }
   }
 
@@ -146,7 +150,7 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
           success("Turma removida com sucesso!");
         } catch (err) {
           console.error("Erro ao remover turma:", err.message);
-          error("Não foi possível remover a turma: " + err.message);
+          error("Não foi possível remover the turma: " + err.message);
         }
       },
       null,
@@ -175,7 +179,7 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
 
   return (
     <div className="modal-backdrop">
-      <div className="modal modal-turmas">
+      <div className="modal modal-turmas" ref={modalRef}>
         {/* Header */}
         <div className="modal-header">
           <div className="modal-header-left">

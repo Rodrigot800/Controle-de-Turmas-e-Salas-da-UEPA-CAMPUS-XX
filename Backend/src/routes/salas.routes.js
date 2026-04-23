@@ -39,7 +39,9 @@ router.post("/", async (req, res) => {
 
   try {
     const result = await pool.query(
-      "INSERT INTO salas (nome, piso, capacidade, tipo_sala) VALUES ($1, $2, $3, $4) RETURNING *",
+      `INSERT INTO salas (nome, piso, capacidade, tipo_sala) 
+       VALUES ($1, $2, $3, $4) 
+       RETURNING id, nome, piso, capacidade, tipo_sala as "tipoSala"`,
       [nome, piso, Number(capacidade), tipoSala],
     );
 

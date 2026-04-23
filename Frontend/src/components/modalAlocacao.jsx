@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import "../style/modalAlocacao.css";
 import "../style/modal.shared.css";
 import AlertModal from "./AlertModal";
@@ -25,6 +25,8 @@ export default function ModalAlocacoes({
 
   // Estados de edição
   const [editandoId, setEditandoId] = useState(null);
+
+  const modalRef = useRef(null);
 
   const { alert, showAlert, showConfirm, error, success } = useAlert();
 
@@ -63,8 +65,10 @@ export default function ModalAlocacoes({
     setTimeAlocacao(alocacao.time_alocacao);
     setAnoTemp(alocacao.ano_temp || anoAtual);
     setSemestreTemp(alocacao.semestre_temp || semestreAtual);
-    // Scroll suave pro topo do formulário
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    
+    if (modalRef.current) {
+      modalRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
   }
 
   function cancelarEdicao() {
@@ -200,7 +204,7 @@ export default function ModalAlocacoes({
 
   return (
     <div className="modal-backdrop">
-      <div className="modal">
+      <div className="modal" ref={modalRef}>
         {/* Header */}
         <div className="modal-header">
           <div className="modal-header-left">
