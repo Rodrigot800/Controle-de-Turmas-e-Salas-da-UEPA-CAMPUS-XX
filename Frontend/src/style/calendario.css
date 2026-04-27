@@ -1,0 +1,139 @@
+.calendario-container {
+  width: 100%;
+  margin-top: 20px;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  padding: 20px;
+}
+
+.calendario-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.calendario-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #333;
+}
+
+.calendario-nav-btn {
+  background-color: #f0f0f0;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-weight: bold;
+  color: #555;
+  transition: background-color 0.2s;
+}
+
+.calendario-nav-btn:hover {
+  background-color: #e0e0e0;
+}
+
+.calendario-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+
+.calendario-dias-semana {
+  display: contents;
+}
+
+.dia-semana-header {
+  text-align: center;
+  font-weight: 600;
+  color: #666;
+  padding: 10px 0;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.calendario-celula {
+  min-height: 120px;
+  border: 1px solid #eaeaea;
+  border-radius: 6px;
+  padding: 8px;
+  background-color: #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+.calendario-celula.dia-vazio {
+  background-color: #f9f9f9;
+  border-color: transparent;
+}
+
+.calendario-celula.dia-atual {
+  border: 2px solid #2196f3;
+  background-color: #f0f8ff;
+}
+
+.dia-numero {
+  font-weight: bold;
+  font-size: 1rem;
+  color: #444;
+  margin-bottom: 8px;
+  text-align: right;
+}
+
+.calendario-celula.dia-atual .dia-numero {
+  color: #2196f3;
+}
+
+.alocacoes-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  max-height: 150px;
+  /* Scrollbar estilizacao */
+  scrollbar-width: thin;
+  scrollbar-color: #ccc transparent;
+}
+
+.alocacoes-lista::-webkit-scrollbar {
+  width: 4px;
+}
+
+.alocacoes-lista::-webkit-scrollbar-thumb {
+  background-color: #ccc;
+  border-radius: 4px;
+}
+
+.alocacao-chip {
+  background-color: #e3f2fd;
+  border-left: 3px solid #1976d2;
+  border-radius: 3px;
+  padding: 4px 6px;
+  font-size: 0.75rem;
+  color: #333;
+  line-height: 1.2;
+}
+
+.alocacao-chip.modular {
+  background-color: #fff3e0;
+  border-left-color: #ff9800;
+}
+
+.alocacao-chip strong {
+  display: block;
+  font-size: 0.8rem;
+  color: #1976d2;
+  margin-bottom: 2px;
+}
+
+.alocacao-chip.modular strong {
+  color: #f57c00;
+}
+
+.sala-info {
+  font-weight: 500;
+  color: #555;
+}

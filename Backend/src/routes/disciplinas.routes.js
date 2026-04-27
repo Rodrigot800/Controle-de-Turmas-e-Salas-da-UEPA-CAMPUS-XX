@@ -15,7 +15,6 @@ router.get("/", async (req, res) => {
       FROM disciplinas
       ORDER BY nome
     `);
-
     res.json(result.rows);
   } catch (error) {
     console.error("Erro ao listar disciplinas:", error);
@@ -42,13 +41,13 @@ router.post("/", async (req, res) => {
       "INSERT INTO disciplinas (nome, duracao) VALUES ($1, $2) RETURNING *",
       [nome, duracaoVal],
     );
-
     res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error("Erro ao criar disciplina:", err.message);
     res.status(500).json({ erro: "Erro ao criar disciplina" });
   }
 });
+
 
 // ===========================
 // Deletar disciplina por ID
@@ -99,5 +98,6 @@ router.put("/:id", async (req, res) => {
     res.status(500).json({ erro: "Erro ao editar disciplina" });
   }
 });
+
 
 module.exports = router;

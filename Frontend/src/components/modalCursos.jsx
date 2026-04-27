@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import "../style/modalCursos.css";
 import "../style/modal.shared.css";
 import AlertModal from "./AlertModal";
@@ -13,6 +13,8 @@ export default function ModalCursos({ cursos, setCursos, onClose }) {
 
   // Estados de edição
   const [editandoId, setEditandoId] = useState(null);
+
+  const modalRef = useRef(null);
 
   const { alert, showAlert, showConfirm, error, success } = useAlert();
 
@@ -38,8 +40,10 @@ export default function ModalCursos({ cursos, setCursos, onClose }) {
     setNome(curso.nome);
     setVagas(curso.vagas);
     setSemestres(curso.semestres);
-    // Scroll suave pro topo do formulário
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    
+    if (modalRef.current) {
+      modalRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
   }
 
   function cancelarEdicao() {
@@ -77,7 +81,7 @@ export default function ModalCursos({ cursos, setCursos, onClose }) {
       success("Curso atualizado com sucesso!");
     } catch (err) {
       console.error("Erro ao editar curso:", err);
-      error("Não foi possível editar o curso: " + err.message);
+      error("Não foi possível editar the curso: " + err.message);
     }
   }
 
@@ -153,7 +157,7 @@ export default function ModalCursos({ cursos, setCursos, onClose }) {
 
   return (
     <div className="modal-backdrop">
-      <div className="modal">
+      <div className="modal" ref={modalRef}>
         {/* Header */}
         <div className="modal-header">
           <div className="modal-header-left">

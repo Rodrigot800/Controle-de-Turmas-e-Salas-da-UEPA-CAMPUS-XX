@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import "../style/modalSalas.css";
 import "../style/modal.shared.css";
 import AlertModal from "./AlertModal";
@@ -12,6 +12,9 @@ export default function ModalSalas({ salas, setSalas, onClose }) {
   const [capacidade, setCapacidade] = useState(30);
   const [piso, setPiso] = useState("térreo");
   const [pesquisa, setPesquisa] = useState("");
+
+  const modalRef = useRef(null);
+  const nomeInputRef = useRef(null);
 
   // Estados de edição
   const [editandoId, setEditandoId] = useState(null);
@@ -41,8 +44,15 @@ export default function ModalSalas({ salas, setSalas, onClose }) {
     setTipoSala(sala.tipoSala);
     setCapacidade(sala.capacidade);
     setPiso(sala.piso);
-    // Scroll suave pro topo do formulário
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    
+    if (modalRef.current) {
+      modalRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    // Focus no primeiro input após o scroll
+    setTimeout(() => {
+      nomeInputRef.current?.focus();
+    }, 150);
   }
 
   function cancelarEdicao() {
@@ -154,7 +164,7 @@ export default function ModalSalas({ salas, setSalas, onClose }) {
 
   return (
     <div className="modal-backdrop">
-      <div className="modal">
+      <div className="modal" ref={modalRef}>
         {/* Header */}
         <div className="modal-header">
           <div className="modal-header-left">
@@ -182,6 +192,7 @@ export default function ModalSalas({ salas, setSalas, onClose }) {
             <div className="form-group full">
               <label>Nome</label>
               <input
+                ref={nomeInputRef}
                 type="text"
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
