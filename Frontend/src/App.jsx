@@ -6,6 +6,8 @@ import ModalTurmas from "./components/modalTurmas";
 import ModalAlocacoes from "./components/modalAlocacao";
 import TabelaAlocacoes from "./components/tabelaAlocacoes";
 import ModalConflitoAlocacao from "./components/modalConflitoAlocacao";
+import ModalProfessores from "./components/modalProfessores";
+import ModalDisciplinas from "./components/modalDisciplinas";
 
 import Sidebar from "./components/sidebar";
 import API_BASE from "./config/api";
@@ -17,11 +19,16 @@ function App() {
   const [modalCursosAberto, setModalCursosAberto] = useState(false);
   const [modalTurmasAberto, setModalTurmasAberto] = useState(false);
   const [modalAlocacoesAberto, setModalAlocacoesAberto] = useState(false);
+  const [modalProfessoresAberto, setModalProfessoresAberto] = useState(false);
+  const [modalDisciplinasAberto, setModalDisciplinasAberto] = useState(false);
 
   const [salas, setSalas] = useState([]);
   const [cursos, setCursos] = useState([]);
   const [turmas, setTurmas] = useState([]);
   const [alocacoes, setAlocacoes] = useState([]);
+  const [professores, setProfessores] = useState([]);
+  const [disciplinas, setDisciplinas] = useState([]);
+  const [cursoDisciplinas, setCursoDisciplinas] = useState([]);
 
   // ============================================================
   // CARREGAMENTO INICIAL DOS DADOS DA API
@@ -32,17 +39,23 @@ function App() {
 
   async function carregarDados() {
     try {
-      const [salasRes, cursosRes, turmasRes, alocacoesRes] = await Promise.all([
+      const [salasRes, cursosRes, turmasRes, alocacoesRes, professoresRes, disciplinasRes, cursoDisciplinasRes] = await Promise.all([
         fetch(`${API_BASE}/salas`),
         fetch(`${API_BASE}/cursos`),
         fetch(`${API_BASE}/turmas`),
         fetch(`${API_BASE}/alocacoes`),
+        fetch(`${API_BASE}/professores`),
+        fetch(`${API_BASE}/disciplinas`),
+        fetch(`${API_BASE}/curso-disciplinas`),
       ]);
 
       if (salasRes.ok) setSalas(await salasRes.json());
       if (cursosRes.ok) setCursos(await cursosRes.json());
       if (turmasRes.ok) setTurmas(await turmasRes.json());
       if (alocacoesRes.ok) setAlocacoes(await alocacoesRes.json());
+      if (professoresRes.ok) setProfessores(await professoresRes.json());
+      if (disciplinasRes.ok) setDisciplinas(await disciplinasRes.json());
+      if (cursoDisciplinasRes.ok) setCursoDisciplinas(await cursoDisciplinasRes.json());
     } catch (err) {
       console.error("Erro ao carregar dados iniciais:", err);
     }
@@ -115,7 +128,21 @@ function App() {
                       className="btn btn-outline-primary"
                       onClick={() => setModalAlocacoesAberto(true)}
                     >
-                      Alocações
+                      Alocações Salas
+                    </button>
+
+                    <button
+                      className="btn btn-outline-primary"
+                      onClick={() => setModalProfessoresAberto(true)}
+                    >
+                      Professores
+                    </button>
+
+                    <button
+                      className="btn btn-outline-primary"
+                      onClick={() => setModalDisciplinasAberto(true)}
+                    >
+                      Grade Curricular
                     </button>
                   </div>
                 </div>
@@ -169,6 +196,26 @@ function App() {
                 alocacoes={alocacoes}
                 setAlocacoes={setAlocacoes}
                 onClose={() => setModalAlocacoesAberto(false)}
+              />
+            )}
+
+            {modalProfessoresAberto && (
+              <ModalProfessores
+                professores={professores}
+                setProfessores={setProfessores}
+                cursos={cursos}
+                onClose={() => setModalProfessoresAberto(false)}
+              />
+            )}
+
+            {modalDisciplinasAberto && (
+              <ModalDisciplinas
+                disciplinas={disciplinas}
+                setDisciplinas={setDisciplinas}
+                cursos={cursos}
+                cursoDisciplinas={cursoDisciplinas}
+                setCursoDisciplinas={setCursoDisciplinas}
+                onClose={() => setModalDisciplinasAberto(false)}
               />
             )}
           </>
