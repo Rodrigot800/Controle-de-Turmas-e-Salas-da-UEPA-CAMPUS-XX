@@ -1,3 +1,4 @@
+import ReactDOM from "react-dom";
 import "../style/alertModal.css";
 
 export default function AlertModal({ visible, type = "info", title, message, onConfirm, onCancel, confirmText = "OK", cancelText = "Cancelar" }) {
@@ -5,7 +6,7 @@ export default function AlertModal({ visible, type = "info", title, message, onC
 
   const isConfirmType = type === "confirm";
 
-  return (
+  return ReactDOM.createPortal(
     <div className="alert-backdrop">
       <div className={`alert-modal alert-${type}`}>
         <div className="alert-icon">
@@ -38,6 +39,7 @@ export default function AlertModal({ visible, type = "info", title, message, onC
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

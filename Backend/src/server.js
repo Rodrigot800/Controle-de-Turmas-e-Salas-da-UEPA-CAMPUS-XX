@@ -17,6 +17,7 @@ const turmasRoutes = require("./routes/turmas.routes");
 const professoresRoutes = require("./routes/professores.routes");
 const disciplinasRoutes = require("./routes/disciplinas.routes");
 const cursoDisciplinasRoutes = require("./routes/curso_disciplinas.routes");
+const alocacoesDisciplinasRoutes = require("./routes/alocacoesDisciplinas.routes");
 
 app.use("/salas", salasRoutes);
 app.use("/cursos", cursosRoutes);
@@ -25,6 +26,7 @@ app.use("/turmas", turmasRoutes);
 app.use("/professores", professoresRoutes);
 app.use("/disciplinas", disciplinasRoutes);
 app.use("/curso-disciplinas", cursoDisciplinasRoutes);
+app.use("/alocacoes-disciplinas", alocacoesDisciplinasRoutes);
 
 app.get('/', (req, res) => {
     res.send('Hello World!')

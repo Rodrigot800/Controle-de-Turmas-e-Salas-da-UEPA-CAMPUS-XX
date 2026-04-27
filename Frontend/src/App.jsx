@@ -5,13 +5,16 @@ import ModalCursos from "./components/modalCursos";
 import ModalTurmas from "./components/modalTurmas";   
 import ModalAlocacoes from "./components/modalAlocacao";
 import TabelaAlocacoes from "./components/tabelaAlocacoes";
+import TabelaAlocacaoDisciplinas from "./components/tabelaAlocacaoDisciplinas";
 import ModalConflitoAlocacao from "./components/modalConflitoAlocacao";
 import ModalProfessores from "./components/modalProfessores";
 import ModalDisciplinas from "./components/modalDisciplinas";
+import ModalAlocacaoPeriodo from "./components/modalAlocacaoPeriodo";
 
 import Sidebar from "./components/sidebar";
 import API_BASE from "./config/api";
 import "./App.css";
+import "./style/tableToggle.css";
 
 function App() {
   const [menuAtivo, setMenuAtivo] = useState("gerenciamento");
@@ -21,6 +24,7 @@ function App() {
   const [modalAlocacoesAberto, setModalAlocacoesAberto] = useState(false);
   const [modalProfessoresAberto, setModalProfessoresAberto] = useState(false);
   const [modalDisciplinasAberto, setModalDisciplinasAberto] = useState(false);
+  const [modalAlocacaoPeriodoAberto, setModalAlocacaoPeriodoAberto] = useState(false);
 
   const [salas, setSalas] = useState([]);
   const [cursos, setCursos] = useState([]);
@@ -29,6 +33,10 @@ function App() {
   const [professores, setProfessores] = useState([]);
   const [disciplinas, setDisciplinas] = useState([]);
   const [cursoDisciplinas, setCursoDisciplinas] = useState([]);
+  const [alocacoesDisciplinas, setAlocacoesDisciplinas] = useState([]);
+
+  // Estado para controlar qual tabela exibir
+  const [tabelaAtiva, setTabelaAtiva] = useState("salas"); // "salas" ou "disciplinas"
 
   // ============================================================
   // CARREGAMENTO INICIAL DOS DADOS DA API
@@ -39,7 +47,10 @@ function App() {
 
   async function carregarDados() {
     try {
-      const [salasRes, cursosRes, turmasRes, alocacoesRes, professoresRes, disciplinasRes, cursoDisciplinasRes] = await Promise.all([
+      const [
+        salasRes, cursosRes, turmasRes, alocacoesRes, 
+        professoresRes, disciplinasRes, cursoDisciplinasRes, alocacoesDisciplinasRes
+      ] = await Promise.all([
         fetch(`${API_BASE}/salas`),
         fetch(`${API_BASE}/cursos`),
         fetch(`${API_BASE}/turmas`),
@@ -47,6 +58,7 @@ function App() {
         fetch(`${API_BASE}/professores`),
         fetch(`${API_BASE}/disciplinas`),
         fetch(`${API_BASE}/curso-disciplinas`),
+        fetch(`${API_BASE}/alocacoes-disciplinas`),
       ]);
 
       if (salasRes.ok) setSalas(await salasRes.json());
@@ -56,6 +68,7 @@ function App() {
       if (professoresRes.ok) setProfessores(await professoresRes.json());
       if (disciplinasRes.ok) setDisciplinas(await disciplinasRes.json());
       if (cursoDisciplinasRes.ok) setCursoDisciplinas(await cursoDisciplinasRes.json());
+      if (alocacoesDisciplinasRes.ok) setAlocacoesDisciplinas(await alocacoesDisciplinasRes.json());
     } catch (err) {
       console.error("Erro ao carregar dados iniciais:", err);
     }
@@ -126,13 +139,6 @@ function App() {
 
                     <button
                       className="btn btn-outline-primary"
-                      onClick={() => setModalAlocacoesAberto(true)}
-                    >
-                      Alocações Salas
-                    </button>
-
-                    <button
-                      className="btn btn-outline-primary"
                       onClick={() => setModalProfessoresAberto(true)}
                     >
                       Professores
@@ -142,25 +148,93 @@ function App() {
                       className="btn btn-outline-primary"
                       onClick={() => setModalDisciplinasAberto(true)}
                     >
-                      Grade Curricular
+                      Disciplinas
                     </button>
+                    
+                    {/* Botão de Nova Alocação Dinâmico */}
+                    {tabelaAtiva === "salas" ? (
+                      <button
+                        className="btn btn-primary shadow-sm"
+                        style={{
+                          background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+                          border: "none",
+                          fontWeight: "600",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px"
+                        }}
+                        onClick={() => setModalAlocacoesAberto(true)}
+                      >
+                        <span style={{ fontSize: "1.2rem", lineHeight: 0 }}>+</span> Alocar Turmas
+                      </button>
+                    ) : (
+                      <button
+                        className="btn btn-primary shadow-sm"
+                        style={{
+                          background: "linear-gradient(135deg, #8b5cf6, #6d28d9)",
+                          border: "none",
+                          fontWeight: "600",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px"
+                        }}
+                        onClick={() => setModalAlocacaoPeriodoAberto(true)}
+                      >
+                        <span style={{ fontSize: "1.2rem", lineHeight: 0 }}>+</span> Alocar Período
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
 
-            <TabelaAlocacoes
-              salas={salas}
-              turmas={turmas}
-              cursos={cursos}
-              alocacoes={alocacoes}
-            />
-            <ModalConflitoAlocacao
-              salas={salas}
-              turmas={turmas}
-              cursos={cursos}
-              alocacoes={alocacoes}
-            />
+            {/* CONTROLE DE ALTERNÂNCIA ENTRE TABELAS */}
+            <div className="table-toggle-container">
+              <div className="table-toggle-wrapper" data-active={tabelaAtiva}>
+                <div className="table-toggle-slider" />
+                <button 
+                  className={`table-toggle-btn ${tabelaAtiva === "salas" ? "active" : ""}`}
+                  onClick={() => setTabelaAtiva("salas")}
+                >
+                  Visão por Salas
+                </button>
+                <button 
+                  className={`table-toggle-btn ${tabelaAtiva === "disciplinas" ? "active" : ""}`}
+                  onClick={() => setTabelaAtiva("disciplinas")}
+                >
+                  Visão por Grade Curricular
+                </button>
+              </div>
+            </div>
+
+            {/* RENDERIZAÇÃO DA TABELA ATIVA */}
+            <div key={tabelaAtiva} className="table-animated-container">
+              {tabelaAtiva === "salas" && (
+                <TabelaAlocacoes
+                  salas={salas}
+                  turmas={turmas}
+                  cursos={cursos}
+                  alocacoes={alocacoes}
+                />
+              )}
+
+              {tabelaAtiva === "disciplinas" && (
+                <TabelaAlocacaoDisciplinas
+                  salas={salas}
+                  alocacoesDisciplinas={alocacoesDisciplinas}
+                />
+              )}
+            </div>
+
+            {/* MODAL DE CONFLITOS FICA FORA DO ANIMATED CONTAINER */}
+            {tabelaAtiva === "salas" && (
+              <ModalConflitoAlocacao
+                salas={salas}
+                turmas={turmas}
+                cursos={cursos}
+                alocacoes={alocacoes}
+              />
+            )}
 
             {/* MODAIS (FICAM AQUI DENTRO DO GERENCIAMENTO) */}
 
@@ -216,6 +290,18 @@ function App() {
                 cursoDisciplinas={cursoDisciplinas}
                 setCursoDisciplinas={setCursoDisciplinas}
                 onClose={() => setModalDisciplinasAberto(false)}
+              />
+            )}
+
+            {modalAlocacaoPeriodoAberto && (
+              <ModalAlocacaoPeriodo
+                salas={salas}
+                turmas={turmas}
+                professores={professores}
+                disciplinas={disciplinas}
+                alocacoesDisciplinas={alocacoesDisciplinas}
+                setAlocacoesDisciplinas={setAlocacoesDisciplinas}
+                onClose={() => setModalAlocacaoPeriodoAberto(false)}
               />
             )}
           </>

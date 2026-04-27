@@ -68,7 +68,7 @@ CREATE TABLE curso_disciplinas (
     ON DELETE CASCADE
 );
 
-CREATE TABLE fluxo_diario (
+CREATE TABLE alocacoes_periodo (
   id SERIAL PRIMARY KEY,
 
   sala_id INTEGER NOT NULL,

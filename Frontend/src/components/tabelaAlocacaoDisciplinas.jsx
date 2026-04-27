@@ -1,169 +1,213 @@
-import { useState } from "react";
-import "../style/tabelaAlocacoes.css";
+import { useState, useMemo } from "react";
+import "../style/tabelaGrade.css";
+
+// Formata data de 'YYYY-MM-DD...' para 'DD/MM'
+function formatarDataBR(dataIso) {
+  if (!dataIso) return "";
+  const [ano, mes, dia] = dataIso.split("T")[0].split("-");
+  return `${dia}/${mes}`;
+}
+
+const DIAS_SEMANA = {
+  1: "segundas",
+  2: "terças",
+  3: "quartas",
+  4: "quintas",
+  5: "sextas",
+  6: "sábados",
+  0: "domingos"
+};
+
+function formatarDia(dia) {
+  if (dia === null || dia === undefined) return "dia indefinido";
+  if (typeof dia === "number" || !isNaN(Number(dia))) {
+    return DIAS_SEMANA[Number(dia)] || `dia ${dia}`;
+  }
+  return dia.toLowerCase() + "s";
+}
 
 export default function TabelaAlocacaoDisciplinas({ salas, alocacoesDisciplinas }) {
   const [termoPesquisa, setTermoPesquisa] = useState("");
 
-  function salaPassaFiltro(sala) {
+  // Agrupa as alocações por Sala e depois por Turma
+  const salasAgrupadas = useMemo(() => {
     const termo = termoPesquisa.trim().toLowerCase();
-    if (!termo) return true;
+    
+    // Filtro de pesquisa abrangente
+    let alocsFiltradas = alocacoesDisciplinas;
+    if (termo) {
+      alocsFiltradas = alocacoesDisciplinas.filter(a => {
+        return (
+          a.sala_nome?.toLowerCase().includes(termo) ||
+          a.turma_nome?.toLowerCase().includes(termo) ||
+          a.disciplina_nome?.toLowerCase().includes(termo) ||
+          a.professor_nome?.toLowerCase().includes(termo)
+        );
+      });
+    }
 
-    // Pesquisar por nome da sala
-    if (sala.nome.toLowerCase().includes(termo)) return true;
+    const mapaSalas = {};
 
-    // Pesquisar nas alocações da sala
-    const alocsDaSala = alocacoesDisciplinas.filter(a => Number(a.sala_id) === Number(sala.id));
-    return alocsDaSala.some(a => 
-      a.turma_nome?.toLowerCase().includes(termo) ||
-      a.disciplina_nome?.toLowerCase().includes(termo) ||
-      a.professor_nome?.toLowerCase().includes(termo)
-    );
-  }
+    // Primeiro agrupa por Sala
+    alocsFiltradas.forEach(aloc => {
+      const salaId = aloc.sala_id || "desconhecida";
+      const turmaId = aloc.turma_id || "desconhecida";
+      
+      if (!mapaSalas[salaId]) {
+        mapaSalas[salaId] = {
+          salaNome: aloc.sala_nome || "Sala Desconhecida",
+          totalAlocacoesSala: 0,
+          mapaTurmas: {}
+        };
+      }
+      
+      if (!mapaSalas[salaId].mapaTurmas[turmaId]) {
+        mapaSalas[salaId].mapaTurmas[turmaId] = {
+          turmaNome: aloc.turma_nome || "Turma Desconhecida",
+          alocacoes: []
+        };
+      }
+      
+      mapaSalas[salaId].mapaTurmas[turmaId].alocacoes.push(aloc);
+      mapaSalas[salaId].totalAlocacoesSala += 1;
+    });
 
-  const salasFiltradas = salas.filter(salaPassaFiltro);
-
-  function formatarDataBR(dataIso) {
-    if (!dataIso) return "";
-    const [ano, mes, dia] = dataIso.split("T")[0].split("-");
-    return `${dia}/${mes}`; // Ou `${dia}/${mes}/${ano}` se quiser com ano
-  }
+    // Converte os dicionários em arrays ordenados
+    return Object.values(mapaSalas)
+      .sort((a, b) => a.salaNome.localeCompare(b.salaNome))
+      .map(sala => {
+        const turmasArray = Object.values(sala.mapaTurmas)
+          .sort((a, b) => a.turmaNome.localeCompare(b.turmaNome));
+        return {
+          salaNome: sala.salaNome,
+          totalAlocacoesSala: sala.totalAlocacoesSala,
+          turmas: turmasArray
+        };
+      });
+  }, [alocacoesDisciplinas, termoPesquisa]);
 
   return (
-    <div className="tabela-container">
-      <div className="tabela-card">
-        {/* ── HEADER ── */}
-        <div className="tabela-header">
-          <div className="tabela-header-left">
-            <h2 className="tabela-title">Alocação de Disciplinas</h2>
-            <span className="tabela-badge">{salas.length} salas</span>
+    <div className="grade-container">
+      <div className="grade-card">
+        
+        {/* ── HEADER E PESQUISA ── */}
+        <div className="grade-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <h2 className="grade-title">Grade Curricular</h2>
+            <span className="grade-badge">{salasAgrupadas.length} salas alocadas</span>
           </div>
-        </div>
-
-        {/* ── BARRA DE PESQUISA ── */}
-        <div className="search-bar-wrapper">
-          <div className="search-input-wrapper">
-            <svg
-              className="search-icon"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          
+          <div className="grade-search-wrapper">
+            <svg className="grade-search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
-
             <input
               type="text"
-              className="search-input"
-              placeholder="Pesquisar por sala, turma, disciplina ou professor..."
+              className="grade-search-input"
+              placeholder="Pesquisar sala, turma, professor..."
               value={termoPesquisa}
               onChange={(e) => setTermoPesquisa(e.target.value)}
             />
-
-            {termoPesquisa && (
-              <button
-                className="search-clear-btn"
-                onClick={() => setTermoPesquisa("")}
-                title="Limpar pesquisa"
-              >
-                ✕
-              </button>
-            )}
           </div>
         </div>
 
-        <div className="tabela-divider" />
-
         {/* ── TABELA ── */}
-        <div className="table-wrapper">
-          <table className="tabela-alocacoes">
+        <div className="grade-table-wrapper">
+          <table className="grade-table">
             <thead>
               <tr>
-                <th style={{ width: '20%' }}>Sala</th>
-                <th>Alocações de Disciplinas no Semestre</th>
+                <th style={{ width: '15%' }} className="txt-center">Sala</th>
+                <th style={{ width: '15%' }} className="txt-center">Turma</th>
+                <th style={{ width: '20%' }}>Professor</th>
+                <th style={{ width: '25%' }}>Disciplina</th>
+                <th style={{ width: '25%' }}>Período</th>
               </tr>
             </thead>
-
             <tbody>
-              {salasFiltradas.length > 0 ? (
-                salasFiltradas.map((sala) => {
-                  const alocsDaSala = alocacoesDisciplinas.filter(
-                    (a) => Number(a.sala_id) === Number(sala.id)
-                  );
+              {salasAgrupadas.length > 0 ? (
+                salasAgrupadas.map((sala, salaIndex) => {
+                  const isZebra = salaIndex % 2 === 0;
+                  const bgClass = isZebra ? "tr-zebra" : "tr-normal";
 
-                  return (
-                    <tr key={sala.id}>
-                      <td style={{ verticalAlign: 'top', paddingTop: '15px' }}>
-                        <span className="sala-name">{sala.nome}</span>
-                        <div style={{ marginTop: '5px' }}>
-                          <span className={`tag ${sala.tipo_sala || sala.tipoSala}`}>
-                            {sala.tipo_sala || sala.tipoSala || "Normal"}
-                          </span>
-                        </div>
-                      </td>
-                      <td>
-                        {alocsDaSala.length > 0 ? (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '10px 0' }}>
-                            {alocsDaSala.map(aloc => {
-                              const inicioFormatado = formatarDataBR(aloc.data_inicio);
-                              const fimFormatado = formatarDataBR(aloc.data_fim);
-                              const temIntervalo = inicioFormatado && fimFormatado;
-                              
-                              return (
-                                <div key={aloc.id} style={{ 
-                                  padding: '12px', 
-                                  backgroundColor: '#f8f9fa', 
-                                  borderLeft: '4px solid #2196f3',
-                                  borderRadius: '4px',
-                                  fontSize: '14px'
-                                }}>
-                                  <strong>Turma {aloc.turma_nome}</strong> terá aula de <strong>{aloc.disciplina_nome}</strong> nas <strong>{aloc.dia_semana.toLowerCase()}s</strong>
-                                  {temIntervalo && ` no intervalo de ${inicioFormatado} até ${fimFormatado}`}
-                                  {aloc.is_modular && (
-                                    <span style={{ 
-                                      marginLeft: '8px', 
-                                      backgroundColor: '#ff9800', 
-                                      color: 'white', 
-                                      padding: '2px 6px', 
-                                      borderRadius: '12px',
-                                      fontSize: '11px',
-                                      fontWeight: 'bold'
-                                    }}>
-                                      MODULAR
-                                    </span>
-                                  )}
-                                  {aloc.professor_nome && (
-                                    <div style={{ marginTop: '4px', color: '#666', fontSize: '13px' }}>
-                                      Professor(a): {aloc.professor_nome}
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <span className="vaga-livre" style={{ display: 'inline-block', margin: '15px 0' }}>Livre</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
+                  return sala.turmas.map((turma, tIdx) => {
+                    return turma.alocacoes.map((aloc, aIdx) => {
+                      const isPrimeiraAlocacaoDaSala = tIdx === 0 && aIdx === 0;
+                      const isPrimeiraAlocacaoDaTurma = aIdx === 0;
+                      const isModular = aloc.tipo_disciplina === "MODULAR";
+                      
+                      const inicio = formatarDataBR(aloc.data_inicio);
+                      const fim = formatarDataBR(aloc.data_fim);
+                      let periodoTexto = "";
+                      
+                      if (inicio && fim) {
+                        periodoTexto = `${inicio} a ${fim}`;
+                      } else if (inicio) {
+                        periodoTexto = `A partir de ${inicio}`;
+                      } else if (fim) {
+                        periodoTexto = `Até ${fim}`;
+                      }
+
+                      // A classe modular sobrepõe a zebra
+                      const trCustomClass = isModular ? `${bgClass} modular-row` : bgClass;
+
+                      return (
+                        <tr key={aloc.id} className={trCustomClass}>
+                          {/* Sala: rowspan igual ao total de alocações em TODAS as turmas dessa sala */}
+                          {isPrimeiraAlocacaoDaSala && (
+                            <td rowSpan={sala.totalAlocacoesSala} className="cell-agrupada cell-sala">
+                              {sala.salaNome}
+                            </td>
+                          )}
+
+                          {/* Turma: rowspan igual ao número de alocações nessa turma específica */}
+                          {isPrimeiraAlocacaoDaTurma && (
+                            <td rowSpan={turma.alocacoes.length} className="cell-agrupada cell-turma">
+                              {turma.turmaNome}
+                            </td>
+                          )}
+                          
+                          {/* Dados da Disciplina */}
+                          <td className={!isPrimeiraAlocacaoDaTurma ? "cell-bordered-top" : ""}>
+                            {aloc.professor_nome ? (
+                              aloc.professor_nome
+                            ) : (
+                              <span className="txt-cinza">A definir</span>
+                            )}
+                          </td>
+                          
+                          <td className={!isPrimeiraAlocacaoDaTurma ? "cell-bordered-top" : ""}>
+                            <strong>{aloc.disciplina_nome}</strong>
+                          </td>
+                          
+                          <td className={!isPrimeiraAlocacaoDaTurma ? "cell-bordered-top" : ""}>
+                            <div className="periodo-wrapper">
+                              {periodoTexto && <span className="periodo-data">{periodoTexto}</span>}
+                              {isModular ? (
+                                <span className="badge-modular" title="Disciplina concentrada">MODULAR</span>
+                              ) : (
+                                <span className="badge-semanal" title="Aula regular na semana">
+                                  às {formatarDia(aloc.dia_semana)}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    });
+                  });
                 })
               ) : (
                 <tr>
-                  <td colSpan={2} className="empty-search-row">
-                    <div className="empty-search-content">
-                      <p>Nenhuma sala correspondente à pesquisa.</p>
-                    </div>
+                  <td colSpan="5" className="txt-center p-4">
+                    <span className="txt-cinza">Nenhuma alocação correspondente à pesquisa.</span>
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
+
       </div>
     </div>
   );
