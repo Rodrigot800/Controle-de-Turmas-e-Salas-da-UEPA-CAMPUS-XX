@@ -299,25 +299,24 @@ export default function ModalAlocacaoPeriodo({
             </div>
 
             {tipoDisciplina === "SEMANAL" && (
-              <>
-                <div className="form-group">
-                  <label>Dia da Semana *</label>
-                  <select value={diaSemana} onChange={e => setDiaSemana(e.target.value)}>
-                    <option value="">Selecione...</option>
-                    {DIAS_SEMANA.map(d => <option key={d.id} value={d.id}>{d.nome}</option>)}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Turno</label>
-                  <select value={turno} onChange={e => setTurno(e.target.value)}>
-                    <option value="">Selecione...</option>
-                    <option value="Manhã">Manhã</option>
-                    <option value="Tarde">Tarde</option>
-                    <option value="Noite">Noite</option>
-                  </select>
-                </div>
-              </>
+              <div className="form-group">
+                <label>Dia da Semana *</label>
+                <select value={diaSemana} onChange={e => setDiaSemana(e.target.value)}>
+                  <option value="">Selecione...</option>
+                  {DIAS_SEMANA.map(d => <option key={d.id} value={d.id}>{d.nome}</option>)}
+                </select>
+              </div>
             )}
+
+            <div className="form-group">
+              <label>Turno</label>
+              <select value={turno} onChange={e => setTurno(e.target.value)}>
+                <option value="">Selecione...</option>
+                <option value="Manhã">Manhã</option>
+                <option value="Tarde">Tarde</option>
+                <option value="Noite">Noite</option>
+              </select>
+            </div>
 
             <div className="form-group">
               <label>Data de Início</label>
