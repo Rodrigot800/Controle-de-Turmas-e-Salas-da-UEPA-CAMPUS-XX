@@ -212,7 +212,7 @@ export default function ModalAlocacaoPeriodo({
     const termo = pesquisa.toLowerCase();
     const txtSala = aloc.sala_nome?.toLowerCase() || "";
     const txtTurma = aloc.turma_nome?.toLowerCase() || "";
-    const txtDisc = aloc.disciplina_nome?.toLowerCase() || "";
+    const txtDisc = aloc.disciplina_nome?.toLowerCase() || "" ;
     const txtProf = aloc.professor_nome?.toLowerCase() || "";
     
     return txtSala.includes(termo) || txtTurma.includes(termo) || txtDisc.includes(termo) || txtProf.includes(termo);

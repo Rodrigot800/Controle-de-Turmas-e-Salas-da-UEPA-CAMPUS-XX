@@ -111,7 +111,9 @@ export default function TabelaAlocacoes({ salas, turmas, cursos, alocacoes }) {
     });
   }
 
-  const salasFiltradas = salas.filter(salaPassaFiltro);
+  const salasFiltradas = salas
+    .filter(salaPassaFiltro)
+    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { numeric: true }));
 
   // ─── Estatísticas ──────────────────────────────────────────────────────────
   const turmasAlocadas = new Set();

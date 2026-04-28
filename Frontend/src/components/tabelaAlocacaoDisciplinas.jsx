@@ -87,10 +87,10 @@ export default function TabelaAlocacaoDisciplinas({ salas, turmas = [], alocacoe
 
     // Converte os dicionários em arrays ordenados
     return Object.values(mapaSalas)
-      .sort((a, b) => a.salaNome.localeCompare(b.salaNome))
+      .sort((a, b) => a.salaNome.localeCompare(b.salaNome, 'pt-BR', { numeric: true }))
       .map(sala => {
         const turmasArray = Object.values(sala.mapaTurmas)
-          .sort((a, b) => a.turmaNome.localeCompare(b.turmaNome));
+          .sort((a, b) => a.turmaNome.localeCompare(b.turmaNome, 'pt-BR', { numeric: true }));
         return {
           salaNome: sala.salaNome,
           totalAlocacoesSala: sala.totalAlocacoesSala,
