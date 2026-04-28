@@ -106,7 +106,7 @@ export default function TabelaAlocacaoDisciplinas({ salas, turmas = [], alocacoe
         {/* ── HEADER E PESQUISA ── */}
         <div className="grade-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <h2 className="grade-title">Grade Curricular</h2>
+            <h2 className="grade-title">Alocações de Disciplinas{filtroTurno ? ` — ${filtroTurno}` : ""}</h2>
             <span className="grade-badge">{salasAgrupadas.length} salas alocadas</span>
           </div>
           
