@@ -36,7 +36,7 @@ function App() {
   const [alocacoesDisciplinas, setAlocacoesDisciplinas] = useState([]);
 
   // Estado para controlar qual tabela exibir
-  const [tabelaAtiva, setTabelaAtiva] = useState("salas"); // "salas" ou "disciplinas"
+  const [tabelaAtiva, setTabelaAtiva] = useState("disciplinas"); // "salas" ou "disciplinas"
 
   // ============================================================
   // CARREGAMENTO INICIAL DOS DADOS DA API
@@ -221,6 +221,7 @@ function App() {
               {tabelaAtiva === "disciplinas" && (
                 <TabelaAlocacaoDisciplinas
                   salas={salas}
+                  turmas={turmas}
                   alocacoesDisciplinas={alocacoesDisciplinas}
                 />
               )}
@@ -299,6 +300,7 @@ function App() {
                 turmas={turmas}
                 professores={professores}
                 disciplinas={disciplinas}
+                cursoDisciplinas={cursoDisciplinas}
                 alocacoesDisciplinas={alocacoesDisciplinas}
                 setAlocacoesDisciplinas={setAlocacoesDisciplinas}
                 onClose={() => setModalAlocacaoPeriodoAberto(false)}

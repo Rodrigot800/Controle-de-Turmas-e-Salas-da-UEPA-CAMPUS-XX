@@ -8,7 +8,8 @@ export default function ModalAlocacaoPeriodo({
   salas, 
   turmas, 
   professores, 
-  disciplinas, 
+  disciplinas,
+  cursoDisciplinas,
   alocacoesDisciplinas, 
   setAlocacoesDisciplinas, 
   onClose 
@@ -25,6 +26,27 @@ export default function ModalAlocacaoPeriodo({
 
   const [editandoId, setEditandoId] = useState(null);
   const [pesquisa, setPesquisa] = useState("");
+
+  // ── Derivados p/ filtros inteligentes ──────────────────
+  // Curso da turma selecionada
+  const turmaSelecionada = turmas.find(t => String(t.id) === String(turmaId));
+  const cursoIdDaTurma = turmaSelecionada?.curso_id ?? null;
+
+  // IDs de disciplinas do curso selecionado
+  const disciplinasDosCursoIds = cursoIdDaTurma
+    ? cursoDisciplinas.filter(cd => cd.curso_id === cursoIdDaTurma).map(cd => cd.disciplina_id)
+    : null;
+
+  // Lista de disciplinas filtrada pelo curso (ou todas, se nenhuma turma selecionada)
+  const disciplinasFiltradas = disciplinasDosCursoIds
+    ? disciplinas.filter(d => disciplinasDosCursoIds.includes(d.id))
+    : disciplinas;
+
+  // Professores filtrados pelo curso (e opcionalmente pela disciplina via curso)
+  const professoresFiltrados = cursoIdDaTurma
+    ? professores.filter(p => p.curso_id === cursoIdDaTurma)
+    : professores;
+
 
   const { alert, showAlert, showConfirm, error, success } = useAlert();
 
@@ -55,6 +77,21 @@ export default function ModalAlocacaoPeriodo({
   function formatarDataEnvio(data) {
     if (!data) return null;
     return data;
+  }
+
+  function handleTurmaChange(novoTurmaId) {
+    setTurmaId(novoTurmaId);
+    setDisciplinaId("");
+    setProfessorId("");
+    // Preencher turno automaticamente da turma
+    const turma = turmas.find(t => String(t.id) === String(novoTurmaId));
+    if (turma?.turno) setTurno(turma.turno);
+    else setTurno("");
+  }
+
+  function handleDisciplinaChange(novaDiscId) {
+    setDisciplinaId(novaDiscId);
+    setProfessorId("");
   }
 
   function iniciarEdicao(aloc) {
@@ -119,6 +156,7 @@ export default function ModalAlocacaoPeriodo({
       const alocacaoCompleta = {
         ...alocacaoSalva,
         turma_nome: turma?.nome,
+        ano_inicio: turma?.ano_inicio ?? null,
         disciplina_nome: disc?.nome,
         professor_nome: prof?.nome,
         sala_nome: sala?.nome
@@ -210,25 +248,29 @@ export default function ModalAlocacaoPeriodo({
 
             <div className="form-group">
               <label>Turma *</label>
-              <select value={turmaId} onChange={e => setTurmaId(e.target.value)}>
+              <select value={turmaId} onChange={e => handleTurmaChange(e.target.value)}>
                 <option value="">Selecione a Turma</option>
-                {turmas.map(t => <option key={t.id} value={t.id}>{t.nome}</option>)}
+                {turmas.map(t => (
+                  <option key={t.id} value={t.id}>
+                    {t.nome} {t.ano_inicio} {t.turno ? `• ${t.turno}` : ""}
+                  </option>
+                ))}
               </select>
             </div>
 
             <div className="form-group full">
               <label>Disciplina *</label>
-              <select value={disciplinaId} onChange={e => setDisciplinaId(e.target.value)}>
-                <option value="">Selecione a Disciplina</option>
-                {disciplinas.map(d => <option key={d.id} value={d.id}>{d.nome}</option>)}
+              <select value={disciplinaId} onChange={e => handleDisciplinaChange(e.target.value)} disabled={!turmaId}>
+                <option value="">{turmaId ? "Selecione a Disciplina" : "Selecione uma turma primeiro"}</option>
+                {disciplinasFiltradas.map(d => <option key={d.id} value={d.id}>{d.nome}</option>)}
               </select>
             </div>
 
             <div className="form-group full">
               <label>Professor (Opcional)</label>
-              <select value={professorId} onChange={e => setProfessorId(e.target.value)}>
-                <option value="">A Definir</option>
-                {professores.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+              <select value={professorId} onChange={e => setProfessorId(e.target.value)} disabled={!turmaId}>
+                <option value="">{turmaId ? "A Definir" : "Selecione uma turma primeiro"}</option>
+                {professoresFiltrados.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
               </select>
             </div>
 

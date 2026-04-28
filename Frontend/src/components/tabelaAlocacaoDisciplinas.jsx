@@ -26,8 +26,14 @@ function formatarDia(dia) {
   return dia.toLowerCase() + "s";
 }
 
-export default function TabelaAlocacaoDisciplinas({ salas, alocacoesDisciplinas }) {
+export default function TabelaAlocacaoDisciplinas({ salas, turmas = [], alocacoesDisciplinas }) {
   const [termoPesquisa, setTermoPesquisa] = useState("");
+  const [filtroTurno, setFiltroTurno] = useState("");
+
+  const turnosUnicos = useMemo(() => {
+    const turnos = alocacoesDisciplinas.map(a => a.turno).filter(Boolean);
+    return [...new Set(turnos)].sort();
+  }, [alocacoesDisciplinas]);
 
   // Agrupa as alocações por Sala e depois por Turma
   const salasAgrupadas = useMemo(() => {
@@ -35,8 +41,13 @@ export default function TabelaAlocacaoDisciplinas({ salas, alocacoesDisciplinas 
     
     // Filtro de pesquisa abrangente
     let alocsFiltradas = alocacoesDisciplinas;
+
+    if (filtroTurno) {
+      alocsFiltradas = alocsFiltradas.filter(a => a.turno === filtroTurno);
+    }
+
     if (termo) {
-      alocsFiltradas = alocacoesDisciplinas.filter(a => {
+      alocsFiltradas = alocsFiltradas.filter(a => {
         return (
           a.sala_nome?.toLowerCase().includes(termo) ||
           a.turma_nome?.toLowerCase().includes(termo) ||
@@ -62,8 +73,10 @@ export default function TabelaAlocacaoDisciplinas({ salas, alocacoesDisciplinas 
       }
       
       if (!mapaSalas[salaId].mapaTurmas[turmaId]) {
+        const turmaObj = turmas.find(t => String(t.id) === String(aloc.turma_id));
         mapaSalas[salaId].mapaTurmas[turmaId] = {
           turmaNome: aloc.turma_nome || "Turma Desconhecida",
+          ano_inicio: turmaObj?.ano_inicio ?? aloc.ano_inicio ?? "",
           alocacoes: []
         };
       }
@@ -84,7 +97,7 @@ export default function TabelaAlocacaoDisciplinas({ salas, alocacoesDisciplinas 
           turmas: turmasArray
         };
       });
-  }, [alocacoesDisciplinas, termoPesquisa]);
+  }, [alocacoesDisciplinas, termoPesquisa, filtroTurno]);
 
   return (
     <div className="grade-container">
@@ -97,18 +110,34 @@ export default function TabelaAlocacaoDisciplinas({ salas, alocacoesDisciplinas 
             <span className="grade-badge">{salasAgrupadas.length} salas alocadas</span>
           </div>
           
-          <div className="grade-search-wrapper">
-            <svg className="grade-search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <input
-              type="text"
-              className="grade-search-input"
-              placeholder="Pesquisar sala, turma, professor..."
-              value={termoPesquisa}
-              onChange={(e) => setTermoPesquisa(e.target.value)}
-            />
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <div className="grade-search-wrapper" style={{ width: 'auto' }}>
+              <select 
+                className="grade-search-input" 
+                style={{ paddingLeft: '12px', cursor: 'pointer', appearance: 'auto' }}
+                value={filtroTurno}
+                onChange={(e) => setFiltroTurno(e.target.value)}
+              >
+                <option value="">Todos os Turnos</option>
+                {turnosUnicos.map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grade-search-wrapper">
+              <svg className="grade-search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input
+                type="text"
+                className="grade-search-input"
+                placeholder="Pesquisar sala, turma, professor..."
+                value={termoPesquisa}
+                onChange={(e) => setTermoPesquisa(e.target.value)}
+              />
+            </div>
           </div>
         </div>
 
@@ -163,7 +192,7 @@ export default function TabelaAlocacaoDisciplinas({ salas, alocacoesDisciplinas 
                           {/* Turma: rowspan igual ao número de alocações nessa turma específica */}
                           {isPrimeiraAlocacaoDaTurma && (
                             <td rowSpan={turma.alocacoes.length} className="cell-agrupada cell-turma">
-                              {turma.turmaNome}
+                              {turma.turmaNome}{turma.ano_inicio ? ` ${turma.ano_inicio}` : ""}
                             </td>
                           )}
                           

@@ -18,6 +18,8 @@ router.get("/", async (req, res) => {
         ad.data_inicio, 
         ad.data_fim, 
         t.nome as turma_nome,
+        t.ano_inicio as ano_inicio,
+        t.turno as turno_turma,
         d.nome as disciplina_nome,
         p.nome as professor_nome,
         s.nome as sala_nome
