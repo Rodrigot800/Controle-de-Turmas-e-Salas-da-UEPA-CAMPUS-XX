@@ -26,7 +26,7 @@ function formatarDia(dia) {
   return dia.toLowerCase() + "s";
 }
 
-export default function TabelaAlocacaoDisciplinas({ salas, turmas = [], alocacoesDisciplinas }) {
+export default function TabelaAlocacaoDisciplinas({ salas, turmas = [], alocacoesDisciplinas, onOpenModalAlocacao }) {
   const [termoPesquisa, setTermoPesquisa] = useState("");
   const [filtroTurno, setFiltroTurno] = useState("");
 
@@ -108,6 +108,25 @@ export default function TabelaAlocacaoDisciplinas({ salas, turmas = [], alocacoe
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <h2 className="grade-title">Alocações de Disciplinas{filtroTurno ? ` — ${filtroTurno}` : ""}</h2>
             <span className="grade-badge">{salasAgrupadas.length} salas alocadas</span>
+            <button
+              className="btn btn-primary shadow-sm"
+              style={{
+                background: "linear-gradient(135deg, #8b5cf6, #6d28d9)",
+                border: "none",
+                fontWeight: "600",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                marginLeft: "12px",
+                color: "#fff",
+                padding: "8px 16px",
+                borderRadius: "8px",
+                cursor: "pointer"
+              }}
+              onClick={onOpenModalAlocacao}
+            >
+              <span style={{ fontSize: "1.2rem", lineHeight: 0 }}>+</span> Alocar Período
+            </button>
           </div>
           
           <div style={{ display: 'flex', gap: '12px' }}>

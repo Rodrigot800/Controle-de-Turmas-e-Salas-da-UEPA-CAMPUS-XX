@@ -1,7 +1,7 @@
 import { useState } from "react";
 import "../style/tabelaAlocacoes.css";
 
-export default function TabelaAlocacoes({ salas, turmas, cursos, alocacoes }) {
+export default function TabelaAlocacoes({ salas, turmas, cursos, alocacoes, onOpenModalAlocacao }) {
   // ─── Filtros de semestre ───────────────────────────────────────────────────
   const [anoSelecionado, setAnoSelecionado] = useState(2026);
   const [semestreSelecionado, setSemestreSelecionado] = useState(1);
@@ -147,8 +147,29 @@ export default function TabelaAlocacoes({ salas, turmas, cursos, alocacoes }) {
         {/* ── HEADER ── */}
         <div className="tabela-header">
           <div className="tabela-header-left">
-            <h2 className="tabela-title">Alocações de Salas</h2>
-            <span className="tabela-badge">{salas.length} salas</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <h2 className="tabela-title">Alocações de Salas</h2>
+              <span className="tabela-badge">{salas.length} salas</span>
+              <button
+                className="btn btn-primary shadow-sm"
+                style={{
+                  background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+                  border: "none",
+                  fontWeight: "600",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  marginLeft: "12px",
+                  color: "#fff",
+                  padding: "8px 16px",
+                  borderRadius: "8px",
+                  cursor: "pointer"
+                }}
+                onClick={onOpenModalAlocacao}
+              >
+                <span style={{ fontSize: "1.2rem", lineHeight: 0 }}>+</span> Alocar Turmas
+              </button>
+            </div>
           </div>
 
           <div className="tabela-filters">

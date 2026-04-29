@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Header from "./components/header";
 import ModalSalas from "./components/modalSalas";
 import ModalCursos from "./components/modalCursos";
@@ -37,6 +37,22 @@ function App() {
 
   // Estado para controlar qual tabela exibir
   const [tabelaAtiva, setTabelaAtiva] = useState("disciplinas"); // "salas" ou "disciplinas"
+  const [mostrarCadastros, setMostrarCadastros] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        // Se o clique for dentro do modal, não fecha o dropdown
+        if (event.target.closest('.modal') || event.target.closest('.modal-backdrop')) {
+          return;
+        }
+        setMostrarCadastros(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // ============================================================
   // CARREGAMENTO INICIAL DOS DADOS DA API
@@ -115,74 +131,77 @@ function App() {
             <div className="container-fluid mt-4">
               <div className="card shadow-sm">
                 <div className="card-body">
-                  <div className="d-flex justify-content-end flex-wrap gap-2">
-                    <button
-                      className="btn btn-outline-primary"
-                      onClick={() => setModalSalasAberto(true)}
-                    >
-                      Salas
-                    </button>
-
-                    <button
-                      className="btn btn-outline-primary"
-                      onClick={() => setModalCursosAberto(true)}
-                    >
-                      Cursos
-                    </button>
-
-                    <button
-                      className="btn btn-outline-primary"
-                      onClick={() => setModalTurmasAberto(true)}
-                    >
-                      Turmas
-                    </button>
-
-                    <button
-                      className="btn btn-outline-primary"
-                      onClick={() => setModalProfessoresAberto(true)}
-                    >
-                      Professores
-                    </button>
-
-                    <button
-                      className="btn btn-outline-primary"
-                      onClick={() => setModalDisciplinasAberto(true)}
-                    >
-                      Disciplinas
-                    </button>
-                    
-                    {/* Botão de Nova Alocação Dinâmico */}
-                    {tabelaAtiva === "salas" ? (
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div>
+                      <h4 style={{ margin: 0, fontWeight: "600", color: "#1f2937" }}>Visão Geral</h4>
+                    </div>
+                    <div className="modern-dropdown-container" ref={dropdownRef}>
                       <button
-                        className="btn btn-primary shadow-sm"
-                        style={{
-                          background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+                        className="btn btn-primary shadow-sm d-flex align-items-center gap-2"
+                        style={{ 
+                          fontWeight: "600", 
+                          transition: "all 0.3s ease",
+                          background: mostrarCadastros ? "#1d4ed8" : "#2563eb",
                           border: "none",
-                          fontWeight: "600",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "6px"
+                          padding: "10px 20px",
+                          borderRadius: "8px"
                         }}
-                        onClick={() => setModalAlocacoesAberto(true)}
+                        onClick={() => setMostrarCadastros(!mostrarCadastros)}
                       >
-                        <span style={{ fontSize: "1.2rem", lineHeight: 0 }}>+</span> Alocar Turmas
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                          <circle cx="12" cy="12" r="3"></circle>
+                          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                        </svg>
+                        Gerenciar Cadastros
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: "transform 0.3s ease", transform: mostrarCadastros ? "rotate(180deg)" : "rotate(0deg)" }}>
+                          <path d="m6 9 6 6 6-6"/>
+                        </svg>
                       </button>
-                    ) : (
-                      <button
-                        className="btn btn-primary shadow-sm"
-                        style={{
-                          background: "linear-gradient(135deg, #8b5cf6, #6d28d9)",
-                          border: "none",
-                          fontWeight: "600",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "6px"
-                        }}
-                        onClick={() => setModalAlocacaoPeriodoAberto(true)}
-                      >
-                        <span style={{ fontSize: "1.2rem", lineHeight: 0 }}>+</span> Alocar Período
-                      </button>
-                    )}
+
+                      {mostrarCadastros && (
+                        <div className="modern-dropdown-menu">
+                          <button
+                            className="modern-dropdown-item"
+                            onClick={() => { setModalSalasAberto(true); }}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                            Salas
+                          </button>
+                          
+                          <button
+                            className="modern-dropdown-item"
+                            onClick={() => { setModalCursosAberto(true); }}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>
+                            Cursos
+                          </button>
+                          
+                          <button
+                            className="modern-dropdown-item"
+                            onClick={() => { setModalTurmasAberto(true); }}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                            Turmas
+                          </button>
+                          
+                          <button
+                            className="modern-dropdown-item"
+                            onClick={() => { setModalProfessoresAberto(true); }}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                            Professores
+                          </button>
+                          
+                          <button
+                            className="modern-dropdown-item"
+                            onClick={() => { setModalDisciplinasAberto(true); }}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+                            Disciplinas
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -215,6 +234,7 @@ function App() {
                   turmas={turmas}
                   cursos={cursos}
                   alocacoes={alocacoes}
+                  onOpenModalAlocacao={() => setModalAlocacoesAberto(true)}
                 />
               )}
 
@@ -223,6 +243,7 @@ function App() {
                   salas={salas}
                   turmas={turmas}
                   alocacoesDisciplinas={alocacoesDisciplinas}
+                  onOpenModalAlocacao={() => setModalAlocacaoPeriodoAberto(true)}
                 />
               )}
             </div>
