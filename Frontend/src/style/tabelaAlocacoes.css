@@ -345,7 +345,9 @@
 
 .search-input {
   width: 100%;
-  padding: 8px 36px 8px 34px;
+  height: 38px;
+  box-sizing: border-box;
+  padding: 0 36px 0 34px;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   font-size: 0.85rem;

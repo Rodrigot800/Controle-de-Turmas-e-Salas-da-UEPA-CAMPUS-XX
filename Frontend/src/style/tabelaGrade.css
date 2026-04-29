@@ -45,7 +45,9 @@
 
 .grade-search-input {
   width: 100%;
-  padding: 10px 40px 10px 16px;
+  height: 38px;
+  box-sizing: border-box;
+  padding: 0 40px 0 16px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   font-size: 14px;

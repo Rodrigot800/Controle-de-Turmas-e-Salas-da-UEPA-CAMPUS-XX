@@ -150,25 +150,6 @@ export default function TabelaAlocacoes({ salas, turmas, cursos, alocacoes, onOp
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <h2 className="tabela-title">Alocações de Salas</h2>
               <span className="tabela-badge">{salas.length} salas</span>
-              <button
-                className="btn btn-primary shadow-sm"
-                style={{
-                  background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
-                  border: "none",
-                  fontWeight: "600",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  marginLeft: "12px",
-                  color: "#fff",
-                  padding: "8px 16px",
-                  borderRadius: "8px",
-                  cursor: "pointer"
-                }}
-                onClick={onOpenModalAlocacao}
-              >
-                <span style={{ fontSize: "1.2rem", lineHeight: 0 }}>+</span> Alocar Turmas
-              </button>
             </div>
           </div>
 
@@ -265,6 +246,30 @@ export default function TabelaAlocacoes({ salas, turmas, cursos, alocacoes, onOp
               </button>
             )}
           </div>
+
+          <button
+            className="btn btn-primary shadow-sm"
+            style={{
+              background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+              border: "none",
+              fontWeight: "600",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "6px",
+              marginLeft: "auto",
+              color: "#fff",
+              height: "38px",
+              padding: "0 16px",
+              fontSize: "13px",
+              borderRadius: "8px",
+              cursor: "pointer",
+              whiteSpace: "nowrap"
+            }}
+            onClick={onOpenModalAlocacao}
+          >
+            <span style={{ fontSize: "1.2rem", lineHeight: 0, marginTop: "-2px" }}>+</span> Alocar Turmas
+          </button>
 
           {/* Contador de resultados */}
           {termoPesquisa && (

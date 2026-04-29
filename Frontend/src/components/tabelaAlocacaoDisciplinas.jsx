@@ -108,28 +108,9 @@ export default function TabelaAlocacaoDisciplinas({ salas, turmas = [], alocacoe
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <h2 className="grade-title">Alocações de Disciplinas{filtroTurno ? ` — ${filtroTurno}` : ""}</h2>
             <span className="grade-badge">{salasAgrupadas.length} salas alocadas</span>
-            <button
-              className="btn btn-primary shadow-sm"
-              style={{
-                background: "linear-gradient(135deg, #8b5cf6, #6d28d9)",
-                border: "none",
-                fontWeight: "600",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                marginLeft: "12px",
-                color: "#fff",
-                padding: "8px 16px",
-                borderRadius: "8px",
-                cursor: "pointer"
-              }}
-              onClick={onOpenModalAlocacao}
-            >
-              <span style={{ fontSize: "1.2rem", lineHeight: 0 }}>+</span> Alocar Período
-            </button>
           </div>
           
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
             <div className="grade-search-wrapper" style={{ width: 'auto' }}>
               <select 
                 className="grade-search-input" 
@@ -157,6 +138,29 @@ export default function TabelaAlocacaoDisciplinas({ salas, turmas = [], alocacoe
                 onChange={(e) => setTermoPesquisa(e.target.value)}
               />
             </div>
+
+            <button
+              className="btn btn-primary shadow-sm"
+              style={{
+                background: "linear-gradient(135deg, #8b5cf6, #6d28d9)",
+                border: "none",
+                fontWeight: "600",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "6px",
+                color: "#fff",
+                height: "38px",
+                padding: "0 16px",
+                fontSize: "13px",
+                borderRadius: "8px",
+                cursor: "pointer",
+                whiteSpace: "nowrap"
+              }}
+              onClick={onOpenModalAlocacao}
+            >
+              <span style={{ fontSize: "1.2rem", lineHeight: 0, marginTop: "-2px" }}>+</span> Alocar Período
+            </button>
           </div>
         </div>
 
