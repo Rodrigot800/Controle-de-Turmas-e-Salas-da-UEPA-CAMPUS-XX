@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   TABELA DE ALOCAÇÃO DE DISCIPLINAS — Design System v2
+   TABELA DE ALOCAÇÃO DE DISCIPLINAS — Design System v4
    ═══════════════════════════════════════════════════════════════════════════ */
 
 .grade-container {
@@ -17,22 +17,33 @@
   overflow: hidden;
 }
 
-/* ── HEADER ── */
-.grade-header {
+/* ═══════════════════════════════════════════════════════════════════════════
+   TOOLBAR UNIFICADA
+   ═══════════════════════════════════════════════════════════════════════════ */
+.grade-toolbar {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 20px 24px;
+  gap: 12px;
+  padding: 16px 24px;
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
   border-bottom: 1px solid #e2e8f0;
+  flex-wrap: wrap;
+}
+
+.grade-toolbar-separator {
+  width: 1px;
+  height: 24px;
+  background: #e2e8f0;
+  flex-shrink: 0;
 }
 
 .grade-title {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
   color: #0f172a;
   margin: 0;
   letter-spacing: -0.02em;
+  white-space: nowrap;
 }
 
 .grade-badge {
@@ -45,13 +56,44 @@
   border: 1px solid #e2e8f0;
   letter-spacing: 0.02em;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  white-space: nowrap;
 }
 
-/* ── SEARCH BAR ── */
+.grade-badge-accent {
+  font-size: 11px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  white-space: nowrap;
+  background: rgba(99, 102, 241, 0.06);
+  color: #6366f1;
+  border: 1px solid rgba(99, 102, 241, 0.15);
+}
+
+.grade-filter-select {
+  height: 36px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+  background: #ffffff;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
 .grade-search-wrapper {
   position: relative;
-  width: 100%;
-  max-width: 340px;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 160px;
+  max-width: 280px;
 }
 
 .grade-search-input {
@@ -60,24 +102,12 @@
   box-sizing: border-box;
   padding: 0 38px 0 14px;
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
-  background-color: #f8fafc;
-  color: #1e293b;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  outline: none;
-}
-
-.grade-search-input:focus {
   background-color: #ffffff;
-  border-color: #818cf8;
-  box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.12);
-}
-
-.grade-search-input::placeholder {
-  color: #94a3b8;
-  font-weight: 400;
+  color: #1e293b;
+  outline: none;
 }
 
 .grade-search-icon {
@@ -88,12 +118,32 @@
   color: #94a3b8;
   width: 16px;
   height: 16px;
+  pointer-events: none;
 }
 
-/* ── TABLE WRAPPER ── */
-.grade-table-wrapper {
-  overflow-x: auto;
+.grade-action-btn {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  border: none;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-left: auto;
+  color: #fff;
+  height: 36px;
+  padding: 0 20px;
+  font-size: 13px;
+  border-radius: 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+  transition: all 0.25s ease;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TABELA PRINCIPAL
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 .grade-table {
   width: 100%;
@@ -102,98 +152,124 @@
   font-size: 13.5px;
 }
 
-/* ── HEADER TABELA ── */
 .grade-table thead th {
   background-color: #1e293b;
-  color: #e2e8f0;
+  color: #cbd5e1;
   padding: 14px 18px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   font-size: 11px;
-  white-space: nowrap;
   border-bottom: 2px solid #0f172a;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
   position: sticky;
   top: 0;
   z-index: 5;
 }
 
-/* ── CORPO DA TABELA ── */
+.grade-table thead th:last-child {
+  border-right: none;
+}
+
 .grade-table tbody td {
   padding: 14px 18px;
   color: #334155;
-  border-bottom: 1px solid #f1f5f9;
   vertical-align: middle;
+  border-bottom: 1px solid #eef2f7;
+  border-right: 1px solid rgba(30, 41, 59, 0.15); /* Linha preta azulada entre colunas */
 }
 
-/* ── ZEBRA STRIPING ── */
-.tr-zebra {
-  background-color: #f8fafc;
+.grade-table tbody td:last-child {
+  border-right: none;
 }
 
-.tr-normal {
-  background-color: #ffffff;
+/* ═══════════════════════════════════════════════════════════════════════════
+   ZEBRA SALA E TURMA (Branco e Cinza)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.tr-normal-sala .cell-sala,
+.tr-normal-sala .cell-turma {
+  background-color: #ffffff !important;
 }
 
-/* Hover global nas linhas */
-.grade-table tbody tr {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+.tr-zebra-sala .cell-sala,
+.tr-zebra-sala .cell-turma {
+  background-color: #f1f5f9 !important; /* Cinza pastel */
 }
 
-.grade-table tbody tr:hover td:not(.cell-agrupada) {
-  background-color: rgba(99, 102, 241, 0.03);
-}
-
-/* ── SEPARADORES DE BLOCO ── */
-.cell-bordered-top {
-  border-top: 1px dashed #e2e8f0;
-}
-
-/* ── CÉLULAS AGRUPADAS (ROWSPAN) ── */
+/* ── CÉLULAS AGRUPADAS ── */
 .cell-agrupada {
   vertical-align: middle;
   text-align: center;
   font-weight: 700;
-  border-right: 2px solid #e2e8f0;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid #d1d5db;
   position: relative;
 }
 
 .cell-sala {
   color: #0f172a;
   font-size: 15px;
-  letter-spacing: -0.01em;
-  background: rgba(241, 245, 249, 0.5);
-}
-
-.cell-sala::after {
-  content: '';
-  position: absolute;
-  right: -2px;
-  top: 8px;
-  bottom: 8px;
-  width: 2px;
-  background: linear-gradient(180deg, transparent, #6366f1, transparent);
-  opacity: 0.3;
+  border-right: 2px solid rgba(30, 41, 59, 0.25) !important;
 }
 
 .cell-turma {
   color: #4338ca;
   font-size: 13.5px;
-  background: rgba(99, 102, 241, 0.04);
-  letter-spacing: -0.01em;
+  border-right: 1px solid rgba(30, 41, 59, 0.2) !important;
 }
 
-/* ── HIGHLIGHT MODULAR ── */
-.modular-row td:not(.cell-agrupada) {
-  background-color: rgba(20, 184, 166, 0.04);
+/* ═══════════════════════════════════════════════════════════════════════════
+   ZEBRA POR TIPO (SEMANAL = AZUL, MODULAR = VERDE)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* --- SEMANAL (AZUL) --- */
+.semanal-row.row-even td:not(.cell-agrupada) {
+  background-color: rgba(59, 130, 246, 0.05) !important; /* Azul tom 1 */
 }
 
-.modular-row:hover td:not(.cell-agrupada) {
-  background-color: rgba(20, 184, 166, 0.08);
+.semanal-row.row-odd td:not(.cell-agrupada) {
+  background-color: rgba(59, 130, 246, 0.12) !important; /* Azul tom 2 (mais forte) */
 }
 
-/* ── PERÍODO E BADGES ── */
+/* --- MODULAR (VERDE) --- */
+.modular-row.row-even td:not(.cell-agrupada) {
+  background-color: rgba(34, 197, 94, 0.05) !important; /* Verde tom 1 */
+}
+
+.modular-row.row-odd td:not(.cell-agrupada) {
+  background-color: rgba(34, 197, 94, 0.12) !important; /* Verde tom 2 (mais forte) */
+}
+
+/* Hover */
+.grade-table tbody tr:hover td:not(.cell-agrupada) {
+  filter: brightness(0.95);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BADGES E OUTROS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.badge-modular {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  box-shadow: 0 2px 4px rgba(34, 197, 94, 0.3);
+}
+
+.badge-semanal {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
+}
+
 .periodo-wrapper {
   display: flex;
   align-items: center;
@@ -207,70 +283,22 @@
   font-size: 13px;
 }
 
-.badge-modular {
-  background: linear-gradient(135deg, #14b8a6, #0d9488);
-  color: white;
-  padding: 4px 12px;
-  border-radius: 6px;
-  font-size: 10.5px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  box-shadow: 0 2px 4px rgba(20, 184, 166, 0.25);
-}
-
-.badge-semanal {
-  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-  color: white;
-  padding: 4px 12px;
-  border-radius: 6px;
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  box-shadow: 0 2px 4px rgba(139, 92, 246, 0.25);
-}
-
-/* ── TEXTOS UTILITÁRIOS ── */
 .txt-cinza {
   color: #94a3b8;
   font-style: italic;
-  font-weight: 400;
 }
 
-.txt-center {
-  text-align: center;
-}
-
-.p-4 {
-  padding: 2rem;
-}
-
-/* ── DISCIPLINA NOME (negrito na coluna) ── */
 .grade-table td strong {
   color: #1e293b;
   font-weight: 700;
 }
 
-/* ── PROFESSOR NOME ── */
-.grade-table td:not(.cell-agrupada) {
-  font-size: 13px;
-}
-
-/* ── RESPONSIVIDADE ── */
 @media (max-width: 768px) {
-  .grade-header {
+  .grade-toolbar {
     flex-direction: column;
-    gap: 12px;
-    align-items: flex-start;
+    align-items: stretch;
   }
-
-  .grade-table thead th,
-  .grade-table tbody td {
-    padding: 10px 12px;
-    font-size: 12px;
-  }
-
   .grade-search-wrapper {
-    max-width: 100%;
+    max-width: none;
   }
 }
