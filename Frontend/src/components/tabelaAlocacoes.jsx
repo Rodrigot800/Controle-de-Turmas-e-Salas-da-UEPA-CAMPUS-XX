@@ -141,74 +141,83 @@ export default function TabelaAlocacoes({ salas, turmas, cursos, alocacoes, onOp
     return "baixo";
   }
 
+  // ─── Ícone de tipo de sala ────────────────────────────────────────────────
+  function iconeTag(tipo) {
+    switch (tipo) {
+      case "laboratorio":
+        return (
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 3h6v7l4 9H5l4-9z" /><line x1="9" y1="3" x2="15" y2="3" />
+          </svg>
+        );
+      case "informatica":
+        return (
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" />
+          </svg>
+        );
+      default:
+        return (
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+          </svg>
+        );
+    }
+  }
+
   return (
     <div className="tabela-container">
       <div className="tabela-card">
-        {/* ── HEADER ── */}
-        <div className="tabela-header">
-          <div className="tabela-header-left">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <h2 className="tabela-title">Alocações de Salas</h2>
-              <span className="tabela-badge">{salas.length} salas</span>
-            </div>
-          </div>
+        {/* ── HEADER UNIFICADO ── */}
+        <div className="tabela-toolbar">
+          {/* Título + Badge */}
+          <h2 className="tabela-title">Alocações de Salas</h2>
+          <span className="tabela-badge">{salas.length} salas</span>
 
-          <div className="tabela-filters">
-            <select
-              className="filter-select"
-              value={anoSelecionado}
-              onChange={(e) => setAnoSelecionado(Number(e.target.value))}
-            >
-              {[
-                2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030,
-                2031,
-              ].map((ano) => (
-                <option key={ano} value={ano}>
-                  {ano}
-                </option>
-              ))}
-            </select>
+          {/* Separador visual */}
+          <div className="toolbar-separator" />
 
-            <select
-              className="filter-select"
-              value={semestreSelecionado}
-              onChange={(e) => setSemestreSelecionado(Number(e.target.value))}
-            >
-              <option value={1}>1º semestre</option>
-              <option value={2}>2º semestre</option>
-            </select>
-          </div>
-        </div>
+          {/* Seletores de período */}
+          <select
+            className="filter-select"
+            value={anoSelecionado}
+            onChange={(e) => setAnoSelecionado(Number(e.target.value))}
+          >
+            {[2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031].map((ano) => (
+              <option key={ano} value={ano}>{ano}</option>
+            ))}
+          </select>
 
-        {/* ── BARRA DE PESQUISA ── */}
-        <div className="search-bar-wrapper">
+          <select
+            className="filter-select"
+            value={semestreSelecionado}
+            onChange={(e) => setSemestreSelecionado(Number(e.target.value))}
+          >
+            <option value={1}>1º sem</option>
+            <option value={2}>2º sem</option>
+          </select>
+
+          {/* Separador visual */}
+          <div className="toolbar-separator" />
+
+          {/* Toggle tipo de pesquisa */}
           <div className="search-type-toggle">
             <button
-              className={`search-type-btn ${
-                tipoPesquisa === "turma" ? "active" : ""
-              }`}
-              onClick={() => {
-                setTipoPesquisa("turma");
-                setTermoPesquisa("");
-              }}
+              className={`search-type-btn ${tipoPesquisa === "turma" ? "active" : ""}`}
+              onClick={() => { setTipoPesquisa("turma"); setTermoPesquisa(""); }}
             >
               Turma
             </button>
             <button
-              className={`search-type-btn ${
-                tipoPesquisa === "ano" ? "active" : ""
-              }`}
-              onClick={() => {
-                setTipoPesquisa("ano");
-                setTermoPesquisa("");
-              }}
+              className={`search-type-btn ${tipoPesquisa === "ano" ? "active" : ""}`}
+              onClick={() => { setTipoPesquisa("ano"); setTermoPesquisa(""); }}
             >
-              Ano de Início
+              Ano
             </button>
           </div>
 
+          {/* Campo de pesquisa */}
           <div className="search-input-wrapper">
-            {/* Ícone de lupa */}
             <svg
               className="search-icon"
               xmlns="http://www.w3.org/2000/svg"
@@ -226,16 +235,11 @@ export default function TabelaAlocacoes({ salas, turmas, cursos, alocacoes, onOp
             <input
               type={tipoPesquisa === "ano" ? "number" : "text"}
               className="search-input"
-              placeholder={
-                tipoPesquisa === "turma"
-                  ? "Pesquisar por nome da turma..."
-                  : "Pesquisar por ano de início (ex: 2024)..."
-              }
+              placeholder={tipoPesquisa === "turma" ? "Pesquisar turma..." : "Ano (ex: 2024)..."}
               value={termoPesquisa}
               onChange={(e) => setTermoPesquisa(e.target.value)}
             />
 
-            {/* Botão limpar pesquisa */}
             {termoPesquisa && (
               <button
                 className="search-clear-btn"
@@ -247,43 +251,23 @@ export default function TabelaAlocacoes({ salas, turmas, cursos, alocacoes, onOp
             )}
           </div>
 
-          <button
-            className="btn btn-primary shadow-sm"
-            style={{
-              background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
-              border: "none",
-              fontWeight: "600",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "6px",
-              marginLeft: "auto",
-              color: "#fff",
-              height: "38px",
-              padding: "0 16px",
-              fontSize: "13px",
-              borderRadius: "8px",
-              cursor: "pointer",
-              whiteSpace: "nowrap"
-            }}
-            onClick={onOpenModalAlocacao}
-          >
-            <span style={{ fontSize: "1.2rem", lineHeight: 0, marginTop: "-2px" }}>+</span> Alocar Turmas
-          </button>
-
           {/* Contador de resultados */}
           {termoPesquisa && (
             <span className="search-results-count">
               {salasFiltradas.length === 0
-                ? "Nenhuma sala encontrada"
-                : `${salasFiltradas.length} sala${
-                    salasFiltradas.length > 1 ? "s" : ""
-                  } encontrada${salasFiltradas.length > 1 ? "s" : ""}`}
+                ? "Nenhuma"
+                : `${salasFiltradas.length} sala${salasFiltradas.length > 1 ? "s" : ""}`}
             </span>
           )}
-        </div>
 
-        <div className="tabela-divider" />
+          {/* Botão alocar */}
+          <button
+            className="toolbar-action-btn"
+            onClick={onOpenModalAlocacao}
+          >
+            <span style={{ fontSize: "1.1rem", lineHeight: 0 }}>+</span> Alocar Turmas
+          </button>
+        </div>
 
         {/* ── TABELA ── */}
         <div className="table-wrapper">
@@ -307,7 +291,15 @@ export default function TabelaAlocacoes({ salas, turmas, cursos, alocacoes, onOp
 
                   const renderTurno = (turma) => {
                     if (!turma) {
-                      return <span className="vaga-livre">Livre</span>;
+                      return (
+                        <span className="vaga-livre">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="8" y1="12" x2="16" y2="12" />
+                          </svg>
+                          Livre
+                        </span>
+                      );
                     }
 
                     const pct = calcularPercentualTurma(turma);
@@ -317,9 +309,8 @@ export default function TabelaAlocacoes({ salas, turmas, cursos, alocacoes, onOp
                         <span className="turma-name">
                           {turma.nome}
                           <span className="turma-period">
-                                    {" ( "}{turma.ano_inicio}.{turma.semestre_inicio} {") "}
-                                    <span className="progress-label">{pct}%</span>
-                            
+                            ({turma.ano_inicio}.{turma.semestre_inicio})
+                            <span className="progress-label"> {pct}%</span>
                           </span>
                         </span>
 
@@ -329,7 +320,6 @@ export default function TabelaAlocacoes({ salas, turmas, cursos, alocacoes, onOp
                             style={{ width: `${pct}%` }}
                           />
                         </div>
-
                       </div>
                     );
                   };
@@ -341,6 +331,7 @@ export default function TabelaAlocacoes({ salas, turmas, cursos, alocacoes, onOp
                       </td>
                       <td>
                         <span className={`tag ${sala.tipoSala}`}>
+                          {iconeTag(sala.tipoSala)}
                           {sala.tipoSala}
                         </span>
                       </td>

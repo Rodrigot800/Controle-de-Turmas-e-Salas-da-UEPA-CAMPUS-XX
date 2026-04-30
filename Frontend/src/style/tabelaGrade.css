@@ -1,3 +1,7 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   TABELA DE ALOCAÇÃO DE DISCIPLINAS — Design System v2
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 .grade-container {
   padding: 0 0 1rem 0;
 }
@@ -6,60 +10,74 @@
   background: #ffffff;
   border-radius: 14px;
   border: 1px solid #e5e7eb;
-  padding: 1.5rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  padding: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02);
   display: flex;
   flex-direction: column;
-  gap: 1.2rem;
+  overflow: hidden;
 }
 
+/* ── HEADER ── */
 .grade-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .grade-title {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
-  color: #111827;
+  color: #0f172a;
   margin: 0;
+  letter-spacing: -0.02em;
 }
 
 .grade-badge {
-  font-size: 13px;
-  background: #f1f5f9;
+  font-size: 11px;
+  background: #ffffff;
   padding: 4px 12px;
-  border-radius: 20px;
+  border-radius: 999px;
   color: #475569;
-  font-weight: 500;
+  font-weight: 600;
   border: 1px solid #e2e8f0;
+  letter-spacing: 0.02em;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 /* ── SEARCH BAR ── */
 .grade-search-wrapper {
   position: relative;
   width: 100%;
-  max-width: 400px;
+  max-width: 340px;
 }
 
 .grade-search-input {
   width: 100%;
-  height: 38px;
+  height: 36px;
   box-sizing: border-box;
-  padding: 0 40px 0 16px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  font-size: 14px;
+  padding: 0 38px 0 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
   background-color: #f8fafc;
-  transition: all 0.2s ease;
+  color: #1e293b;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   outline: none;
 }
 
 .grade-search-input:focus {
   background-color: #ffffff;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  border-color: #818cf8;
+  box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.12);
+}
+
+.grade-search-input::placeholder {
+  color: #94a3b8;
+  font-weight: 400;
 }
 
 .grade-search-icon {
@@ -68,46 +86,47 @@
   top: 50%;
   transform: translateY(-50%);
   color: #94a3b8;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 
-/* ── TABLE WRAPPER E TABELA PRINCIPAL ── */
+/* ── TABLE WRAPPER ── */
 .grade-table-wrapper {
   overflow-x: auto;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
 }
 
 .grade-table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 14px;
+  font-size: 13.5px;
 }
 
 /* ── HEADER TABELA ── */
 .grade-table thead th {
   background-color: #1e293b;
-  color: #f8fafc;
-  padding: 14px 16px;
-  font-weight: 600;
-  letter-spacing: 0.03em;
+  color: #e2e8f0;
+  padding: 14px 18px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  font-size: 12px;
+  font-size: 11px;
   white-space: nowrap;
   border-bottom: 2px solid #0f172a;
+  position: sticky;
+  top: 0;
+  z-index: 5;
 }
 
-/* ── CORPO DA TABELA E CÉLULAS ── */
+/* ── CORPO DA TABELA ── */
 .grade-table tbody td {
-  padding: 12px 16px;
+  padding: 14px 18px;
   color: #334155;
   border-bottom: 1px solid #f1f5f9;
   vertical-align: middle;
 }
 
-/* ── ZEBRA STRIPING EM BLOCOS E ROWSPAN ── */
+/* ── ZEBRA STRIPING ── */
 .tr-zebra {
   background-color: #f8fafc;
 }
@@ -116,71 +135,106 @@
   background-color: #ffffff;
 }
 
-/* Linha superior de cada novo bloco ou disciplina */
+/* Hover global nas linhas */
+.grade-table tbody tr {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.grade-table tbody tr:hover td:not(.cell-agrupada) {
+  background-color: rgba(99, 102, 241, 0.03);
+}
+
+/* ── SEPARADORES DE BLOCO ── */
 .cell-bordered-top {
   border-top: 1px dashed #e2e8f0;
 }
 
-/* Células agrupadas de Sala e Turma */
+/* ── CÉLULAS AGRUPADAS (ROWSPAN) ── */
 .cell-agrupada {
   vertical-align: middle;
   text-align: center;
-  font-weight: 600;
-  border-right: 1px solid #e2e8f0;
-  border-bottom: 1px solid #e2e8f0; /* força a borda fina mesmo se for zebra */
+  font-weight: 700;
+  border-right: 2px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+  position: relative;
 }
 
 .cell-sala {
   color: #0f172a;
   font-size: 15px;
+  letter-spacing: -0.01em;
+  background: rgba(241, 245, 249, 0.5);
+}
+
+.cell-sala::after {
+  content: '';
+  position: absolute;
+  right: -2px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: linear-gradient(180deg, transparent, #6366f1, transparent);
+  opacity: 0.3;
 }
 
 .cell-turma {
   color: #4338ca;
-  background-color: rgba(99, 102, 241, 0.05); /* fundo levemente azulado para destacar a turma */
+  font-size: 13.5px;
+  background: rgba(99, 102, 241, 0.04);
+  letter-spacing: -0.01em;
 }
 
-/* ── HIGHLIGHTS: MODULAR VS SEMANAL ── */
+/* ── HIGHLIGHT MODULAR ── */
 .modular-row td:not(.cell-agrupada) {
-  background-color: #f0fdfa; /* Teal clarinho */
+  background-color: rgba(20, 184, 166, 0.04);
+}
+
+.modular-row:hover td:not(.cell-agrupada) {
+  background-color: rgba(20, 184, 166, 0.08);
 }
 
 /* ── PERÍODO E BADGES ── */
 .periodo-wrapper {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .periodo-data {
-  font-weight: 500;
-  color: #475569;
+  font-weight: 600;
+  color: #334155;
+  font-size: 13px;
 }
 
 .badge-modular {
-  background-color: #14b8a6;
+  background: linear-gradient(135deg, #14b8a6, #0d9488);
   color: white;
-  padding: 4px 10px;
+  padding: 4px 12px;
   border-radius: 6px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: 0 2px 4px rgba(20, 184, 166, 0.25);
 }
 
 .badge-semanal {
-  background-color: #8b5cf6;
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
   color: white;
-  padding: 4px 10px;
+  padding: 4px 12px;
   border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  box-shadow: 0 2px 4px rgba(139, 92, 246, 0.25);
 }
 
 /* ── TEXTOS UTILITÁRIOS ── */
 .txt-cinza {
   color: #94a3b8;
   font-style: italic;
+  font-weight: 400;
 }
 
 .txt-center {
@@ -189,4 +243,34 @@
 
 .p-4 {
   padding: 2rem;
+}
+
+/* ── DISCIPLINA NOME (negrito na coluna) ── */
+.grade-table td strong {
+  color: #1e293b;
+  font-weight: 700;
+}
+
+/* ── PROFESSOR NOME ── */
+.grade-table td:not(.cell-agrupada) {
+  font-size: 13px;
+}
+
+/* ── RESPONSIVIDADE ── */
+@media (max-width: 768px) {
+  .grade-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .grade-table thead th,
+  .grade-table tbody td {
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+
+  .grade-search-wrapper {
+    max-width: 100%;
+  }
 }
