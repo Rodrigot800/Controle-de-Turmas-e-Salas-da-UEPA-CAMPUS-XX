@@ -112,7 +112,7 @@ export default function TabelaAlocacaoDisciplinas({ salas, turmas = [], alocacoe
         <div className="grade-toolbar">
           {/* Título */}
           <h2 className="grade-title">
-            Alocações de Disciplinas{filtroTurno ? ` — ${filtroTurno}` : ""}
+            Relação de turmas com disciplinas {filtroTurno ? ` — ${filtroTurno}` : ""}
           </h2>
 
           {/* Badges */}
@@ -216,11 +216,11 @@ export default function TabelaAlocacaoDisciplinas({ salas, turmas = [], alocacoe
             </thead>
             <tbody>
               {(() => {
-                let globalRowCounter = 0;
                 return salasAgrupadas.length > 0 ? (
                   salasAgrupadas.map((sala, salaIndex) => {
                     const isZebraSala = salaIndex % 2 === 1;
                     const salaBgClass = isZebraSala ? "tr-zebra-sala" : "tr-normal-sala";
+                    let localRowCounter = 0; // Reseta a cada nova sala
 
                     return sala.turmas.map((turma) => {
                       return turma.alocacoes.map((aloc, aIdx) => {
@@ -228,8 +228,8 @@ export default function TabelaAlocacaoDisciplinas({ salas, turmas = [], alocacoe
                         const isPrimeiraAlocacaoDaTurma = aIdx === 0;
                         const isModular = aloc.tipo_disciplina === "MODULAR";
                         
-                        const rowParity = globalRowCounter % 2 === 0 ? "row-even" : "row-odd";
-                        globalRowCounter++;
+                        const rowParity = localRowCounter % 2 === 0 ? "row-even" : "row-odd";
+                        localRowCounter++;
 
                         const trCustomClass = `${salaBgClass} ${rowParity} ${isModular ? 'modular-row' : 'semanal-row'}`;
                         

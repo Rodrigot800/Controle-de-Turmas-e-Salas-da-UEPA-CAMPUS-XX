@@ -98,7 +98,8 @@
   flex: 1;
   min-width: 160px;
   max-width: 280px;
-  margin-left: auto; /* Empurra a pesquisa e o botão para a direita */
+  margin-left: auto;
+  /* Empurra a pesquisa e o botão para a direita */
 }
 
 .grade-search-input {
@@ -180,7 +181,8 @@
   color: #334155;
   vertical-align: middle;
   border-bottom: 1px solid #eef2f7;
-  border-right: 1px solid rgba(30, 41, 59, 0.15); /* Linha preta azulada entre colunas */
+  border-right: 1px solid rgba(30, 41, 59, 0.15);
+  /* Linha preta azulada entre colunas */
 }
 
 .grade-table tbody td:last-child {
@@ -198,7 +200,8 @@
 
 .tr-zebra-sala .cell-sala,
 .tr-zebra-sala .cell-turma {
-  background-color: #f1f5f9 !important; /* Cinza pastel */
+  background-color: #f1f5f9 !important;
+  /* Cinza pastel */
 }
 
 /* ── CÉLULAS AGRUPADAS ── */
@@ -228,20 +231,24 @@
 
 /* --- SEMANAL (AZUL) --- */
 .semanal-row.row-even td:not(.cell-agrupada) {
-  background-color: rgba(59, 130, 246, 0.05) !important; /* Azul tom 1 */
+  background-color: rgba(59, 130, 246, 0.05) !important;
+  /* Azul tom 1 */
 }
 
 .semanal-row.row-odd td:not(.cell-agrupada) {
-  background-color: rgba(59, 130, 246, 0.12) !important; /* Azul tom 2 (mais forte) */
+  background-color: rgba(59, 130, 246, 0.12) !important;
+  /* Azul tom 2 (mais forte) */
 }
 
 /* --- MODULAR (VERDE) --- */
 .modular-row.row-even td:not(.cell-agrupada) {
-  background-color: rgba(34, 197, 94, 0.05) !important; /* Verde tom 1 */
+  background-color: rgba(34, 197, 94, 0.05) !important;
+  /* Verde tom 1 */
 }
 
 .modular-row.row-odd td:not(.cell-agrupada) {
-  background-color: rgba(34, 197, 94, 0.12) !important; /* Verde tom 2 (mais forte) */
+  background-color: rgba(34, 197, 94, 0.12) !important;
+  /* Verde tom 2 (mais forte) */
 }
 
 /* Hover Realçado */
@@ -260,7 +267,8 @@
 
 /* Realce específico para as células de Sala/Turma quando a linha é focada */
 .grade-table tbody tr:hover td.cell-agrupada {
-  background-color: #e2e8f0 !important; /* Tom de cinza mais definido para realce */
+  background-color: #e2e8f0 !important;
+  /* Tom de cinza mais definido para realce */
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -316,6 +324,7 @@
     flex-direction: column;
     align-items: stretch;
   }
+
   .grade-search-wrapper {
     max-width: none;
   }

@@ -171,7 +171,7 @@ export default function TabelaAlocacoes({ salas, turmas, cursos, alocacoes, onOp
         {/* ── HEADER UNIFICADO ── */}
         <div className="tabela-toolbar">
           {/* Título + Badge */}
-          <h2 className="tabela-title">Alocações de Salas</h2>
+          <h2 className="tabela-title">Relação de Turmas com salas</h2>
           <span className="tabela-badge">{salas.length} salas</span>
 
           {/* Separador visual */}

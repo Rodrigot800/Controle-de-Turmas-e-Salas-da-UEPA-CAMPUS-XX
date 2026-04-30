@@ -205,14 +205,14 @@ function App() {
                 onClick={() => setTabelaAtiva("salas")}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
-                Alocação semestral
+                Alocação de Turmas 
               </button>
               <button 
                 className={`table-tab-btn ${tabelaAtiva === "disciplinas" ? "active" : ""}`}
                 onClick={() => setTabelaAtiva("disciplinas")}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
-                Visão Disciplinas
+                Alocação de Disciplinas
               </button>
             </div>
 
