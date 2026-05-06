@@ -27,6 +27,7 @@ export default function ModalAlocacoes({
   const [editandoId, setEditandoId] = useState(null);
 
   const modalRef = useRef(null);
+  const primeiroInputRef = useRef(null);
 
   const { alert, showAlert, showConfirm, error, success } = useAlert();
 
@@ -69,6 +70,10 @@ export default function ModalAlocacoes({
     if (modalRef.current) {
       modalRef.current.scrollTo({ top: 0, behavior: "smooth" });
     }
+
+    setTimeout(() => {
+      primeiroInputRef.current?.focus();
+    }, 150);
   }
 
   function cancelarEdicao() {
@@ -231,6 +236,7 @@ export default function ModalAlocacoes({
             <div className="form-group full">
               <label>Turma</label>
               <select
+                ref={primeiroInputRef}
                 value={turmaId}
                 onChange={(e) => selecionarTurma(e.target.value)}
               >

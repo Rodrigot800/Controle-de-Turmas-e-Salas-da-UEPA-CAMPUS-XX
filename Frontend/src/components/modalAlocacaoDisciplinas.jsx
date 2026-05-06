@@ -21,6 +21,7 @@ export default function ModalAlocacaoDisciplinas({
   const [editandoId, setEditandoId] = useState(null);
 
   const modalRef = useRef(null);
+  const primeiroInputRef = useRef(null);
 
   const { alert, showAlert, showConfirm, error, success } = useAlert();
 
@@ -56,6 +57,10 @@ export default function ModalAlocacaoDisciplinas({
     if (modalRef.current) {
       modalRef.current.scrollTo({ top: 0, behavior: "smooth" });
     }
+
+    setTimeout(() => {
+      primeiroInputRef.current?.focus();
+    }, 150);
   }
 
   function cancelarEdicao() {
@@ -221,7 +226,7 @@ export default function ModalAlocacaoDisciplinas({
           <div className="form-grid">
             <div className="form-group">
               <label>Turma</label>
-              <select value={turmaId} onChange={(e) => setTurmaId(e.target.value)}>
+              <select ref={primeiroInputRef} value={turmaId} onChange={(e) => setTurmaId(e.target.value)}>
                 <option value="">Selecione uma turma</option>
                 {turmas.map(t => (
                   <option key={t.id} value={t.id}>{t.nome}</option>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import "../style/modal.shared.css";
 import AlertModal from "./AlertModal";
 import { useAlert } from "../hooks/useAlert";
@@ -26,6 +26,9 @@ export default function ModalAlocacaoPeriodo({
 
   const [editandoId, setEditandoId] = useState(null);
   const [pesquisa, setPesquisa] = useState("");
+
+  const modalRef = useRef(null);
+  const primeiroInputRef = useRef(null);
 
   // ── Derivados p/ filtros inteligentes ──────────────────
   // Curso da turma selecionada
@@ -107,7 +110,15 @@ export default function ModalAlocacaoPeriodo({
     setDataInicio(aloc.data_inicio ? aloc.data_inicio.split('T')[0] : "");
     setDataFim(aloc.data_fim ? aloc.data_fim.split('T')[0] : "");
     
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    setDataFim(aloc.data_fim ? aloc.data_fim.split('T')[0] : "");
+    
+    if (modalRef.current) {
+      modalRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    setTimeout(() => {
+      primeiroInputRef.current?.focus();
+    }, 150);
   }
 
   function cancelarEdicao() {
@@ -220,7 +231,7 @@ export default function ModalAlocacaoPeriodo({
 
   return (
     <div className="modal-backdrop">
-      <div className="modal">
+      <div className="modal" ref={modalRef}>
         <div className="modal-header">
           <div className="modal-header-left">
             <h2>{editandoId ? "Editar Alocação de Período" : "Nova Alocação de Período"}</h2>
@@ -240,7 +251,7 @@ export default function ModalAlocacaoPeriodo({
           <div className="form-grid">
             <div className="form-group">
               <label>Sala *</label>
-              <select value={salaId} onChange={e => setSalaId(e.target.value)}>
+              <select ref={primeiroInputRef} value={salaId} onChange={e => setSalaId(e.target.value)}>
                 <option value="">Selecione a Sala</option>
                 {salas.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
               </select>

@@ -17,6 +17,7 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
   const [editandoId, setEditandoId] = useState(null);
 
   const modalRef = useRef(null);
+  const nomeInputRef = useRef(null);
 
   const { alert, showAlert, showConfirm, error, success } = useAlert();
 
@@ -56,6 +57,10 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
     if (modalRef.current) {
       modalRef.current.scrollTo({ top: 0, behavior: "smooth" });
     }
+
+    setTimeout(() => {
+      nomeInputRef.current?.focus();
+    }, 150);
   }
 
   function cancelarEdicao() {
@@ -207,6 +212,7 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
             <div className="form-group full">
               <label>Nome da turma</label>
               <input
+                ref={nomeInputRef}
                 type="text"
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}

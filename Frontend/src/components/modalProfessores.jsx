@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import "../style/modal.shared.css";
 import AlertModal from "./AlertModal";
 import { useAlert } from "../hooks/useAlert";
@@ -10,6 +10,9 @@ export default function ModalProfessores({ professores, setProfessores, cursos, 
   const [pesquisa, setPesquisa] = useState("");
 
   const [editandoId, setEditandoId] = useState(null);
+
+  const modalRef = useRef(null);
+  const nomeInputRef = useRef(null);
 
   const { alert, showAlert, showConfirm, error, success } = useAlert();
 
@@ -29,7 +32,14 @@ export default function ModalProfessores({ professores, setProfessores, cursos, 
     setEditandoId(professor.id);
     setNome(professor.nome);
     setCursoId(professor.curso_id);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    
+    if (modalRef.current) {
+      modalRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    setTimeout(() => {
+      nomeInputRef.current?.focus();
+    }, 150);
   }
 
   function cancelarEdicao() {
@@ -143,7 +153,7 @@ export default function ModalProfessores({ professores, setProfessores, cursos, 
 
   return (
     <div className="modal-backdrop">
-      <div className="modal">
+      <div className="modal" ref={modalRef}>
         <div className="modal-header">
           <div className="modal-header-left">
             <h2>{editandoId ? "Editar professor" : "Gerenciar professores"}</h2>
@@ -164,6 +174,7 @@ export default function ModalProfessores({ professores, setProfessores, cursos, 
             <div className="form-group full">
               <label>Nome do Professor</label>
               <input
+                ref={nomeInputRef}
                 type="text"
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
