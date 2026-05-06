@@ -305,7 +305,7 @@ export default function ModalAlocacaoPeriodo({
                   checked={tipoDisciplina === "SEMANAL"}
                   onChange={() => setTipoDisciplina("SEMANAL")}
                 />
-                Semanal
+                Regular
               </label>
             </div>
 
