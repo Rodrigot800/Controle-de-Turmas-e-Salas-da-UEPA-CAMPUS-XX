@@ -119,7 +119,7 @@ export default function TabelaAlocacoes({ salas, turmas, cursos, alocacoes, onOp
   const turmasAlocadas = new Set();
   let totalTurmasOcupadas = 0;
 
-  salas.forEach((sala) => {
+  salasFiltradas.forEach((sala) => {
     ["manhã", "tarde", "noite"].forEach((turno) => {
       const turma = turmaPorSalaETurno(sala.id, turno);
       if (turma) {
@@ -172,7 +172,7 @@ export default function TabelaAlocacoes({ salas, turmas, cursos, alocacoes, onOp
         <div className="tabela-toolbar">
           {/* Título + Badge */}
           <h2 className="tabela-title">Relação de Turmas com salas</h2>
-          <span className="tabela-badge">{salas.length} salas</span>
+          <span className="tabela-badge">{totalTurmasOcupadas} turmas ativas</span>
 
           {/* Separador visual */}
           <div className="toolbar-separator" />
