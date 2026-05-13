@@ -17,8 +17,8 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg}']
       },
       manifest: {
-        name: 'Controle de Turmas UEPA',
-        short_name: 'Turmas UEPA',
+        name: 'Hydrazil',
+        short_name: 'Hydrazil',
         theme_color: '#0f172a',
         background_color: '#0f172a',
         display: 'standalone',
