@@ -1,4 +1,4 @@
-import logoHYDRAZIL from "../assets/HYDRAZIL_LOGO.png";
+import logoHYDRAZIL from "../../public/hydrazil-logo.png";
 import "../style/sidebar.css";
 export default function Sidebar({ menuAtivo, setMenuAtivo }) {
   return (
