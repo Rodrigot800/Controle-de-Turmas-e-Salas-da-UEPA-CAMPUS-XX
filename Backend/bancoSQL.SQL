@@ -53,6 +53,7 @@ CREATE TABLE professores (
 CREATE TABLE disciplinas (
   id SERIAL PRIMARY KEY,
   nome VARCHAR(100) NOT NULL,
+  semestre_
   duracao INTEGER -- pode ser em horas ou dias
 );
 

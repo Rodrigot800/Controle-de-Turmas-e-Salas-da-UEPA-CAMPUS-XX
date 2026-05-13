@@ -1,17 +1,55 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { VitePWA } from 'vite-plugin-pwa'
 
-// https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+
+    VitePWA({
+      registerType: 'autoUpdate',
+      injectRegister: 'auto',
+      devOptions: {
+        enabled: true
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
+      },
+      manifest: {
+        name: 'Controle de Turmas UEPA',
+        short_name: 'Turmas UEPA',
+        theme_color: '#0f172a',
+        background_color: '#0f172a',
+        display: 'standalone',
+
+        icons: [
+          {
+            src: '/pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any maskable',
+          },
+          {
+            src: '/pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable',
+          },
+        ],
+      },
+    }),
+  ],
+
   server: {
     host: true,
     allowedHosts: true,
-
-    port: 5173, // Mudar a porta do servidor local
+    port: 5173,
 
     proxy: {
-      "/api": "http://192.168.18.57/:3001", // Redirecionar chamadas pro seu Backend
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
     },
   },
-});
+})
