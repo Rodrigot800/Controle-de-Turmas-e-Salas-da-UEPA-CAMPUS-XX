@@ -53,14 +53,14 @@ CREATE TABLE professores (
 CREATE TABLE disciplinas (
   id SERIAL PRIMARY KEY,
   nome VARCHAR(100) NOT NULL,
-  semestre_
-  duracao INTEGER -- pode ser em horas ou dias
+  carga_horaria INTEGER NOT NULL
 );
 
 CREATE TABLE curso_disciplinas (
   id SERIAL PRIMARY KEY,
   curso_id INTEGER NOT NULL,
   disciplina_id INTEGER NOT NULL,
+  semestre_disciplina INTEGER NOT NULL,
   FOREIGN KEY (curso_id)
     REFERENCES cursos(id)
     ON DELETE CASCADE,

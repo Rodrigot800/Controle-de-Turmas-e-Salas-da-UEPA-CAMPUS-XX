@@ -11,7 +11,7 @@ router.get("/", async (req, res) => {
       SELECT 
         id,
         nome,
-        duracao
+        carga_horaria as duracao
       FROM disciplinas
       ORDER BY nome
     `);
@@ -38,7 +38,7 @@ router.post("/", async (req, res) => {
 
   try {
     const result = await pool.query(
-      "INSERT INTO disciplinas (nome, duracao) VALUES ($1, $2) RETURNING *",
+      "INSERT INTO disciplinas (nome, carga_horaria) VALUES ($1, $2) RETURNING id, nome, carga_horaria as duracao",
       [nome, duracaoVal],
     );
     res.status(201).json(result.rows[0]);
@@ -82,9 +82,9 @@ router.put("/:id", async (req, res) => {
   try {
     const result = await pool.query(
       `UPDATE disciplinas 
-       SET nome = $1, duracao = $2 
+       SET nome = $1, carga_horaria = $2 
        WHERE id = $3 
-       RETURNING *`,
+       RETURNING id, nome, carga_horaria as duracao`,
       [nome, duracaoVal, id]
     );
 

@@ -141,3 +141,5 @@ VALUES
 -- Sala 23
 (22, 24, 'Manhã', 'definitivo', NULL, NULL), -- FISICA 2025
 (3, 24, 'Tarde', 'definitivo', NULL, NULL);  -- EAS 2023
+
+

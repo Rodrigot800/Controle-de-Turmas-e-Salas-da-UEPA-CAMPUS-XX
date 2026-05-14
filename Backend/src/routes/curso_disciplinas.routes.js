@@ -11,7 +11,8 @@ router.get("/", async (req, res) => {
       SELECT 
         id,
         curso_id,
-        disciplina_id
+        disciplina_id,
+        semestre_disciplina
       FROM curso_disciplinas
     `);
 
