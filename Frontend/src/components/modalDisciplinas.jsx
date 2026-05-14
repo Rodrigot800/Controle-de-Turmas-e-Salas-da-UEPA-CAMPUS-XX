@@ -8,6 +8,7 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
   const [nome, setNome] = useState("");
   const [duracao, setDuracao] = useState(60);
   const [cursoId, setCursoId] = useState("");
+  const [semestre, setSemestre] = useState(1);
   const [pesquisa, setPesquisa] = useState("");
 
   const [editandoId, setEditandoId] = useState(null);
@@ -30,6 +31,10 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
       error("Por favor, selecione um curso para a disciplina.");
       return false;
     }
+    if (semestre <= 0 || isNaN(semestre)) {
+      error("Por favor, insira um semestre válido.");
+      return false;
+    }
     return true;
   }
 
@@ -37,8 +42,9 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
     setEditandoId(disciplina.id);
     setNome(disciplina.nome);
     setDuracao(disciplina.duracao || 60);
-    const alocacao = cursoDisciplinas.find(cd => cd.disciplina_id === disciplina.id);
-    setCursoId(alocacao ? alocacao.curso_id : "");
+    const alocacao = cursoDisciplinas.find(cd => Number(cd.disciplina_id) === Number(disciplina.id));
+    setCursoId(alocacao ? String(alocacao.curso_id) : "");
+    setSemestre(alocacao ? (Number(alocacao.semestre_disciplina) || 1) : 1);
     
     if (modalRef.current) {
       modalRef.current.scrollTo({ top: 0, behavior: "smooth" });
@@ -78,18 +84,18 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
         prev.map((d) => (d.id === editandoId ? disciplinaEditada : d)),
       );
 
-      // Agora atualiza a alocação (se mudou o curso)
-      const alocacaoAntiga = cursoDisciplinas.find(cd => cd.disciplina_id === editandoId);
+      // Agora atualiza a alocação (se mudou o curso ou o semestre)
+      const alocacaoAntiga = cursoDisciplinas.find(cd => Number(cd.disciplina_id) === Number(editandoId));
       
       if (alocacaoAntiga) {
-        if (alocacaoAntiga.curso_id !== Number(cursoId)) {
+        if (Number(alocacaoAntiga.curso_id) !== Number(cursoId) || Number(alocacaoAntiga.semestre_disciplina) !== Number(semestre)) {
           // Deleta a alocação antiga
           await fetch(`${API_BASE}/curso-disciplinas/${alocacaoAntiga.id}`, { method: "DELETE" });
           // Cria nova
           const resAloc = await fetch(`${API_BASE}/curso-disciplinas`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ curso_id: Number(cursoId), disciplina_id: editandoId }),
+            body: JSON.stringify({ curso_id: Number(cursoId), disciplina_id: editandoId, semestre_disciplina: Number(semestre) }),
           });
           const novaAloc = await resAloc.json();
           setCursoDisciplinas((prev) => prev.map((cd) => (cd.id === alocacaoAntiga.id ? novaAloc : cd)));
@@ -99,7 +105,7 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
         const resAloc = await fetch(`${API_BASE}/curso-disciplinas`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ curso_id: Number(cursoId), disciplina_id: editandoId }),
+          body: JSON.stringify({ curso_id: Number(cursoId), disciplina_id: editandoId, semestre_disciplina: Number(semestre) }),
         });
         const novaAloc = await resAloc.json();
         setCursoDisciplinas((prev) => [...prev, novaAloc]);
@@ -148,7 +154,8 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           curso_id: Number(cursoId),
-          disciplina_id: disciplinaCriada.id
+          disciplina_id: disciplinaCriada.id,
+          semestre_disciplina: Number(semestre)
         }),
       });
 
@@ -196,13 +203,19 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
     setNome("");
     setDuracao(60);
     setCursoId("");
+    setSemestre(1);
   }
 
   function getNomeCurso(disciplinaId) {
-    const alocacao = cursoDisciplinas.find(cd => cd.disciplina_id === disciplinaId);
+    const alocacao = cursoDisciplinas.find(cd => Number(cd.disciplina_id) === Number(disciplinaId));
     if (!alocacao) return "Sem curso vinculado";
     const curso = cursos.find(c => c.id === alocacao.curso_id);
     return curso ? curso.nome : "Curso desconhecido";
+  }
+
+  function getSemestre(disciplinaId) {
+    const alocacao = cursoDisciplinas.find(cd => Number(cd.disciplina_id) === Number(disciplinaId));
+    return alocacao ? alocacao.semestre_disciplina : null;
   }
 
   const disciplinasFiltradas = disciplinas.filter((disciplina) => {
@@ -262,6 +275,17 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
                 ))}
               </select>
             </div>
+
+            <div className="form-group full">
+              <label>Semestre da Disciplina</label>
+              <input
+                type="number"
+                value={semestre}
+                onChange={(e) => setSemestre(Number(e.target.value))}
+                min="1"
+                placeholder="Ex: 1 para 1º Semestre"
+              />
+            </div>
           </div>
 
           {editandoId ? (
@@ -297,6 +321,9 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
                     <div className="item-meta">
                       <span className="pill">{disciplina.duracao}h</span>
                       <span className="pill">Curso: {getNomeCurso(disciplina.id)}</span>
+                      {getSemestre(disciplina.id) && (
+                        <span className="pill">Semestre: {getSemestre(disciplina.id)}º</span>
+                      )}
                     </div>
                   </div>
                   <div className="item-actions">
