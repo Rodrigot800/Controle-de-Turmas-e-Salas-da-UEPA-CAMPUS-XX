@@ -11,6 +11,9 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
   const [semestre, setSemestre] = useState(1);
   const [pesquisa, setPesquisa] = useState("");
 
+  const [cursosExpandidos, setCursosExpandidos] = useState({});
+  const [semestresExpandidos, setSemestresExpandidos] = useState({});
+
   const [editandoId, setEditandoId] = useState(null);
 
   const modalRef = useRef(null);
@@ -36,6 +39,15 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
       return false;
     }
     return true;
+  }
+
+  function toggleCurso(id) {
+    setCursosExpandidos(prev => ({ ...prev, [id]: !prev[id] }));
+  }
+
+  function toggleSemestre(cursoId, sem) {
+    const key = `${cursoId}-${sem}`;
+    setSemestresExpandidos(prev => ({ ...prev, [key]: !prev[key] }));
   }
 
   function iniciarEdicao(disciplina) {
@@ -225,6 +237,24 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
     return nomeD.includes(termo) || nomeC.includes(termo);
   });
 
+  const groupedData = {};
+  groupedData["sem-curso"] = { nome: "Sem curso vinculado", semestres: { "null": [] } };
+  cursos.forEach(c => { groupedData[c.id] = { nome: c.nome, semestres: {} }; });
+
+  disciplinasFiltradas.forEach(d => {
+    const alocacao = cursoDisciplinas.find(cd => Number(cd.disciplina_id) === Number(d.id));
+    let cId = "sem-curso";
+    let sem = "null";
+
+    if (alocacao) {
+      if (groupedData[alocacao.curso_id]) cId = alocacao.curso_id;
+      sem = String(alocacao.semestre_disciplina || "null");
+    }
+
+    if (!groupedData[cId].semestres[sem]) groupedData[cId].semestres[sem] = [];
+    groupedData[cId].semestres[sem].push(d);
+  });
+
   return (
     <div className="modal-backdrop">
       <div className="modal" ref={modalRef}>
@@ -313,26 +343,72 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
           ) : disciplinasFiltradas.length === 0 ? (
             <p className="lista-feedback">Nenhuma disciplina encontrada.</p>
           ) : (
-            <ul className="lista-cursos">
-              {disciplinasFiltradas.map((disciplina) => (
-                <li key={disciplina.id} className={`item-curso ${editandoId === disciplina.id ? "item-editando" : ""}`}>
-                  <div className="item-info">
-                    <span className="item-nome">{disciplina.nome}</span>
-                    <div className="item-meta">
-                      <span className="pill">{disciplina.duracao}h</span>
-                      <span className="pill">Curso: {getNomeCurso(disciplina.id)}</span>
-                      {getSemestre(disciplina.id) && (
-                        <span className="pill">Semestre: {getSemestre(disciplina.id)}º</span>
-                      )}
+            <div className="accordion-container" style={{ marginTop: '16px' }}>
+              {Object.keys(groupedData).map(cId => {
+                const cursoData = groupedData[cId];
+                const semestresKeys = Object.keys(cursoData.semestres);
+                const hasDisciplinas = semestresKeys.some(s => cursoData.semestres[s].length > 0);
+                
+                if (!hasDisciplinas) return null;
+
+                const isCursoExpanded = cursosExpandidos[cId];
+
+                return (
+                  <div key={cId} className="accordion-curso">
+                    <div 
+                      onClick={() => toggleCurso(cId)}
+                      style={{ padding: '12px 16px', background: '#f9fafb', border: '1px solid #e5e7eb', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 'bold', borderRadius: '6px', marginBottom: isCursoExpanded ? '0' : '8px', borderBottomLeftRadius: isCursoExpanded ? '0' : '6px', borderBottomRightRadius: isCursoExpanded ? '0' : '6px' }}
+                    >
+                      <span style={{color: '#111', fontSize: '14px'}}>{cursoData.nome}</span>
+                      <span style={{color: '#9ca3af'}}>{isCursoExpanded ? "▼" : "▶"}</span>
                     </div>
+
+                    {isCursoExpanded && (
+                      <div className="accordion-body" style={{ padding: '12px 0 12px 16px', borderLeft: '2px solid #e5e7eb', borderRight: '1px solid #e5e7eb', borderBottom: '1px solid #e5e7eb', marginBottom: '8px', borderBottomLeftRadius: '6px', borderBottomRightRadius: '6px' }}>
+                        {semestresKeys.sort((a,b) => Number(a) - Number(b)).map(sem => {
+                          const disciplinasDoSemestre = cursoData.semestres[sem];
+                          if (disciplinasDoSemestre.length === 0) return null;
+
+                          const semKey = `${cId}-${sem}`;
+                          const isSemExpanded = semestresExpandidos[semKey];
+
+                          return (
+                            <div key={semKey} className="accordion-semestre" style={{ marginBottom: '8px', paddingRight: '16px' }}>
+                              <div 
+                                onClick={() => toggleSemestre(cId, sem)}
+                                style={{ padding: '8px 12px', background: '#eff6ff', borderRadius: '4px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#1d4ed8', fontWeight: '500', marginBottom: isSemExpanded ? '4px' : '0', fontSize: '13px' }}
+                              >
+                                <span>{sem === "null" ? "Sem Semestre Definido" : `${sem}º Semestre`}</span>
+                                <span>{isSemExpanded ? "▼" : "▶"}</span>
+                              </div>
+
+                              {isSemExpanded && (
+                                <ul style={{ padding: 0, margin: 0, listStyle: 'none', width: '100%', border: '1px solid #f0f0f0', borderTop: 'none', borderRadius: '0 0 4px 4px' }}>
+                                  {disciplinasDoSemestre.map((disciplina) => (
+                                    <li key={disciplina.id} className="item-curso" style={{ borderBottom: '1px solid #f0f0f0', padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                      <div className="item-info">
+                                        <span className="item-nome">{disciplina.nome}</span>
+                                        <div className="item-meta">
+                                          <span className="pill">{disciplina.duracao}h</span>
+                                        </div>
+                                      </div>
+                                      <div className="item-actions">
+                                        <button className="btn-edit" onClick={() => iniciarEdicao(disciplina)} style={{ border: '1px solid #e5e7eb', background: '#fff', color: '#6b7280', padding: '4px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', marginRight: '6px' }}>Editar</button>
+                                        <button className="btn-delete" onClick={() => removerDisciplina(disciplina.id)}>Excluir</button>
+                                      </div>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                  <div className="item-actions">
-                    <button className="btn-edit" onClick={() => iniciarEdicao(disciplina)}>Editar</button>
-                    <button className="btn-delete" onClick={() => removerDisciplina(disciplina.id)}>Excluir</button>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                );
+              })}
+            </div>
           )}
         </div>
       </div>
