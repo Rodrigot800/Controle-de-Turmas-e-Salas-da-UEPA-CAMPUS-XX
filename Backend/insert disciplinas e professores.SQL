@@ -300,6 +300,14 @@ SELECT 3, id, 4 FROM disciplinas WHERE nome IN ('Cálculo Diferencial e Integral
 INSERT INTO curso_disciplinas (curso_id, disciplina_id, semestre_disciplina)
 SELECT 3, id, 5 FROM disciplinas WHERE nome IN ('Física Geral e Experimental III', 'Cálculo Numérico', 'Hidráulica I', 'Qualidade de Solo', 'Resistência dos Materiais', 'Gestão de Resíduos Sólidos', 'Climatologia e Meteorologia');
 
+-- BLOCO 6
+INSERT INTO curso_disciplinas (curso_id, disciplina_id, semestre_disciplina)
+SELECT 3, id, 6 FROM disciplinas WHERE nome IN ('Hidrologia', 'Controle de Poluição Atmosférica', 'Elementos de Projeto Estrutural', 'Sistemas de Abastecimento de Água', 'Hidráulica II', 'Ecologia de Ecossistemas Amazônicos', 'Fontes e Controle de Poluição Mineral');
+
+-- BLOCO 7
+INSERT INTO curso_disciplinas (curso_id, disciplina_id, semestre_disciplina)
+SELECT 3, id, 7 FROM disciplinas WHERE nome IN ('Sistema de Informações Ambientais', 'Avaliação de Impactos Ambientais I', 'Gestão Ambiental e Legislação Aplicada', 'Tratamento de águas Residuárias e Industriais', 'Sistema de Esgotamento Sanitário', 'Sistemas Elétricos');
+
 INSERT INTO disciplinas (nome, carga_horaria) VALUES
 -- 1º Semestre
 ('Introdução ao Cálculo Diferencial e Integral', 45),
