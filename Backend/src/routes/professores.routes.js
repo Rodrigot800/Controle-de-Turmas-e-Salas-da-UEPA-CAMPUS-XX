@@ -80,7 +80,10 @@ router.delete("/:id", async (req, res) => {
     res.json({ mensagem: "Professor removido" });
   } catch (err) {
     console.error("Erro ao remover professor:", err.message);
-    res.status(500).json({ erro: "Erro ao remover professor" });
+    if (err.code === '23503') {
+      return res.status(400).json({ erro: "Não é possível remover este professor, pois ele está vinculado a alocações de período." });
+    }
+    res.status(500).json({ erro: "Erro interno ao remover professor" });
   }
 });
 
