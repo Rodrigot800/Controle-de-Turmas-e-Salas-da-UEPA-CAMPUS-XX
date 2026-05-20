@@ -9,11 +9,16 @@ router.get("/", async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT 
-        id,
-        nome,
-        curso_id
-      FROM professores
-      ORDER BY nome
+        p.id,
+        p.nome,
+        COALESCE(
+          json_agg(pc.curso_id) FILTER (WHERE pc.curso_id IS NOT NULL),
+          '[]'
+        ) as cursos_ids
+      FROM professores p
+      LEFT JOIN professor_cursos pc ON p.id = pc.professor_id
+      GROUP BY p.id, p.nome
+      ORDER BY p.nome
     `);
 
     res.json(result.rows);
@@ -27,24 +32,40 @@ router.get("/", async (req, res) => {
 // Criar novo professor
 // ===========================
 router.post("/", async (req, res) => {
-  const { nome, curso_id } = req.body;
+  const { nome, cursos_ids } = req.body;
 
-  if (!nome || !curso_id) {
+  if (!nome || !cursos_ids || !Array.isArray(cursos_ids)) {
     return res
       .status(400)
-      .json({ erro: "Campos nome e curso_id são obrigatórios" });
+      .json({ erro: "Campos nome e cursos_ids (array) são obrigatórios" });
   }
 
+  const client = await pool.connect();
   try {
-    const result = await pool.query(
-      "INSERT INTO professores (nome, curso_id) VALUES ($1, $2) RETURNING *",
-      [nome, Number(curso_id)],
+    await client.query("BEGIN");
+    const result = await client.query(
+      "INSERT INTO professores (nome) VALUES ($1) RETURNING *",
+      [nome]
     );
+    const novoProfessor = result.rows[0];
 
-    res.status(201).json(result.rows[0]);
+    for (const cursoId of cursos_ids) {
+      await client.query(
+        "INSERT INTO professor_cursos (professor_id, curso_id) VALUES ($1, $2)",
+        [novoProfessor.id, Number(cursoId)]
+      );
+    }
+    
+    await client.query("COMMIT");
+    
+    novoProfessor.cursos_ids = cursos_ids.map(Number);
+    res.status(201).json(novoProfessor);
   } catch (err) {
+    await client.query("ROLLBACK");
     console.error("Erro ao criar professor:", err.message);
     res.status(500).json({ erro: "Erro ao criar professor" });
+  } finally {
+    client.release();
   }
 });
 
@@ -68,31 +89,52 @@ router.delete("/:id", async (req, res) => {
 // ===========================
 router.put("/:id", async (req, res) => {
   const { id } = req.params;
-  const { nome, curso_id } = req.body;
+  const { nome, cursos_ids } = req.body;
 
-  if (!nome || !curso_id) {
+  if (!nome || !cursos_ids || !Array.isArray(cursos_ids)) {
     return res.status(400).json({
-      erro: "Campos nome e curso_id são obrigatórios",
+      erro: "Campos nome e cursos_ids (array) são obrigatórios",
     });
   }
 
+  const client = await pool.connect();
   try {
-    const result = await pool.query(
+    await client.query("BEGIN");
+    
+    const result = await client.query(
       `UPDATE professores 
-       SET nome = $1, curso_id = $2 
-       WHERE id = $3 
+       SET nome = $1
+       WHERE id = $2 
        RETURNING *`,
-      [nome, Number(curso_id), id]
+      [nome, id]
     );
 
     if (result.rows.length === 0) {
+      await client.query("ROLLBACK");
       return res.status(404).json({ erro: "Professor não encontrado" });
     }
 
-    res.json(result.rows[0]);
+    const professorAtualizado = result.rows[0];
+
+    await client.query("DELETE FROM professor_cursos WHERE professor_id = $1", [id]);
+
+    for (const cursoId of cursos_ids) {
+      await client.query(
+        "INSERT INTO professor_cursos (professor_id, curso_id) VALUES ($1, $2)",
+        [id, Number(cursoId)]
+      );
+    }
+
+    await client.query("COMMIT");
+
+    professorAtualizado.cursos_ids = cursos_ids.map(Number);
+    res.json(professorAtualizado);
   } catch (err) {
+    await client.query("ROLLBACK");
     console.error("Erro ao editar professor:", err.message);
     res.status(500).json({ erro: "Erro ao editar professor" });
+  } finally {
+    client.release();
   }
 });
 

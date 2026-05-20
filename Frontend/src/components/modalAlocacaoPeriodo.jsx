@@ -47,7 +47,7 @@ export default function ModalAlocacaoPeriodo({
 
   // Professores filtrados pelo curso (e opcionalmente pela disciplina via curso)
   const professoresFiltrados = cursoIdDaTurma
-    ? professores.filter(p => p.curso_id === cursoIdDaTurma)
+    ? professores.filter(p => p.cursos_ids && (p.cursos_ids.includes(Number(cursoIdDaTurma)) || p.cursos_ids.includes(String(cursoIdDaTurma))))
     : professores;
 
 

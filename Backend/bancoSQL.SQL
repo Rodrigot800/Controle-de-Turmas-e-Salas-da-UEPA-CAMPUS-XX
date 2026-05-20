@@ -43,11 +43,19 @@ CREATE TABLE alocacoes (
 
 CREATE TABLE professores (
   id SERIAL PRIMARY KEY,
-  nome VARCHAR(100) NOT NULL,
+  nome VARCHAR(100) NOT NULL
+);
+
+CREATE TABLE professor_cursos (
+  id SERIAL PRIMARY KEY,
+  professor_id INTEGER NOT NULL,
   curso_id INTEGER NOT NULL,
+  FOREIGN KEY (professor_id)
+    REFERENCES professores(id)
+    ON DELETE CASCADE,
   FOREIGN KEY (curso_id)
     REFERENCES cursos(id)
-    ON DELETE RESTRICT
+    ON DELETE CASCADE
 );
 
 CREATE TABLE disciplinas (
