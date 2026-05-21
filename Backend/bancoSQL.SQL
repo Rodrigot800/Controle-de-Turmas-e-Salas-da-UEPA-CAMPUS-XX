@@ -68,7 +68,8 @@ CREATE TABLE curso_disciplinas (
   id SERIAL PRIMARY KEY,
   curso_id INTEGER NOT NULL,
   disciplina_id INTEGER NOT NULL,
-  semestre_disciplina INTEGER NOT NULL,
+  semestre_disciplina INTEGER,
+  disciplina_optativa BOOLEAN DEFAULT false,
   FOREIGN KEY (curso_id)
     REFERENCES cursos(id)
     ON DELETE CASCADE,

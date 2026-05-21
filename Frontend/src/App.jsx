@@ -310,6 +310,7 @@ function App() {
               <ModalAlocacaoPeriodo
                 salas={salas}
                 turmas={turmas}
+                cursos={cursos}
                 professores={professores}
                 disciplinas={disciplinas}
                 cursoDisciplinas={cursoDisciplinas}

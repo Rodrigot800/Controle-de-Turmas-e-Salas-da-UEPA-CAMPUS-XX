@@ -9,6 +9,7 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
   const [duracao, setDuracao] = useState(60);
   const [cursoId, setCursoId] = useState("");
   const [semestre, setSemestre] = useState(1);
+  const [isOptativa, setIsOptativa] = useState(false);
   const [pesquisa, setPesquisa] = useState("");
 
   const [cursosExpandidos, setCursosExpandidos] = useState({});
@@ -34,7 +35,7 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
       error("Por favor, selecione um curso para a disciplina.");
       return false;
     }
-    if (semestre <= 0 || isNaN(semestre)) {
+    if (!isOptativa && (semestre <= 0 || isNaN(semestre))) {
       error("Por favor, insira um semestre válido.");
       return false;
     }
@@ -57,6 +58,7 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
     const alocacao = cursoDisciplinas.find(cd => Number(cd.disciplina_id) === Number(disciplina.id));
     setCursoId(alocacao ? String(alocacao.curso_id) : "");
     setSemestre(alocacao ? (Number(alocacao.semestre_disciplina) || 1) : 1);
+    setIsOptativa(alocacao ? Boolean(alocacao.disciplina_optativa) : false);
     
     if (modalRef.current) {
       modalRef.current.scrollTo({ top: 0, behavior: "smooth" });
@@ -96,18 +98,27 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
         prev.map((d) => (d.id === editandoId ? disciplinaEditada : d)),
       );
 
-      // Agora atualiza a alocação (se mudou o curso ou o semestre)
+      // Agora atualiza a alocação (se mudou o curso, semestre ou optativa)
       const alocacaoAntiga = cursoDisciplinas.find(cd => Number(cd.disciplina_id) === Number(editandoId));
       
+      const alocacaoBody = { 
+        curso_id: Number(cursoId), 
+        disciplina_id: editandoId, 
+        semestre_disciplina: isOptativa ? null : Number(semestre),
+        disciplina_optativa: isOptativa 
+      };
+
       if (alocacaoAntiga) {
-        if (Number(alocacaoAntiga.curso_id) !== Number(cursoId) || Number(alocacaoAntiga.semestre_disciplina) !== Number(semestre)) {
+        if (Number(alocacaoAntiga.curso_id) !== Number(cursoId) || 
+            Number(alocacaoAntiga.semestre_disciplina) !== Number(semestre) ||
+            Boolean(alocacaoAntiga.disciplina_optativa) !== isOptativa) {
           // Deleta a alocação antiga
           await fetch(`${API_BASE}/curso-disciplinas/${alocacaoAntiga.id}`, { method: "DELETE" });
           // Cria nova
           const resAloc = await fetch(`${API_BASE}/curso-disciplinas`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ curso_id: Number(cursoId), disciplina_id: editandoId, semestre_disciplina: Number(semestre) }),
+            body: JSON.stringify(alocacaoBody),
           });
           const novaAloc = await resAloc.json();
           setCursoDisciplinas((prev) => prev.map((cd) => (cd.id === alocacaoAntiga.id ? novaAloc : cd)));
@@ -117,7 +128,7 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
         const resAloc = await fetch(`${API_BASE}/curso-disciplinas`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ curso_id: Number(cursoId), disciplina_id: editandoId, semestre_disciplina: Number(semestre) }),
+          body: JSON.stringify(alocacaoBody),
         });
         const novaAloc = await resAloc.json();
         setCursoDisciplinas((prev) => [...prev, novaAloc]);
@@ -167,7 +178,8 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
         body: JSON.stringify({
           curso_id: Number(cursoId),
           disciplina_id: disciplinaCriada.id,
-          semestre_disciplina: Number(semestre)
+          semestre_disciplina: isOptativa ? null : Number(semestre),
+          disciplina_optativa: isOptativa
         }),
       });
 
@@ -216,6 +228,7 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
     setDuracao(60);
     setCursoId("");
     setSemestre(1);
+    setIsOptativa(false);
   }
 
   function getNomeCurso(disciplinaId) {
@@ -248,7 +261,7 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
 
     if (alocacao) {
       if (groupedData[alocacao.curso_id]) cId = alocacao.curso_id;
-      sem = String(alocacao.semestre_disciplina || "null");
+      sem = alocacao.disciplina_optativa ? "Optativas" : String(alocacao.semestre_disciplina || "null");
     }
 
     if (!groupedData[cId].semestres[sem]) groupedData[cId].semestres[sem] = [];
@@ -306,16 +319,31 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
               </select>
             </div>
 
-            <div className="form-group full">
-              <label>Semestre da Disciplina</label>
-              <input
-                type="number"
-                value={semestre}
-                onChange={(e) => setSemestre(Number(e.target.value))}
-                min="1"
-                placeholder="Ex: 1 para 1º Semestre"
+            <div className="form-group full" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px', marginBottom: '8px' }}>
+              <input 
+                type="checkbox" 
+                id="check-optativa" 
+                checked={isOptativa}
+                onChange={(e) => setIsOptativa(e.target.checked)}
+                style={{ width: '16px', height: '16px', cursor: 'pointer' }}
               />
+              <label htmlFor="check-optativa" style={{ margin: 0, cursor: 'pointer', fontWeight: '500', color: '#374151' }}>
+                É uma disciplina optativa?
+              </label>
             </div>
+
+            {!isOptativa && (
+              <div className="form-group full">
+                <label>Semestre da Disciplina</label>
+                <input
+                  type="number"
+                  value={semestre}
+                  onChange={(e) => setSemestre(Number(e.target.value))}
+                  min="1"
+                  placeholder="Ex: 1 para 1º Semestre"
+                />
+              </div>
+            )}
           </div>
 
           {editandoId ? (
@@ -365,7 +393,13 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
 
                     {isCursoExpanded && (
                       <div className="accordion-body" style={{ padding: '12px 0 12px 16px', borderLeft: '2px solid #e5e7eb', borderRight: '1px solid #e5e7eb', borderBottom: '1px solid #e5e7eb', marginBottom: '8px', borderBottomLeftRadius: '6px', borderBottomRightRadius: '6px' }}>
-                        {semestresKeys.sort((a,b) => Number(a) - Number(b)).map(sem => {
+                        {semestresKeys.sort((a,b) => {
+                          if (a === "Optativas") return 1;
+                          if (b === "Optativas") return -1;
+                          if (a === "null") return 1;
+                          if (b === "null") return -1;
+                          return Number(a) - Number(b);
+                        }).map(sem => {
                           const disciplinasDoSemestre = cursoData.semestres[sem];
                           if (disciplinasDoSemestre.length === 0) return null;
 
@@ -376,9 +410,9 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
                             <div key={semKey} className="accordion-semestre" style={{ marginBottom: '8px', paddingRight: '16px' }}>
                               <div 
                                 onClick={() => toggleSemestre(cId, sem)}
-                                style={{ padding: '8px 12px', background: '#eff6ff', borderRadius: '4px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#1d4ed8', fontWeight: '500', marginBottom: isSemExpanded ? '4px' : '0', fontSize: '13px' }}
+                                style={{ padding: '8px 12px', background: sem === "Optativas" ? '#fef3c7' : '#eff6ff', borderRadius: '4px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: sem === "Optativas" ? '#b45309' : '#1d4ed8', fontWeight: '500', marginBottom: isSemExpanded ? '4px' : '0', fontSize: '13px' }}
                               >
-                                <span>{sem === "null" ? "Sem Semestre Definido" : `${sem}º Semestre`}</span>
+                                <span>{sem === "null" ? "Sem Semestre Definido" : sem === "Optativas" ? "Disciplinas Optativas" : `${sem}º Semestre`}</span>
                                 <span>{isSemExpanded ? "▼" : "▶"}</span>
                               </div>
 

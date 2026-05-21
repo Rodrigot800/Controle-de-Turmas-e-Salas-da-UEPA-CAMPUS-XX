@@ -6,7 +6,8 @@ import API_BASE from "../config/api";
 
 export default function ModalAlocacaoPeriodo({ 
   salas, 
-  turmas, 
+  turmas,
+  cursos = [], 
   professores, 
   disciplinas,
   cursoDisciplinas,
@@ -27,6 +28,9 @@ export default function ModalAlocacaoPeriodo({
   const [editandoId, setEditandoId] = useState(null);
   const [pesquisa, setPesquisa] = useState("");
 
+  const [cursosExpandidos, setCursosExpandidos] = useState({});
+  const [turmasExpandidas, setTurmasExpandidas] = useState({});
+
   const modalRef = useRef(null);
   const primeiroInputRef = useRef(null);
 
@@ -35,15 +39,43 @@ export default function ModalAlocacaoPeriodo({
   const turmaSelecionada = turmas.find(t => String(t.id) === String(turmaId));
   const cursoIdDaTurma = turmaSelecionada?.curso_id ?? null;
 
-  // IDs de disciplinas do curso selecionado
-  const disciplinasDosCursoIds = cursoIdDaTurma
-    ? cursoDisciplinas.filter(cd => cd.curso_id === cursoIdDaTurma).map(cd => cd.disciplina_id)
-    : null;
+  // Semestre atual da turma
+  let semestreAtualDaTurma = 99; // Fallback se não tiver turma
+  if (turmaSelecionada && turmaSelecionada.ano_inicio && turmaSelecionada.semestre_inicio) {
+    const dataAtual = new Date();
+    const anoAtual = dataAtual.getFullYear();
+    const semestreAtual = dataAtual.getMonth() + 1 <= 6 ? 1 : 2;
+    
+    const inicio = Number(turmaSelecionada.ano_inicio) * 2 + (Number(turmaSelecionada.semestre_inicio) === 2 ? 1 : 0);
+    const atual = anoAtual * 2 + (semestreAtual === 2 ? 1 : 0);
+    semestreAtualDaTurma = Math.max(1, atual - inicio + 1);
+  }
 
-  // Lista de disciplinas filtrada pelo curso (ou todas, se nenhuma turma selecionada)
-  const disciplinasFiltradas = disciplinasDosCursoIds
-    ? disciplinas.filter(d => disciplinasDosCursoIds.includes(d.id))
-    : disciplinas;
+  // Lista de disciplinas formatada e filtrada
+  let disciplinasFiltradas = [];
+
+  if (cursoIdDaTurma) {
+    // Filtra disciplinas do curso cujo semestre seja <= semestre atual da turma
+    const relacoesCurso = cursoDisciplinas.filter(cd => 
+      cd.curso_id === cursoIdDaTurma && 
+      cd.semestre_disciplina <= semestreAtualDaTurma
+    );
+    
+    // Ordem decrescente de semestres (do semestre atual pra trás)
+    relacoesCurso.sort((a, b) => (b.semestre_disciplina || 0) - (a.semestre_disciplina || 0));
+
+    disciplinasFiltradas = relacoesCurso.map(cd => {
+      const disc = disciplinas.find(d => d.id === cd.disciplina_id);
+      if (!disc) return null;
+      return {
+        ...disc,
+        nomeFormatado: cd.semestre_disciplina ? `${cd.semestre_disciplina}º Sem - ${disc.nome}` : disc.nome
+      };
+    }).filter(Boolean);
+  } else {
+    // Se não selecionou turma ainda, mostra todas
+    disciplinasFiltradas = disciplinas.map(d => ({ ...d, nomeFormatado: d.nome }));
+  }
 
   // Professores filtrados pelo curso (e opcionalmente pela disciplina via curso)
   const professoresFiltrados = cursoIdDaTurma
@@ -63,6 +95,12 @@ export default function ModalAlocacaoPeriodo({
     { id: 0, nome: "Domingo" }
   ];
 
+  function formatarDataBR(dataIso) {
+    if (!dataIso) return "";
+    const [ano, mes, dia] = dataIso.split("T")[0].split("-");
+    return `${dia}/${mes}`;
+  }
+
   function validarEntrada() {
     if (!salaId) { error("Selecione uma sala."); return false; }
     if (!turmaId) { error("Selecione uma turma."); return false; }
@@ -75,6 +113,15 @@ export default function ModalAlocacaoPeriodo({
     }
     
     return true;
+  }
+
+  function toggleCurso(id) {
+    setCursosExpandidos(prev => ({ ...prev, [id]: !prev[id] }));
+  }
+
+  function toggleTurma(cursoId, tNome) {
+    const key = `${cursoId}-${tNome}`;
+    setTurmasExpandidas(prev => ({ ...prev, [key]: !prev[key] }));
   }
 
   function formatarDataEnvio(data) {
@@ -227,6 +274,26 @@ export default function ModalAlocacaoPeriodo({
     return txtSala.includes(termo) || txtTurma.includes(termo) || txtDisc.includes(termo) || txtProf.includes(termo);
   });
 
+  const groupedData = {};
+  groupedData["sem-curso"] = { nome: "Sem curso vinculado", turmas: { "null": [] } };
+  cursos.forEach(c => { groupedData[c.id] = { nome: c.nome, turmas: {} }; });
+
+  alocacoesFiltradas.forEach(aloc => {
+    let cId = "sem-curso";
+    let tNome = "null";
+
+    const turma = turmas.find(t => Number(t.id) === Number(aloc.turma_id));
+    if (turma) {
+      if (groupedData[turma.curso_id]) cId = turma.curso_id;
+      tNome = `${turma.nome} ${turma.ano_inicio ? `(${turma.ano_inicio})` : ""}`;
+    } else if (aloc.turma_nome) {
+      tNome = aloc.turma_nome;
+    }
+
+    if (!groupedData[cId].turmas[tNome]) groupedData[cId].turmas[tNome] = [];
+    groupedData[cId].turmas[tNome].push(aloc);
+  });
+
   return (
     <div className="modal-backdrop">
       <div className="modal" ref={modalRef}>
@@ -271,7 +338,7 @@ export default function ModalAlocacaoPeriodo({
               <label>Disciplina *</label>
               <select value={disciplinaId} onChange={e => handleDisciplinaChange(e.target.value)} disabled={!turmaId}>
                 <option value="">{turmaId ? "Selecione a Disciplina" : "Selecione uma turma primeiro"}</option>
-                {disciplinasFiltradas.map(d => <option key={d.id} value={d.id}>{d.nome}</option>)}
+                {disciplinasFiltradas.map(d => <option key={d.id} value={d.id}>{d.nomeFormatado}</option>)}
               </select>
             </div>
 
@@ -361,25 +428,86 @@ export default function ModalAlocacaoPeriodo({
           ) : alocacoesFiltradas.length === 0 ? (
              <p className="lista-feedback">Nenhuma alocação encontrada.</p>
           ) : (
-            <ul className="lista-cursos">
-              {alocacoesFiltradas.map(aloc => (
-                <li key={aloc.id} className={`item-curso ${editandoId === aloc.id ? "item-editando" : ""}`}>
-                  <div className="item-info">
-                    <span className="item-nome">
-                      {aloc.sala_nome} - {aloc.turma_nome}
-                    </span>
-                    <div className="item-meta">
-                      <span className="pill">{aloc.disciplina_nome}</span>
-                      <span className="pill">{aloc.tipo_disciplina}</span>
+            <div className="accordion-container" style={{ marginTop: '16px' }}>
+              {Object.keys(groupedData).map(cId => {
+                const cursoData = groupedData[cId];
+                const turmasKeys = Object.keys(cursoData.turmas);
+                const hasAlocacoes = turmasKeys.some(t => cursoData.turmas[t].length > 0);
+                
+                if (!hasAlocacoes) return null;
+
+                const isCursoExpanded = cursosExpandidos[cId];
+
+                return (
+                  <div key={cId} className="accordion-curso">
+                    <div 
+                      onClick={() => toggleCurso(cId)}
+                      style={{ padding: '12px 16px', background: '#f9fafb', border: '1px solid #e5e7eb', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 'bold', borderRadius: '6px', marginBottom: isCursoExpanded ? '0' : '8px', borderBottomLeftRadius: isCursoExpanded ? '0' : '6px', borderBottomRightRadius: isCursoExpanded ? '0' : '6px' }}
+                    >
+                      <span style={{color: '#111', fontSize: '14px'}}>{cursoData.nome}</span>
+                      <span style={{color: '#9ca3af'}}>{isCursoExpanded ? "▼" : "▶"}</span>
                     </div>
+
+                    {isCursoExpanded && (
+                      <div className="accordion-body" style={{ padding: '12px 0 12px 16px', borderLeft: '2px solid #e5e7eb', borderRight: '1px solid #e5e7eb', borderBottom: '1px solid #e5e7eb', marginBottom: '8px', borderBottomLeftRadius: '6px', borderBottomRightRadius: '6px' }}>
+                        {turmasKeys.sort((a,b) => a.localeCompare(b)).map(tNome => {
+                          const alocacoesDaTurma = cursoData.turmas[tNome];
+                          if (alocacoesDaTurma.length === 0) return null;
+
+                          const tKey = `${cId}-${tNome}`;
+                          const isTurmaExpanded = turmasExpandidas[tKey];
+
+                          return (
+                            <div key={tKey} className="accordion-semestre" style={{ marginBottom: '8px', paddingRight: '16px' }}>
+                              <div 
+                                onClick={() => toggleTurma(cId, tNome)}
+                                style={{ padding: '8px 12px', background: '#eff6ff', borderRadius: '4px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#1d4ed8', fontWeight: '500', marginBottom: isTurmaExpanded ? '4px' : '0', fontSize: '13px' }}
+                              >
+                                <span>{tNome === "null" ? "Turma Desconhecida" : `Turma: ${tNome}`}</span>
+                                <span>{isTurmaExpanded ? "▼" : "▶"}</span>
+                              </div>
+
+                              {isTurmaExpanded && (
+                                <ul style={{ padding: 0, margin: 0, listStyle: 'none', width: '100%', border: '1px solid #f0f0f0', borderTop: 'none', borderRadius: '0 0 4px 4px' }}>
+                                  {alocacoesDaTurma.map((aloc) => {
+                                    const inicio = formatarDataBR(aloc.data_inicio);
+                                    const fim = formatarDataBR(aloc.data_fim);
+                                    let periodoTexto = "Período indefinido";
+                                    if (inicio && fim) periodoTexto = `${inicio} a ${fim}`;
+                                    else if (inicio) periodoTexto = `A partir de ${inicio}`;
+                                    else if (fim) periodoTexto = `Até ${fim}`;
+
+                                    return (
+                                    <li key={aloc.id} className={`item-curso ${editandoId === aloc.id ? "item-editando" : ""}`} style={{ borderBottom: '1px solid #f0f0f0', padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                      <div className="item-info">
+                                        <span className="item-nome">
+                                          {aloc.disciplina_nome} <span style={{ fontWeight: 'normal', color: '#6b7280', fontSize: '13px' }}>— {aloc.sala_nome}</span>
+                                        </span>
+                                        <div className="item-meta">
+                                          {aloc.turno && <span className="pill" style={{ background: '#e0e7ff', color: '#3730a3' }}>{aloc.turno}</span>}
+                                          <span className="pill" style={{ background: '#f3f4f6', color: '#4b5563' }}>{periodoTexto}</span>
+                                          <span className="pill">{aloc.tipo_disciplina}</span>
+                                          {aloc.professor_nome && <span className="pill" style={{ background: '#fef3c7', color: '#92400e' }}>Prof: {aloc.professor_nome}</span>}
+                                        </div>
+                                      </div>
+                                      <div className="item-actions">
+                                        <button className="btn-edit" onClick={() => iniciarEdicao(aloc)} style={{ border: '1px solid #e5e7eb', background: '#fff', color: '#6b7280', padding: '4px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', marginRight: '6px' }}>Editar</button>
+                                        <button className="btn-delete" onClick={() => remover(aloc.id)}>Excluir</button>
+                                      </div>
+                                    </li>
+                                    );
+                                  })}
+                                </ul>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                  <div className="item-actions">
-                    <button className="btn-edit" onClick={() => iniciarEdicao(aloc)}>Editar</button>
-                    <button className="btn-delete" onClick={() => remover(aloc.id)}>Excluir</button>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                );
+              })}
+            </div>
           )}
         </div>
       </div>

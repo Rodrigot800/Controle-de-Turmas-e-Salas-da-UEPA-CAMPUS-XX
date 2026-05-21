@@ -12,7 +12,8 @@ router.get("/", async (req, res) => {
         id,
         curso_id,
         disciplina_id,
-        semestre_disciplina
+        semestre_disciplina,
+        disciplina_optativa
       FROM curso_disciplinas
     `);
 
@@ -27,7 +28,7 @@ router.get("/", async (req, res) => {
 // Criar nova alocação de disciplina para curso
 // ===========================
 router.post("/", async (req, res) => {
-  const { curso_id, disciplina_id, semestre_disciplina } = req.body;
+  const { curso_id, disciplina_id, semestre_disciplina, disciplina_optativa } = req.body;
 
 
   if (!curso_id || !disciplina_id) {
@@ -46,12 +47,13 @@ router.post("/", async (req, res) => {
     return res.status(400).json({ erro: "Essa disciplina já está alocada a este curso" });
   }
 
-  const semestreVal = semestre_disciplina ? Number(semestre_disciplina) : 1;
+  const semestreVal = semestre_disciplina ? Number(semestre_disciplina) : null;
+  const isOptativa = disciplina_optativa === true;
 
   try {
     const result = await pool.query(
-      "INSERT INTO curso_disciplinas (curso_id, disciplina_id, semestre_disciplina) VALUES ($1, $2, $3) RETURNING *",
-      [Number(curso_id), Number(disciplina_id), semestreVal],
+      "INSERT INTO curso_disciplinas (curso_id, disciplina_id, semestre_disciplina, disciplina_optativa) VALUES ($1, $2, $3, $4) RETURNING *",
+      [Number(curso_id), Number(disciplina_id), semestreVal, isOptativa],
     );
 
     res.status(201).json(result.rows[0]);

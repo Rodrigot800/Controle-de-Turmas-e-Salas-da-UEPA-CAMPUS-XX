@@ -1,4 +1,4 @@
-TRUNCATE TABLE alocacoes, turmas, cursos, salas 
+TRUNCATE TABLE alocacoes, turmas, cursos, salas, disciplinas, professores
 RESTART IDENTITY CASCADE;
 
 INSERT INTO salas (nome, capacidade, tipo_sala, piso)
