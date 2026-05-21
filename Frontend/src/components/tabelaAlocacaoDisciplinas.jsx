@@ -36,7 +36,15 @@ export default function TabelaAlocacaoDisciplinas({ salas, turmas = [], cursos =
   const [semestreSelecionado, setSemestreSelecionado] = useState(semestreAtual);
   
   const [termoPesquisa, setTermoPesquisa] = useState("");
-  const [filtroTurno, setFiltroTurno] = useState("");
+  const [filtroTurno, setFiltroTurno] = useState(() => {
+    const agora = new Date();
+    const hora = agora.getHours();
+    const min = agora.getMinutes();
+    
+    if (hora < 12 || (hora === 12 && min === 0)) return "Manhã";
+    if (hora < 18 || (hora === 18 && min === 0)) return "Tarde";
+    return "Noite";
+  });
 
   const turnosUnicos = useMemo(() => {
     const turnos = alocacoesDisciplinas.map(a => a.turno).filter(Boolean);
