@@ -110,8 +110,6 @@ export default function ModalAlocacaoPeriodo({
     setDataInicio(aloc.data_inicio ? aloc.data_inicio.split('T')[0] : "");
     setDataFim(aloc.data_fim ? aloc.data_fim.split('T')[0] : "");
     
-    setDataFim(aloc.data_fim ? aloc.data_fim.split('T')[0] : "");
-    
     if (modalRef.current) {
       modalRef.current.scrollTo({ top: 0, behavior: "smooth" });
     }

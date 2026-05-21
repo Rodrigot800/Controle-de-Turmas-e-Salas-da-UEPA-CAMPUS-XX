@@ -232,6 +232,7 @@ function App() {
                 <TabelaAlocacaoDisciplinas
                   salas={salas}
                   turmas={turmas}
+                  cursos={cursos}
                   alocacoesDisciplinas={alocacoesDisciplinas}
                   onOpenModalAlocacao={() => setModalAlocacaoPeriodoAberto(true)}
                 />

@@ -26,7 +26,15 @@ function formatarDia(dia) {
   return dia.toLowerCase() + "s";
 }
 
-export default function TabelaAlocacaoDisciplinas({ salas, turmas = [], alocacoesDisciplinas, onOpenModalAlocacao }) {
+export default function TabelaAlocacaoDisciplinas({ salas, turmas = [], cursos = [], alocacoesDisciplinas, onOpenModalAlocacao }) {
+  const dataAtual = new Date();
+  const anoAtual = dataAtual.getFullYear();
+  const mesAtual = dataAtual.getMonth() + 1;
+  const semestreAtual = mesAtual <= 6 ? 1 : 2;
+
+  const [anoSelecionado, setAnoSelecionado] = useState(anoAtual);
+  const [semestreSelecionado, setSemestreSelecionado] = useState(semestreAtual);
+  
   const [termoPesquisa, setTermoPesquisa] = useState("");
   const [filtroTurno, setFiltroTurno] = useState("");
 
@@ -35,12 +43,49 @@ export default function TabelaAlocacaoDisciplinas({ salas, turmas = [], alocacoe
     return [...new Set(turnos)].sort();
   }, [alocacoesDisciplinas]);
 
+  // ─── Funções auxiliares p/ verificar se turma está ativa no semestre ───────
+  function semestreAbsoluto(ano, semestre) {
+    return Number(ano) * 2 + (Number(semestre) === 2 ? 1 : 0);
+  }
+
+  function turmaEstaAtiva(turma) {
+    if (!cursos || cursos.length === 0) return true; // Se não houver cursos, exibe tudo por segurança
+    const curso = cursos.find((c) => Number(c.id) === Number(turma.curso_id));
+    if (!curso) return false;
+
+    const inicio = semestreAbsoluto(turma.ano_inicio, turma.semestre_inicio);
+    const fim = inicio + Number(curso.semestres) - 1;
+    const atual = semestreAbsoluto(anoSelecionado, semestreSelecionado);
+
+    return atual >= inicio && atual <= fim;
+  }
+
+
   // Agrupa as alocações por Sala e depois por Turma
   const salasAgrupadas = useMemo(() => {
     const termo = termoPesquisa.trim().toLowerCase();
     
     // Filtro de pesquisa abrangente
     let alocsFiltradas = alocacoesDisciplinas;
+
+    // Filtra pelo semestre/ano selecionado
+    alocsFiltradas = alocsFiltradas.filter(a => {
+      // Se a alocação possui data_inicio explícita, extraímos o ano e o semestre da data
+      if (a.data_inicio) {
+        // Garantindo que a data seja interpretada no fuso horário local corretamente (evitando shift de dia)
+        const [anoStr, mesStr] = a.data_inicio.split('T')[0].split('-');
+        const anoAloc = Number(anoStr);
+        const mesAloc = Number(mesStr);
+        const semestreAloc = mesAloc <= 6 ? 1 : 2;
+        
+        return anoAloc === Number(anoSelecionado) && semestreAloc === Number(semestreSelecionado);
+      }
+      
+      // Fallback para turmas ativas caso a alocação não tenha data de início
+      const turma = turmas.find(t => String(t.id) === String(a.turma_id));
+      if (!turma) return false;
+      return turmaEstaAtiva(turma);
+    });
 
     if (filtroTurno) {
       alocsFiltradas = alocsFiltradas.filter(a => a.turno === filtroTurno);
@@ -97,7 +142,7 @@ export default function TabelaAlocacaoDisciplinas({ salas, turmas = [], alocacoe
           turmas: turmasArray
         };
       });
-  }, [alocacoesDisciplinas, termoPesquisa, filtroTurno]);
+  }, [alocacoesDisciplinas, termoPesquisa, filtroTurno, anoSelecionado, semestreSelecionado, turmas, cursos]);
 
   // Conta total de alocações
   const totalAlocacoes = useMemo(() => {
@@ -124,6 +169,29 @@ export default function TabelaAlocacaoDisciplinas({ salas, turmas = [], alocacoe
               {totalAlocacoes} {totalAlocacoes === 1 ? 'disciplina' : 'disciplinas'}
             </span>
           )}
+
+          {/* Separador */}
+          <div className="grade-toolbar-separator" />
+
+          {/* Seletores de ano e semestre */}
+          <select
+            className="grade-filter-select"
+            value={anoSelecionado}
+            onChange={(e) => setAnoSelecionado(Number(e.target.value))}
+          >
+            {[2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031].map((ano) => (
+              <option key={ano} value={ano}>{ano}</option>
+            ))}
+          </select>
+
+          <select
+            className="grade-filter-select"
+            value={semestreSelecionado}
+            onChange={(e) => setSemestreSelecionado(Number(e.target.value))}
+          >
+            <option value={1}>1º sem</option>
+            <option value={2}>2º sem</option>
+          </select>
 
           {/* Separador */}
           <div className="grade-toolbar-separator" />
