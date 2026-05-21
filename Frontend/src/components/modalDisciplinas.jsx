@@ -319,31 +319,33 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
               </select>
             </div>
 
-            <div className="form-group full" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px', marginBottom: '8px' }}>
-              <input 
-                type="checkbox" 
-                id="check-optativa" 
-                checked={isOptativa}
-                onChange={(e) => setIsOptativa(e.target.checked)}
-                style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-              />
-              <label htmlFor="check-optativa" style={{ margin: 0, cursor: 'pointer', fontWeight: '500', color: '#374151' }}>
-                É uma disciplina optativa?
-              </label>
-            </div>
-
-            {!isOptativa && (
-              <div className="form-group full">
+            <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', marginTop: '8px', marginBottom: '8px' }}>
+              <div className="form-group full" style={{ flex: 1, margin: 0 }}>
                 <label>Semestre da Disciplina</label>
                 <input
                   type="number"
-                  value={semestre}
+                  value={isOptativa ? "" : semestre}
                   onChange={(e) => setSemestre(Number(e.target.value))}
                   min="1"
-                  placeholder="Ex: 1 para 1º Semestre"
+                  placeholder={isOptativa ? "Optativa" : "Ex: 1"}
+                  disabled={isOptativa}
+                  style={isOptativa ? { backgroundColor: '#f9fafb', color: '#9ca3af', cursor: 'not-allowed' } : {}}
                 />
               </div>
-            )}
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingBottom: '12px', opacity: 0.75 }}>
+                <input 
+                  type="checkbox" 
+                  id="check-optativa" 
+                  checked={isOptativa}
+                  onChange={(e) => setIsOptativa(e.target.checked)}
+                  style={{ width: '14px', height: '14px', cursor: 'pointer', margin: 0 }}
+                />
+                <label htmlFor="check-optativa" style={{ margin: 0, cursor: 'pointer', fontWeight: '400', fontSize: '0.85rem', color: '#4b5563', whiteSpace: 'nowrap' }}>
+                  Optativa
+                </label>
+              </div>
+            </div>
           </div>
 
           {editandoId ? (
