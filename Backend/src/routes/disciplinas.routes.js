@@ -42,6 +42,7 @@ router.post("/", async (req, res) => {
       [nome, duracaoVal],
     );
     res.status(201).json(result.rows[0]);
+    if (req.io) req.io.emit("db_updated", { entity: "disciplinas", action: "create" });
   } catch (err) {
     console.error("Erro ao criar disciplina:", err.message);
     res.status(500).json({ erro: "Erro ao criar disciplina" });
@@ -58,6 +59,7 @@ router.delete("/:id", async (req, res) => {
   try {
     await pool.query("DELETE FROM disciplinas WHERE id = $1", [id]);
     res.json({ mensagem: "Disciplina removida" });
+    if (req.io) req.io.emit("db_updated", { entity: "disciplinas", action: "delete" });
   } catch (err) {
     console.error("Erro ao remover disciplina:", err.message);
     res.status(500).json({ erro: "Erro ao remover disciplina" });
@@ -93,6 +95,7 @@ router.put("/:id", async (req, res) => {
     }
 
     res.json(result.rows[0]);
+    if (req.io) req.io.emit("db_updated", { entity: "disciplinas", action: "update" });
   } catch (err) {
     console.error("Erro ao editar disciplina:", err.message);
     res.status(500).json({ erro: "Erro ao editar disciplina" });

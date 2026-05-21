@@ -57,6 +57,7 @@ router.post("/", async (req, res) => {
     );
 
     res.status(201).json(result.rows[0]);
+    if (req.io) req.io.emit("db_updated", { entity: "curso_disciplinas", action: "create" });
   } catch (err) {
     console.error("Erro ao alocar disciplina ao curso:", err.message);
     res.status(500).json({ erro: "Erro ao alocar disciplina ao curso" });
@@ -72,6 +73,7 @@ router.delete("/:id", async (req, res) => {
   try {
     await pool.query("DELETE FROM curso_disciplinas WHERE id = $1", [id]);
     res.json({ mensagem: "Alocação removida" });
+    if (req.io) req.io.emit("db_updated", { entity: "curso_disciplinas", action: "delete" });
   } catch (err) {
     console.error("Erro ao remover alocação:", err.message);
     res.status(500).json({ erro: "Erro ao remover alocação" });

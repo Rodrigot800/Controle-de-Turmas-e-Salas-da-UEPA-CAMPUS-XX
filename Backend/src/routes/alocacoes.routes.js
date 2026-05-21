@@ -140,7 +140,9 @@ router.post("/", async (req, res) => {
       ],
     );
 
-    return res.status(201).json(result.rows[0]);
+    res.status(201).json(result.rows[0]);
+    if (req.io) req.io.emit("db_updated", { entity: "alocacoes", action: "create" });
+    return;
   } catch (err) {
     console.error("Erro ao criar alocacao:", err);
     return res.status(500).json({ erro: err.message });
@@ -306,6 +308,7 @@ router.put("/:id", async (req, res) => {
     );
 
     res.json(result.rows[0]);
+    if (req.io) req.io.emit("db_updated", { entity: "alocacoes", action: "update" });
   } catch (err) {
     console.error("Erro ao editar alocação:", err.message);
     res.status(500).json({ erro: "Erro ao editar alocação" });
@@ -324,6 +327,7 @@ router.delete("/:id", async (req, res) => {
       return res.status(404).json({ erro: "Alocacao não encontrada" });
     }
     res.json({ mensagem: "Alocacao removida" });
+    if (req.io) req.io.emit("db_updated", { entity: "alocacoes", action: "delete" });
   } catch (err) {
     console.error("Erro ao remover alocacao:", err.message);
     res.status(500).json({ erro: "Erro ao remover alocacao" });

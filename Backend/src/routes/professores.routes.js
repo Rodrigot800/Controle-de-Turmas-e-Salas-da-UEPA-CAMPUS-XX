@@ -60,6 +60,7 @@ router.post("/", async (req, res) => {
     
     novoProfessor.cursos_ids = cursos_ids.map(Number);
     res.status(201).json(novoProfessor);
+    if (req.io) req.io.emit("db_updated", { entity: "professores", action: "create" });
   } catch (err) {
     await client.query("ROLLBACK");
     console.error("Erro ao criar professor:", err.message);
@@ -78,6 +79,7 @@ router.delete("/:id", async (req, res) => {
   try {
     await pool.query("DELETE FROM professores WHERE id = $1", [id]);
     res.json({ mensagem: "Professor removido" });
+    if (req.io) req.io.emit("db_updated", { entity: "professores", action: "delete" });
   } catch (err) {
     console.error("Erro ao remover professor:", err.message);
     if (err.code === '23503') {
@@ -132,6 +134,7 @@ router.put("/:id", async (req, res) => {
 
     professorAtualizado.cursos_ids = cursos_ids.map(Number);
     res.json(professorAtualizado);
+    if (req.io) req.io.emit("db_updated", { entity: "professores", action: "update" });
   } catch (err) {
     await client.query("ROLLBACK");
     console.error("Erro ao editar professor:", err.message);

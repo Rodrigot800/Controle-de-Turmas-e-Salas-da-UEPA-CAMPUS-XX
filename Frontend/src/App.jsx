@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { io } from "socket.io-client";
 import Header from "./components/header";
 import ModalSalas from "./components/modalSalas";
 import ModalCursos from "./components/modalCursos";
@@ -55,10 +56,24 @@ function App() {
   }, []);
 
   // ============================================================
-  // CARREGAMENTO INICIAL DOS DADOS DA API
+  // CARREGAMENTO INICIAL DOS DADOS DA API E SOCKET.IO
   // ============================================================
   useEffect(() => {
     carregarDados();
+
+    // Configurar a conexão do WebSocket com a base da API
+    const socket = io(API_BASE);
+
+    // Escutar por eventos de atualização do banco de dados
+    socket.on("db_updated", (data) => {
+      console.log("Recebido evento db_updated, recarregando dados...", data);
+      carregarDados();
+    });
+
+    // Cleanup na desmontagem
+    return () => {
+      socket.disconnect();
+    };
   }, []);
 
   async function carregarDados() {

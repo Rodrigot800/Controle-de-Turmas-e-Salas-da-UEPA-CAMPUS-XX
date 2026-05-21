@@ -58,6 +58,7 @@ router.post("/", async (req, res) => {
     );
 
     res.status(201).json(result.rows[0]);
+    if (req.io) req.io.emit("db_updated", { entity: "turmas", action: "create" });
   } catch (err) {
     console.error("Erro ao criar turma:", err.message);
     res.status(500).json({ erro: "Erro ao criar turma" });
@@ -73,6 +74,7 @@ router.delete("/:id", async (req, res) => {
   try {
     await pool.query("DELETE FROM turmas WHERE id = $1", [id]);
     res.json({ mensagem: "Turma removida" });
+    if (req.io) req.io.emit("db_updated", { entity: "turmas", action: "delete" });
   } catch (err) {
     console.error("Erro ao remover turma:", err.message);
     res.status(500).json({ erro: "Erro ao remover turma" });
@@ -106,6 +108,7 @@ router.put("/:id", async (req, res) => {
     }
 
     res.json(result.rows[0]);
+    if (req.io) req.io.emit("db_updated", { entity: "turmas", action: "update" });
   } catch (err) {
     console.error("Erro ao editar turma:", err.message);
     res.status(500).json({ erro: "Erro ao editar turma" });
