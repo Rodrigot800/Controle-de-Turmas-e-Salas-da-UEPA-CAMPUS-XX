@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./Backend
+    container_name: unigestao_backend
+    network_mode: "host"
+    environment:
+      DB_HOST: localhost
+      DB_USER: postgres
+      DB_PASSWORD: 123456
+      DB_NAME: uniGestao
+      DB_PORT: 5432
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./Frontend
+    container_name: unigestao_frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+

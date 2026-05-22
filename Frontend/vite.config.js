@@ -45,16 +45,5 @@ export default defineConfig({
     host: true,
     allowedHosts: true,
     port: 5173,
-
-    https: {
-      key: fs.readFileSync('./192.168.10.231-key.pem'),
-      cert: fs.readFileSync('./192.168.10.231.pem'),
-    },
-    proxy: {
-      '/api': {
-        target: 'http://192.168.10.231:3001',
-        changeOrigin: true,
-      },
-    },
   },
 })
