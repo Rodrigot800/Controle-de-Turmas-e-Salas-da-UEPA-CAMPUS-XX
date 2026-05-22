@@ -40,9 +40,31 @@ Assim que os contêineres terminarem de inicializar, o sistema estará pronto pa
 
 | Componente | URL Local | Descrição |
 |---|---|---|
-| **🎨 Frontend (App Web)** | [http://192.168.10.231:5173](http://192.168.10.231:5173) | Interface gráfica para gestão acadêmica. |
+| **🎨 Frontend (App Web)** | [https://192.168.10.231](https://192.168.10.231) | Interface gráfica para gestão acadêmica. |
 | **⚙️ Backend (API)** | [http://192.168.10.231:3001](http://192.168.10.231:3001) | Motor do sistema (rotas e regras de negócio). |
 | **🗄️ Banco de Dados** | `192.168.10.231:5432` | Acesso direto ao PostgreSQL (útil para DBeaver/PgAdmin). |
+
+---
+
+## 📱 3. Como Instalar o Aplicativo (PWA)
+Como o sistema roda em um IP local (`192.168.10.231`), nós usamos um certificado de segurança "autoassinado" para permitir o HTTPS. No entanto, navegadores como Google Chrome e Edge **bloqueiam a instalação de PWAs** se o certificado não for de uma entidade reconhecida mundialmente.
+
+Para fazer o botão de instalação aparecer, precisamos dizer ao navegador que esse IP é confiável.
+
+### Passo a passo para liberar a instalação:
+1. Abra uma nova aba no seu navegador (Chrome ou Edge).
+2. Na barra de endereços, digite o seguinte comando e aperte Enter:
+   - Se for Chrome: `chrome://flags/#unsafely-treat-insecure-origin-as-secure`
+   - Se for Edge: `edge://flags/#unsafely-treat-insecure-origin-as-secure`
+3. Você verá uma caixa de texto amarela. Digite exatamente: `https://192.168.10.231`
+4. Mude o botão ao lado de "Disabled" para **"Enabled"**.
+5. Clique no botão azul **"Relaunch"** (Reiniciar) que aparecerá no canto inferior da tela.
+
+### Instalando de Fato:
+6. Após o navegador reiniciar, acesse o sistema normalmente em: `https://192.168.10.231`
+7. Vá em "Avançado" e depois em "Ir para 192.168.10.231 (inseguro)".
+8. Agora sim, na barra superior de endereços, clique no ícone de **"Instalar Aplicativo"** (ou "Adicionar à Tela Inicial" no celular).
+9. O UniGestão abrirá como um programa nativo do sistema!
 
 ---
 

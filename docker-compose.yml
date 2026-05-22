@@ -21,8 +21,6 @@ services:
     build:
       context: ./Backend
     container_name: unigestao_backend
-    ports:
-      - "192.168.10.231:3001:3001"
     environment:
       DB_HOST: db
       DB_USER: postgres
@@ -38,7 +36,8 @@ services:
       context: ./Frontend
     container_name: unigestao_frontend
     ports:
-      - "192.168.10.231:5173:80"
+      - "192.168.10.231:443:443"
+      - "192.168.10.231:3001:3001"
     depends_on:
       - backend
     restart: unless-stopped
