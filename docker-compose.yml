@@ -3,29 +3,28 @@ version: '3.8'
 services:
   db:
     image: postgres:14-alpine
-    container_name: unigestao_db
+    container_name: hydrazil_db
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: "123456"
-      POSTGRES_DB: uniGestao
+      POSTGRES_PASSWORD: "systemhidrazil@2026"
+      POSTGRES_DB: hydrazil_db
     ports:
       - "192.168.10.231:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./Backend/bancoSQL.SQL:/docker-entrypoint-initdb.d/01-bancoSQL.sql
-      - ./Backend/insert.SQL:/docker-entrypoint-initdb.d/02-insert.sql
-      - "./Backend/insert disciplinas e professores.SQL:/docker-entrypoint-initdb.d/03-insert.sql"
+      - ./Backend/codeSQL/CreateTable.SQL:/docker-entrypoint-initdb.d/01-CreateTable.sql
+      - ./Backend/codeSQL/Insert.SQL:/docker-entrypoint-initdb.d/02-Insert.sql
     restart: unless-stopped
 
   backend:
     build:
       context: ./Backend
-    container_name: unigestao_backend
+    container_name: hydrazil_backend
     environment:
       DB_HOST: db
       DB_USER: postgres
-      DB_PASSWORD: "123456"
-      DB_NAME: uniGestao
+      DB_PASSWORD: "systemhidrazil@2026"
+      DB_NAME: hydrazil_db
       DB_PORT: 5432
     depends_on:
       - db
@@ -34,7 +33,7 @@ services:
   frontend:
     build:
       context: ./Frontend
-    container_name: unigestao_frontend
+    container_name: hydrazil_frontend
     ports:
       - "192.168.10.231:443:443"
       - "192.168.10.231:3001:3001"
