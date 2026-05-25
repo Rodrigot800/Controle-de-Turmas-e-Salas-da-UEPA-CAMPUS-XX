@@ -985,7 +985,7 @@ SELECT 1, id, 5, false FROM disciplinas WHERE nome IN ('Dendrologia', 'Sensoriam
 
 -- 6º Semestre
 INSERT INTO curso_disciplinas (curso_id, disciplina_id, semestre_disciplina, disciplina_optativa)
-SELECT 1, id, 6, false FROM disciplinas WHERE nome IN ('Dendometria', 'Sistemas de Informação Geográfica (SIG)', 'Nutrição de Árvores Florestais', 'Patologia Florestal', 'Incêndios Florestais', 'Mecanização e Transporte Florestal');
+SELECT 1, id, 6, false FROM disciplinas WHERE nome IN ('Dendrometria', 'Sistemas de Informação Geográfica (SIG)', 'Nutrição de Árvores Florestais', 'Patologia Florestal', 'Incêndios Florestais', 'Mecanização e Transporte Florestal');
 
 -- 7º Semestre
 INSERT INTO curso_disciplinas (curso_id, disciplina_id, semestre_disciplina, disciplina_optativa)
