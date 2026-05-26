@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express')
 const cors = require('cors')
 const http = require('http')
@@ -47,6 +48,9 @@ app.get('/', (req, res) => {
     res.send('Hello World!')
 })
 
-server.listen(3001, "0.0.0.0", () => {
-  console.log("Server is running on port 3001");
+const PORT = process.env.PORT || 3001;
+const HOST = process.env.HOST || "0.0.0.0";
+
+server.listen(PORT, HOST, () => {
+  console.log(`Server is running on ${HOST}:${PORT}`);
 });

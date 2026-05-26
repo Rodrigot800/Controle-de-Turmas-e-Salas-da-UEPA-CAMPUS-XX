@@ -43,3 +43,5 @@ services:
 
 volumes:
   pgdata:
+    external: true
+    name: controle-de-turmas-e-salas-da-uepa-campus-xx_pgdata
