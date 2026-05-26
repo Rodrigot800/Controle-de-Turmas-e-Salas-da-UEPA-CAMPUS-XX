@@ -83,7 +83,7 @@ CREATE TABLE alocacoes_periodo (
 
   sala_id INTEGER NOT NULL,
   disciplina_id INTEGER NOT NULL,
-  professor_id INTEGER NOT NULL,
+  professor_id INTEGER,
   turma_id INTEGER NOT NULL,
 
   turno VARCHAR(20),

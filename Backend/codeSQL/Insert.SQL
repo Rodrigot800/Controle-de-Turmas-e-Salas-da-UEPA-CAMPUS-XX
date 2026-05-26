@@ -1258,6 +1258,7 @@ INSERT INTO professores (nome) VALUES
 
 -- TECNOLOGIA DE ALIMENTOS (CURSO 7)
 INSERT INTO professor_cursos (professor_id, curso_id) SELECT id, 7 FROM professores WHERE nome IN (
+    'A DEFINIR',
     'ADRIANO CESAR CALANDRINI BRAGA', 
     'ALAN MARCEL FERNANDES DE SOUZA',
     'ALEX OTOBO',
@@ -1277,6 +1278,7 @@ INSERT INTO professor_cursos (professor_id, curso_id) SELECT id, 7 FROM professo
 
 -- ENGENHARIA FLORESTAL (CURSO 1)
 INSERT INTO professor_cursos (professor_id, curso_id) SELECT id, 1 FROM professores WHERE nome IN (
+    'A DEFINIR',
     'ALAN MARCEL FERNANDES DE SOUZA',
     'ALESSANDRA JACKELINE GUEDES DE MORAES',
     'ALESSANDRE SAMPAIO',
@@ -1303,6 +1305,7 @@ INSERT INTO professor_cursos (professor_id, curso_id) SELECT id, 1 FROM professo
 
 -- ENGENHARIA AMBIENTAL E SANITÁRIA (CURSO 3)
 INSERT INTO professor_cursos (professor_id, curso_id) SELECT id, 3 FROM professores WHERE nome IN (
+    'A DEFINIR',
     'ALAN MARCEL FERNANDES DE SOUZA',
     'ALBERTO LIMA',
     'ALESSANDRE SAMPAIO',
@@ -1335,6 +1338,7 @@ INSERT INTO professor_cursos (professor_id, curso_id) SELECT id, 3 FROM professo
 
 -- ENGENHARIA DE SOFTWARE (CURSO 4)
 INSERT INTO professor_cursos (professor_id, curso_id) SELECT id, 4 FROM professores WHERE nome IN (
+    'A DEFINIR',
     'ANTONILSON ALCANTARA',
     'ANTONIO MARCOS CARDOSO SILVA',
     'CLAUDIO MACIEL DE SOUZA COUTINHO', 
@@ -1348,6 +1352,7 @@ INSERT INTO professor_cursos (professor_id, curso_id) SELECT id, 4 FROM professo
 
 -- ENGENHARIA DE PRODUÇÃO (CURSO 2)
 INSERT INTO professor_cursos (professor_id, curso_id) SELECT id, 2 FROM professores WHERE nome IN (
+    'A DEFINIR',
     'ANTONIO BATISTA RIBEIRO NETO',
     'BENEDITO LOBATO',
     'DANIEL MEIRELES DE AMORIM',
@@ -1395,6 +1400,7 @@ INSERT INTO professor_cursos (professor_id, curso_id) SELECT id, 5 FROM professo
 
 -- LICENCIATURA EM GEOGRAFIA (CURSO 6)
 INSERT INTO professor_cursos (professor_id, curso_id) SELECT id, 6 FROM professores WHERE nome IN (
+    'A DEFINIR',
     'ALCIONE SANTOS',
     'ANDERSON MADSON OLIVEIRA MAIA',
     'EDGAR MONTEIRO',
