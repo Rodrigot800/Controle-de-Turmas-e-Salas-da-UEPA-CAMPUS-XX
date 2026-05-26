@@ -56,6 +56,8 @@ export default function ModalCursos({ cursos, setCursos, onClose }) {
     limparFormulario();
   }
 
+
+
   async function salvarEdicao() {
     if (!validarEntrada()) return;
 

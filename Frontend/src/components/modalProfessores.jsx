@@ -11,6 +11,7 @@ export default function ModalProfessores({ professores, setProfessores, cursos, 
   const [pesquisa, setPesquisa] = useState("");
 
   const [editandoId, setEditandoId] = useState(null);
+  const [cursosExpandidos, setCursosExpandidos] = useState({});
 
   const modalRef = useRef(null);
   const nomeInputRef = useRef(null);
@@ -57,6 +58,10 @@ export default function ModalProfessores({ professores, setProfessores, cursos, 
   function cancelarEdicao() {
     setEditandoId(null);
     limparFormulario();
+  }
+
+  function toggleCurso(id) {
+    setCursosExpandidos(prev => ({ ...prev, [id]: !prev[id] }));
   }
 
   async function salvarEdicao() {
@@ -162,6 +167,28 @@ export default function ModalProfessores({ professores, setProfessores, cursos, 
   const professoresFiltrados = professores.filter((professor) =>
     professor.nome.toLowerCase().includes(pesquisa.toLowerCase())
   );
+
+  // Agrupamento de professores por curso
+  const groupedData = {};
+  groupedData["sem-curso"] = { nome: "Sem curso vinculado", professores: [] };
+  cursos.forEach(c => {
+    groupedData[c.id] = { nome: c.nome, professores: [] };
+  });
+
+  professoresFiltrados.forEach(p => {
+    const pCursos = p.cursos_ids || [];
+    if (pCursos.length === 0) {
+      groupedData["sem-curso"].professores.push(p);
+    } else {
+      pCursos.forEach(cid => {
+        if (groupedData[cid]) {
+          groupedData[cid].professores.push(p);
+        } else {
+          groupedData["sem-curso"].professores.push(p);
+        }
+      });
+    }
+  });
 
   return (
     <div className="modal-backdrop">
@@ -304,26 +331,51 @@ export default function ModalProfessores({ professores, setProfessores, cursos, 
           ) : professoresFiltrados.length === 0 ? (
             <p className="lista-feedback">Nenhum professor encontrado.</p>
           ) : (
-            <ul className="lista-cursos">
-              {professoresFiltrados.map((professor) => (
-                <li key={professor.id} className={`item-curso ${editandoId === professor.id ? "item-editando" : ""}`}>
-                  <div className="item-info">
-                    <span className="item-nome">{professor.nome}</span>
-                    <div className="item-meta">
-                      {(professor.cursos_ids || []).map(cid => (
-                        <span key={cid} className="pill" style={{ marginRight: '4px', marginBottom: '4px', display: 'inline-block' }}>
-                          {getNomeCurso(cid)}
-                        </span>
-                      ))}
+            <div className="accordion-container" style={{ marginTop: '16px' }}>
+              {Object.keys(groupedData).map(cId => {
+                const cursoData = groupedData[cId];
+                const professoresDoCurso = cursoData.professores;
+                
+                if (professoresDoCurso.length === 0) return null;
+
+                const isCursoExpanded = cursosExpandidos[cId];
+
+                return (
+                  <div key={cId} className="accordion-curso">
+                    <div 
+                      onClick={() => toggleCurso(cId)}
+                      style={{ padding: '12px 16px', background: '#f9fafb', border: '1px solid #e5e7eb', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 'bold', borderRadius: '6px', marginBottom: isCursoExpanded ? '0' : '8px', borderBottomLeftRadius: isCursoExpanded ? '0' : '6px', borderBottomRightRadius: isCursoExpanded ? '0' : '6px' }}
+                    >
+                      <span style={{color: '#111', fontSize: '14px'}}>{cursoData.nome}</span>
+                      <span style={{color: '#9ca3af'}}>{isCursoExpanded ? "▼" : "▶"}</span>
                     </div>
+
+                    {isCursoExpanded && (
+                      <ul style={{ padding: 0, margin: 0, listStyle: 'none', width: '100%', border: '1px solid #e5e7eb', borderTop: 'none', borderRadius: '0 0 6px 6px', marginBottom: '8px' }}>
+                        {professoresDoCurso.map((professor) => (
+                          <li key={professor.id} className={`item-curso ${editandoId === professor.id ? "item-editando" : ""}`} style={{ borderBottom: '1px solid #f0f0f0', padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div className="item-info">
+                              <span className="item-nome">{professor.nome}</span>
+                              <div className="item-meta" style={{ marginTop: '4px' }}>
+                                {(professor.cursos_ids || []).map(cid => (
+                                  <span key={cid} className="pill" style={{ marginRight: '4px', marginBottom: '4px', display: 'inline-block' }}>
+                                    {getNomeCurso(cid)}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="item-actions">
+                              <button className="btn-edit" onClick={() => iniciarEdicao(professor)} style={{ border: '1px solid #e5e7eb', background: '#fff', color: '#6b7280', padding: '4px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', marginRight: '6px' }}>Editar</button>
+                              <button className="btn-delete" onClick={() => removerProfessor(professor.id)}>Excluir</button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
-                  <div className="item-actions">
-                    <button className="btn-edit" onClick={() => iniciarEdicao(professor)}>Editar</button>
-                    <button className="btn-delete" onClick={() => removerProfessor(professor.id)}>Excluir</button>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                );
+              })}
+            </div>
           )}
         </div>
       </div>

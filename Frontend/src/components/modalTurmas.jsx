@@ -15,6 +15,7 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
 
   // Estados de edição
   const [editandoId, setEditandoId] = useState(null);
+  const [cursosExpandidos, setCursosExpandidos] = useState({});
 
   const modalRef = useRef(null);
   const nomeInputRef = useRef(null);
@@ -66,6 +67,10 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
   function cancelarEdicao() {
     setEditandoId(null);
     limparFormulario();
+  }
+
+  function toggleCurso(id) {
+    setCursosExpandidos(prev => ({ ...prev, [id]: !prev[id] }));
   }
 
   async function salvarEdicao() {
@@ -181,6 +186,21 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
     nomeCurso(turma.curso_id).toLowerCase().includes(pesquisa.toLowerCase()) ||
     turma.turno.toLowerCase().includes(pesquisa.toLowerCase())
   );
+
+  // Agrupamento de turmas por curso
+  const groupedData = {};
+  groupedData["sem-curso"] = { nome: "Sem curso vinculado", turmas: [] };
+  cursos.forEach(c => {
+    groupedData[c.id] = { nome: c.nome, turmas: [] };
+  });
+
+  turmasFiltradas.forEach(t => {
+    if (groupedData[t.curso_id]) {
+      groupedData[t.curso_id].turmas.push(t);
+    } else {
+      groupedData["sem-curso"].turmas.push(t);
+    }
+  });
 
   return (
     <div className="modal-backdrop">
@@ -300,41 +320,68 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
           ) : turmasFiltradas.length === 0 ? (
             <p className="lista-feedback">Nenhuma turma encontrada.</p>
           ) : (
-            <ul className="lista-turmas">
-              {turmasFiltradas.map((turma) => (
-                <li
-                  key={turma.id}
-                  className={`item-turma ${editandoId === turma.id ? "item-editando" : ""}`}
-                >
-                  <div className="item-info">
-                    <span className="item-nome">{turma.nome}</span>
-                    <div className="item-meta">
-                      <span className="pill curso">
-                        {nomeCurso(turma.curso_id)}
-                      </span>
-                      <span className="pill turno">{turma.turno}</span>
-                      <span className="pill periodo">
-                        {turma.ano_inicio}.{turma.semestre_inicio}
-                      </span>
+            <div className="accordion-container" style={{ marginTop: '16px' }}>
+              {Object.keys(groupedData).map(cId => {
+                const cursoData = groupedData[cId];
+                const turmasDoCurso = cursoData.turmas;
+
+                if (turmasDoCurso.length === 0) return null;
+
+                const isCursoExpanded = cursosExpandidos[cId];
+
+                return (
+                  <div key={cId} className="accordion-curso">
+                    <div 
+                      onClick={() => toggleCurso(cId)}
+                      style={{ padding: '12px 16px', background: '#f9fafb', border: '1px solid #e5e7eb', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 'bold', borderRadius: '6px', marginBottom: isCursoExpanded ? '0' : '8px', borderBottomLeftRadius: isCursoExpanded ? '0' : '6px', borderBottomRightRadius: isCursoExpanded ? '0' : '6px' }}
+                    >
+                      <span style={{color: '#111', fontSize: '14px'}}>{cursoData.nome}</span>
+                      <span style={{color: '#9ca3af'}}>{isCursoExpanded ? "▼" : "▶"}</span>
                     </div>
+
+                    {isCursoExpanded && (
+                      <ul style={{ padding: 0, margin: 0, listStyle: 'none', width: '100%', border: '1px solid #e5e7eb', borderTop: 'none', borderRadius: '0 0 6px 6px', marginBottom: '8px' }}>
+                        {turmasDoCurso.map((turma) => (
+                          <li
+                            key={turma.id}
+                            className={`item-curso ${editandoId === turma.id ? "item-editando" : ""}`}
+                            style={{ borderBottom: '1px solid #f0f0f0', padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                          >
+                            <div className="item-info">
+                              <span className="item-nome">{turma.nome}</span>
+                              <div className="item-meta" style={{ marginTop: '4px' }}>
+                                <span className="pill curso">
+                                  {nomeCurso(turma.curso_id)}
+                                </span>
+                                <span className="pill turno">{turma.turno}</span>
+                                <span className="pill periodo">
+                                  {turma.ano_inicio}.{turma.semestre_inicio}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="item-actions">
+                              <button
+                                className="btn-edit"
+                                onClick={() => iniciarEdicao(turma)}
+                                style={{ border: '1px solid #e5e7eb', background: '#fff', color: '#6b7280', padding: '4px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', marginRight: '6px' }}
+                              >
+                                Editar
+                              </button>
+                              <button
+                                className="btn-delete"
+                                onClick={() => removerTurma(turma.id)}
+                              >
+                                Excluir
+                              </button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
-                  <div className="item-actions">
-                    <button
-                      className="btn-edit"
-                      onClick={() => iniciarEdicao(turma)}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      className="btn-delete"
-                      onClick={() => removerTurma(turma.id)}
-                    >
-                      Excluir
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                );
+              })}
+            </div>
           )}
         </div>
       </div>
