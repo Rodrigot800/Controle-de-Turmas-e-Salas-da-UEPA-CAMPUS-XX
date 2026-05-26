@@ -148,7 +148,7 @@ export default function ModalAlocacaoPeriodo({
     setEditandoId(aloc.id);
     setSalaId(aloc.sala_id || "");
     setTurmaId(aloc.turma_id || "");
-    setDisciplinaId(aloc.disciplina_id || "");
+    setDisciplinaId(aloc.disciplina_id || "optativa");
     setProfessorId(aloc.professor_id || "");
     setTurno(aloc.turno || "");
     setTipoDisciplina(aloc.tipo_disciplina || "MODULAR");
@@ -177,7 +177,7 @@ export default function ModalAlocacaoPeriodo({
     const payload = {
       sala_id: Number(salaId),
       turma_id: Number(turmaId),
-      disciplina_id: Number(disciplinaId),
+      disciplina_id: disciplinaId === "optativa" || !disciplinaId ? null : Number(disciplinaId),
       professor_id: professorId ? Number(professorId) : null,
       turno: turno || null,
       tipo_disciplina: tipoDisciplina,
@@ -205,7 +205,7 @@ export default function ModalAlocacaoPeriodo({
 
       // Recarregar tudo para ter os nomes dos joins, ou simular localmente
       const turma = turmas.find(t => t.id === Number(turmaId));
-      const disc = disciplinas.find(d => d.id === Number(disciplinaId));
+      const disc = disciplinaId === "optativa" || !disciplinaId ? { nome: "Optativa" } : disciplinas.find(d => d.id === Number(disciplinaId));
       const prof = professores.find(p => p.id === Number(professorId));
       const sala = salas.find(s => s.id === Number(salaId));
 
@@ -213,7 +213,7 @@ export default function ModalAlocacaoPeriodo({
         ...alocacaoSalva,
         turma_nome: turma?.nome,
         ano_inicio: turma?.ano_inicio ?? null,
-        disciplina_nome: disc?.nome,
+        disciplina_nome: disc?.nome || "Optativa",
         professor_nome: prof?.nome,
         sala_nome: sala?.nome
       };
@@ -268,7 +268,7 @@ export default function ModalAlocacaoPeriodo({
     const termo = pesquisa.toLowerCase();
     const txtSala = aloc.sala_nome?.toLowerCase() || "";
     const txtTurma = aloc.turma_nome?.toLowerCase() || "";
-    const txtDisc = aloc.disciplina_nome?.toLowerCase() || "" ;
+    const txtDisc = aloc.disciplina_nome?.toLowerCase() || "optativa" ;
     const txtProf = aloc.professor_nome?.toLowerCase() || "";
     
     return txtSala.includes(termo) || txtTurma.includes(termo) || txtDisc.includes(termo) || txtProf.includes(termo);
@@ -339,6 +339,7 @@ export default function ModalAlocacaoPeriodo({
               <select value={disciplinaId} onChange={e => handleDisciplinaChange(e.target.value)} disabled={!turmaId}>
                 <option value="">{turmaId ? "Selecione a Disciplina" : "Selecione uma turma primeiro"}</option>
                 {disciplinasFiltradas.map(d => <option key={d.id} value={d.id}>{d.nomeFormatado}</option>)}
+                {turmaId && <option value="optativa">Optativa</option>}
               </select>
             </div>
 
@@ -481,7 +482,7 @@ export default function ModalAlocacaoPeriodo({
                                     <li key={aloc.id} className={`item-curso ${editandoId === aloc.id ? "item-editando" : ""}`} style={{ borderBottom: '1px solid #f0f0f0', padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                       <div className="item-info">
                                         <span className="item-nome">
-                                          {aloc.disciplina_nome} <span style={{ fontWeight: 'normal', color: '#6b7280', fontSize: '13px' }}>— {aloc.sala_nome}</span>
+                                          {aloc.disciplina_nome || "Optativa"} <span style={{ fontWeight: 'normal', color: '#6b7280', fontSize: '13px' }}>— {aloc.sala_nome}</span>
                                         </span>
                                         <div className="item-meta">
                                           {aloc.turno && <span className="pill" style={{ background: '#e0e7ff', color: '#3730a3' }}>{aloc.turno}</span>}

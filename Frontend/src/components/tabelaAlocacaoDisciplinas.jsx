@@ -104,7 +104,7 @@ export default function TabelaAlocacaoDisciplinas({ salas, turmas = [], cursos =
         return (
           a.sala_nome?.toLowerCase().includes(termo) ||
           a.turma_nome?.toLowerCase().includes(termo) ||
-          a.disciplina_nome?.toLowerCase().includes(termo) ||
+          (a.disciplina_nome?.toLowerCase() || "optativa").includes(termo) ||
           a.professor_nome?.toLowerCase().includes(termo)
         );
       });
@@ -349,8 +349,8 @@ export default function TabelaAlocacaoDisciplinas({ salas, turmas = [], cursos =
                             </td>
                             
                             <td className={!isPrimeiraAlocacaoDaTurma ? "cell-bordered-top" : ""}>
-                              <strong>{aloc.disciplina_nome}</strong>
-                            </td>
+                               <strong>{aloc.disciplina_nome || "Optativa"}</strong>
+                             </td>
                             
                             <td className={!isPrimeiraAlocacaoDaTurma ? "cell-bordered-top" : ""}>
                               <div className="periodo-wrapper">

@@ -25,7 +25,7 @@ router.get("/", async (req, res) => {
         s.nome as sala_nome
       FROM alocacoes_periodo ad
       JOIN turmas t ON ad.turma_id = t.id
-      JOIN disciplinas d ON ad.disciplina_id = d.id
+      LEFT JOIN disciplinas d ON ad.disciplina_id = d.id
       LEFT JOIN professores p ON ad.professor_id = p.id
       JOIN salas s ON ad.sala_id = s.id
       ORDER BY s.nome, ad.dia_semana
@@ -41,8 +41,8 @@ router.get("/", async (req, res) => {
 router.post("/", async (req, res) => {
   const { turma_id, disciplina_id, professor_id, sala_id, turno, tipo_disciplina, dia_semana, data_inicio, data_fim } = req.body;
 
-  if (!turma_id || !disciplina_id || !sala_id || !tipo_disciplina) {
-    return res.status(400).json({ erro: "Campos turma, disciplina, sala e tipo_disciplina são obrigatórios" });
+  if (!turma_id || !sala_id || !tipo_disciplina) {
+    return res.status(400).json({ erro: "Campos turma, sala e tipo_disciplina são obrigatórios" });
   }
 
   try {
@@ -51,7 +51,7 @@ router.post("/", async (req, res) => {
        (turma_id, disciplina_id, professor_id, sala_id, turno, tipo_disciplina, dia_semana, data_inicio, data_fim) 
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
        RETURNING *`,
-      [turma_id, disciplina_id, professor_id || null, sala_id, turno || null, tipo_disciplina, dia_semana || null, data_inicio || null, data_fim || null]
+      [turma_id, disciplina_id || null, professor_id || null, sala_id, turno || null, tipo_disciplina, dia_semana || null, data_inicio || null, data_fim || null]
     );
     res.status(201).json(result.rows[0]);
     if (req.io) req.io.emit("db_updated", { entity: "alocacoesDisciplinas", action: "create" });
@@ -66,8 +66,8 @@ router.put("/:id", async (req, res) => {
   const { id } = req.params;
   const { turma_id, disciplina_id, professor_id, sala_id, turno, tipo_disciplina, dia_semana, data_inicio, data_fim } = req.body;
 
-  if (!turma_id || !disciplina_id || !sala_id || !tipo_disciplina) {
-    return res.status(400).json({ erro: "Campos turma, disciplina, sala e tipo_disciplina são obrigatórios" });
+  if (!turma_id || !sala_id || !tipo_disciplina) {
+    return res.status(400).json({ erro: "Campos turma, sala e tipo_disciplina são obrigatórios" });
   }
 
   try {
@@ -77,7 +77,7 @@ router.put("/:id", async (req, res) => {
            turno = $5, tipo_disciplina = $6, dia_semana = $7, data_inicio = $8, data_fim = $9 
        WHERE id = $10 
        RETURNING *`,
-      [turma_id, disciplina_id, professor_id || null, sala_id, turno || null, tipo_disciplina, dia_semana || null, data_inicio || null, data_fim || null, id]
+      [turma_id, disciplina_id || null, professor_id || null, sala_id, turno || null, tipo_disciplina, dia_semana || null, data_inicio || null, data_fim || null, id]
     );
 
     if (result.rows.length === 0) {

@@ -82,7 +82,7 @@ CREATE TABLE alocacoes_periodo (
   id SERIAL PRIMARY KEY,
 
   sala_id INTEGER NOT NULL,
-  disciplina_id INTEGER NOT NULL,
+  disciplina_id INTEGER,
   professor_id INTEGER,
   turma_id INTEGER NOT NULL,
 
