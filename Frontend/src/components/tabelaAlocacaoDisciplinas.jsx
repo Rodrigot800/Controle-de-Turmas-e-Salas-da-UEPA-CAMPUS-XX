@@ -350,10 +350,14 @@ export default function TabelaAlocacaoDisciplinas({ salas, turmas = [], cursos =
                         const isPrimeiraAlocacaoDaTurma = aIdx === 0;
                         const isModular = aloc.tipo_disciplina === "MODULAR";
                         
+                        const isUltimaAlocacaoDaTurma = aIdx === turma.alocacoes.length - 1;
+                        const isUltimaAlocacaoDaSala = turma === sala.turmas[sala.turmas.length - 1] && aIdx === turma.alocacoes.length - 1;
+
                         const rowParity = localRowCounter % 2 === 0 ? "row-even" : "row-odd";
                         localRowCounter++;
 
-                        const trCustomClass = `${salaBgClass} ${rowParity} ${isModular ? 'modular-row' : 'semanal-row'}`;
+                        const boundaryClass = isUltimaAlocacaoDaSala ? 'ultimo-sala-row' : isUltimaAlocacaoDaTurma ? 'ultimo-turma-row' : '';
+                        const trCustomClass = `${salaBgClass} ${rowParity} ${isModular ? 'modular-row' : 'semanal-row'} ${boundaryClass}`;
                         
                         const inicio = formatarDataBR(aloc.data_inicio);
                         const fim = formatarDataBR(aloc.data_fim);
@@ -376,7 +380,10 @@ export default function TabelaAlocacaoDisciplinas({ salas, turmas = [], cursos =
                             )}
 
                             {isPrimeiraAlocacaoDaTurma && (
-                              <td rowSpan={turma.alocacoes.length} className="cell-agrupada cell-turma">
+                              <td 
+                                rowSpan={turma.alocacoes.length} 
+                                className={`cell-agrupada cell-turma ${turma === sala.turmas[sala.turmas.length - 1] ? 'ultimo-turma-da-sala' : ''}`}
+                              >
                                 {turma.turmaNome}{turma.ano_inicio ? ` ${turma.ano_inicio}` : ""}
                               </td>
                             )}

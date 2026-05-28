@@ -204,6 +204,7 @@
   vertical-align: middle;
   border-bottom: 1px solid #eef2f7;
   border-right: 1px solid rgba(30, 41, 59, 0.15);
+  background-clip: padding-box;
   /* Linha preta azulada entre colunas */
 }
 
@@ -232,19 +233,25 @@
   text-align: center;
   font-weight: 700;
   border-bottom: 1px solid #d1d5db;
-  position: relative;
+  background-clip: padding-box;
 }
 
-.cell-sala {
+.grade-table tbody td.cell-sala {
   color: #0f172a;
   font-size: 15px;
   border-right: 2px solid rgba(30, 41, 59, 0.25) !important;
+  border-bottom: 3px solid #64748b !important; /* Divisor de salas */
 }
 
-.cell-turma {
+.grade-table tbody td.cell-turma {
   color: #4338ca;
   font-size: 13.5px;
   border-right: 1px solid rgba(30, 41, 59, 0.2) !important;
+  border-bottom: 2px solid #cbd5e1 !important; /* Divisor de turmas */
+}
+
+.grade-table tbody td.cell-turma.ultimo-turma-da-sala {
+  border-bottom: 3px solid #64748b !important; /* A última turma da sala ganha o divisor de salas */
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -406,6 +413,17 @@
 
 .switch-wrapper.active .switch-knob {
   transform: translateX(14px);
+}
+
+/* --- CONTRASTE E SEPARAÇÃO DE TURMAS E SALAS --- */
+/* Separador de turmas (dentro de uma mesma sala) - Linha cinza média distinta */
+.ultimo-turma-row td {
+  border-bottom: 2px solid #cbd5e1 !important;
+}
+
+/* Separador de salas - Linha cinza escura sólida */
+.ultimo-sala-row td {
+  border-bottom: 3px solid #64748b !important;
 }
 
 @media (max-width: 768px) {
