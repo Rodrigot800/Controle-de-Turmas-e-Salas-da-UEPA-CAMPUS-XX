@@ -22,23 +22,49 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 .grade-toolbar {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 24px;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 24px;
   background: #ffffff;
   border-bottom: 1px solid #e2e8f0;
+}
+
+.grade-toolbar-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
   flex-wrap: wrap;
 }
 
-.grade-toolbar-separator {
-  width: 1px;
-  height: 24px;
-  background: #e2e8f0;
-  flex-shrink: 0;
+.grade-title-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
-.grade-toolbar-separator:first-of-type {
-  margin-left: 0;
+.grade-badge-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.grade-toolbar-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.grade-filters-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .grade-title {
@@ -95,11 +121,7 @@
   position: relative;
   display: flex;
   align-items: center;
-  flex: 1;
-  min-width: 160px;
-  max-width: 280px;
-  margin-left: auto;
-  /* Empurra a pesquisa e o botão para a direita */
+  width: 280px;
 }
 
 .grade-search-input {
@@ -317,6 +339,73 @@
 .grade-table td strong {
   color: #1e293b;
   font-weight: 700;
+}
+
+/* --- TOGGLE SWITCH EM ANDAMENTO --- */
+.switch-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f1f5f9;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  height: 36px;
+  box-sizing: border-box;
+}
+
+.switch-wrapper:hover {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+}
+
+.switch-wrapper.active {
+  background: rgba(139, 92, 246, 0.08);
+  border-color: rgba(139, 92, 246, 0.3);
+}
+
+.switch-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #475569;
+  white-space: nowrap;
+  transition: color 0.2s ease;
+}
+
+.switch-wrapper.active .switch-label {
+  color: #7c3aed;
+}
+
+.switch-control {
+  position: relative;
+  width: 32px;
+  height: 18px;
+  background-color: #cbd5e1;
+  border-radius: 9px;
+  transition: background-color 0.2s ease;
+}
+
+.switch-wrapper.active .switch-control {
+  background-color: #7c3aed;
+}
+
+.switch-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  background-color: #ffffff;
+  border-radius: 50%;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.switch-wrapper.active .switch-knob {
+  transform: translateX(14px);
 }
 
 @media (max-width: 768px) {

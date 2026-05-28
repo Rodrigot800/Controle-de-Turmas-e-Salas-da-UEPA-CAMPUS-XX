@@ -36,6 +36,7 @@ export default function TabelaAlocacaoDisciplinas({ salas, turmas = [], cursos =
   const [semestreSelecionado, setSemestreSelecionado] = useState(semestreAtual);
   
   const [termoPesquisa, setTermoPesquisa] = useState("");
+  const [apenasEmAndamento, setApenasEmAndamento] = useState(true);
   const [filtroTurno, setFiltroTurno] = useState(() => {
     const agora = new Date();
     const hora = agora.getHours();
@@ -76,24 +77,50 @@ export default function TabelaAlocacaoDisciplinas({ salas, turmas = [], cursos =
     // Filtro de pesquisa abrangente
     let alocsFiltradas = alocacoesDisciplinas;
 
-    // Filtra pelo semestre/ano selecionado
-    alocsFiltradas = alocsFiltradas.filter(a => {
-      // Se a alocação possui data_inicio explícita, extraímos o ano e o semestre da data
-      if (a.data_inicio) {
-        // Garantindo que a data seja interpretada no fuso horário local corretamente (evitando shift de dia)
-        const [anoStr, mesStr] = a.data_inicio.split('T')[0].split('-');
-        const anoAloc = Number(anoStr);
-        const mesAloc = Number(mesStr);
-        const semestreAloc = mesAloc <= 6 ? 1 : 2;
+    if (!apenasEmAndamento) {
+      // Filtra pelo semestre/ano selecionado
+      alocsFiltradas = alocsFiltradas.filter(a => {
+        // Se a alocação possui data_inicio explícita, extraímos o ano e o semestre da data
+        if (a.data_inicio) {
+          // Garantindo que a data seja interpretada no fuso horário local corretamente (evitando shift de dia)
+          const [anoStr, mesStr] = a.data_inicio.split('T')[0].split('-');
+          const anoAloc = Number(anoStr);
+          const mesAloc = Number(mesStr);
+          const semestreAloc = mesAloc <= 6 ? 1 : 2;
+          
+          return anoAloc === Number(anoSelecionado) && semestreAloc === Number(semestreSelecionado);
+        }
         
-        return anoAloc === Number(anoSelecionado) && semestreAloc === Number(semestreSelecionado);
-      }
-      
-      // Fallback para turmas ativas caso a alocação não tenha data de início
-      const turma = turmas.find(t => String(t.id) === String(a.turma_id));
-      if (!turma) return false;
-      return turmaEstaAtiva(turma);
-    });
+        // Fallback para turmas ativas caso a alocação não tenha data de início
+        const turma = turmas.find(t => String(t.id) === String(a.turma_id));
+        if (!turma) return false;
+        return turmaEstaAtiva(turma);
+      });
+    } else {
+      // Filtra apenas pelo momento atual (hoje)
+      const hoje = new Date();
+      const ano = hoje.getFullYear();
+      const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+      const dia = String(hoje.getDate()).padStart(2, '0');
+      const hojeStr = `${ano}-${mes}-${dia}`;
+
+      alocsFiltradas = alocsFiltradas.filter(a => {
+        // Se não tem período definido, não pode estar em andamento
+        if (!a.data_inicio && !a.data_fim) return false;
+
+        const inicio = a.data_inicio ? a.data_inicio.split('T')[0] : null;
+        const fim = a.data_fim ? a.data_fim.split('T')[0] : null;
+
+        if (inicio && fim) {
+          return hojeStr >= inicio && hojeStr <= fim;
+        } else if (inicio) {
+          return hojeStr >= inicio;
+        } else if (fim) {
+          return hojeStr <= fim;
+        }
+        return false;
+      });
+    }
 
     if (filtroTurno) {
       alocsFiltradas = alocsFiltradas.filter(a => a.turno === filtroTurno);
@@ -150,7 +177,7 @@ export default function TabelaAlocacaoDisciplinas({ salas, turmas = [], cursos =
           turmas: turmasArray
         };
       });
-  }, [alocacoesDisciplinas, termoPesquisa, filtroTurno, anoSelecionado, semestreSelecionado, turmas, cursos]);
+  }, [alocacoesDisciplinas, termoPesquisa, filtroTurno, anoSelecionado, semestreSelecionado, turmas, cursos, apenasEmAndamento]);
 
   // Conta total de alocações
   const totalAlocacoes = useMemo(() => {
@@ -163,84 +190,103 @@ export default function TabelaAlocacaoDisciplinas({ salas, turmas = [], cursos =
         
         {/* ── TOOLBAR UNIFICADA ── */}
         <div className="grade-toolbar">
-          {/* Título */}
-          <h2 className="grade-title">
-            Relação de turmas com disciplinas {filtroTurno ? ` — ${filtroTurno}` : ""}
-          </h2>
+          
+          {/* Linha Superior: Título + Badges à esquerda, Botão principal à direita */}
+          <div className="grade-toolbar-top">
+            <div className="grade-title-section">
+              <h2 className="grade-title">
+                Relação de turmas com disciplinas {filtroTurno ? ` — ${filtroTurno}` : ""}
+              </h2>
+              <div className="grade-badge-container">
+                <span className="grade-badge">
+                  {salasAgrupadas.length} {salasAgrupadas.length === 1 ? 'sala' : 'salas'}
+                </span>
+                {totalAlocacoes > 0 && (
+                  <span className="grade-badge-accent">
+                    {totalAlocacoes} {totalAlocacoes === 1 ? 'disciplina' : 'disciplinas'}
+                  </span>
+                )}
+              </div>
+            </div>
 
-          {/* Badges */}
-          <span className="grade-badge">
-            {salasAgrupadas.length} {salasAgrupadas.length === 1 ? 'sala' : 'salas'}
-          </span>
-          {totalAlocacoes > 0 && (
-            <span className="grade-badge-accent">
-              {totalAlocacoes} {totalAlocacoes === 1 ? 'disciplina' : 'disciplinas'}
-            </span>
-          )}
-
-          {/* Separador */}
-          <div className="grade-toolbar-separator" />
-
-          {/* Seletores de ano e semestre */}
-          <select
-            className="grade-filter-select"
-            value={anoSelecionado}
-            onChange={(e) => setAnoSelecionado(Number(e.target.value))}
-          >
-            {[2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031].map((ano) => (
-              <option key={ano} value={ano}>{ano}</option>
-            ))}
-          </select>
-
-          <select
-            className="grade-filter-select"
-            value={semestreSelecionado}
-            onChange={(e) => setSemestreSelecionado(Number(e.target.value))}
-          >
-            <option value={1}>1º sem</option>
-            <option value={2}>2º sem</option>
-          </select>
-
-          {/* Separador */}
-          <div className="grade-toolbar-separator" />
-
-          {/* Filtro de turno */}
-          <select 
-            className="grade-filter-select"
-            value={filtroTurno}
-            onChange={(e) => setFiltroTurno(e.target.value)}
-          >
-            <option value="">Todos os Turnos</option>
-            {turnosUnicos.map(t => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
-
-          {/* Separador */}
-          <div className="grade-toolbar-separator" />
-
-          {/* Campo de pesquisa */}
-          <div className="grade-search-wrapper">
-            <svg className="grade-search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <input
-              type="text"
-              className="grade-search-input"
-              placeholder="Pesquisar sala, turma, professor..."
-              value={termoPesquisa}
-              onChange={(e) => setTermoPesquisa(e.target.value)}
-            />
+            <button
+              className="grade-action-btn"
+              onClick={onOpenModalAlocacao}
+            >
+              <span style={{ fontSize: "1.1rem", lineHeight: 0 }}>+</span> Alocar Período
+            </button>
           </div>
 
-          {/* Botão alocar */}
-          <button
-            className="grade-action-btn"
-            onClick={onOpenModalAlocacao}
-          >
-            <span style={{ fontSize: "1.1rem", lineHeight: 0 }}>+</span> Alocar Período
-          </button>
+          {/* Linha Inferior: Filtros à esquerda, Pesquisa à direita */}
+          <div className="grade-toolbar-bottom">
+            <div className="grade-filters-section">
+              {/* Seletores de ano e semestre */}
+              <select
+                className="grade-filter-select"
+                value={anoSelecionado}
+                onChange={(e) => setAnoSelecionado(Number(e.target.value))}
+                disabled={apenasEmAndamento}
+                style={apenasEmAndamento ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+                title={apenasEmAndamento ? "Filtros desabilitados pois 'Em andamento' está ativo" : "Filtrar por ano"}
+              >
+                {[2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031].map((ano) => (
+                  <option key={ano} value={ano}>{ano}</option>
+                ))}
+              </select>
+
+              <select
+                className="grade-filter-select"
+                value={semestreSelecionado}
+                onChange={(e) => setSemestreSelecionado(Number(e.target.value))}
+                disabled={apenasEmAndamento}
+                style={apenasEmAndamento ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+                title={apenasEmAndamento ? "Filtros desabilitados pois 'Em andamento' está ativo" : "Filtrar por semestre"}
+              >
+                <option value={1}>1º sem</option>
+                <option value={2}>2º sem</option>
+              </select>
+
+              {/* Filtro de turno */}
+              <select 
+                className="grade-filter-select"
+                value={filtroTurno}
+                onChange={(e) => setFiltroTurno(e.target.value)}
+              >
+                <option value="">Todos os Turnos</option>
+                {turnosUnicos.map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+
+              {/* Interruptor "Em Andamento Hoje" */}
+              <div 
+                className={`switch-wrapper ${apenasEmAndamento ? 'active' : ''}`}
+                onClick={() => setApenasEmAndamento(!apenasEmAndamento)}
+                title="Mostrar apenas alocações com período letivo ativo hoje"
+              >
+                <div className="switch-control">
+                  <div className="switch-knob" />
+                </div>
+                <span className="switch-label">Em andamento hoje</span>
+              </div>
+            </div>
+
+            {/* Campo de pesquisa */}
+            <div className="grade-search-wrapper">
+              <svg className="grade-search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input
+                type="text"
+                className="grade-search-input"
+                placeholder="Pesquisar sala, turma, professor..."
+                value={termoPesquisa}
+                onChange={(e) => setTermoPesquisa(e.target.value)}
+              />
+            </div>
+          </div>
+
         </div>
 
         {/* ── TABELA ── */}
