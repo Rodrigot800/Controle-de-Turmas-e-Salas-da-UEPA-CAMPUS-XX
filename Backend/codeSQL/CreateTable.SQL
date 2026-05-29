@@ -70,12 +70,13 @@ CREATE TABLE curso_disciplinas (
   disciplina_id INTEGER NOT NULL,
   semestre_disciplina INTEGER,
   disciplina_optativa BOOLEAN DEFAULT false,
+  disciplina_atual BOOLEAN DEFAULT true,
   FOREIGN KEY (curso_id)
     REFERENCES cursos(id)
     ON DELETE CASCADE,
   FOREIGN KEY (disciplina_id)
     REFERENCES disciplinas(id)
-    ON DELETE CASCADE
+    ON DELETE CASCADE 
 );
 
 CREATE TABLE alocacoes_periodo (

@@ -13,7 +13,8 @@ router.get("/", async (req, res) => {
         curso_id,
         disciplina_id,
         semestre_disciplina,
-        disciplina_optativa
+        disciplina_optativa,
+        disciplina_atual
       FROM curso_disciplinas
     `);
 
@@ -28,7 +29,7 @@ router.get("/", async (req, res) => {
 // Criar nova alocação de disciplina para curso
 // ===========================
 router.post("/", async (req, res) => {
-  const { curso_id, disciplina_id, semestre_disciplina, disciplina_optativa } = req.body;
+  const { curso_id, disciplina_id, semestre_disciplina, disciplina_optativa, disciplina_atual } = req.body;
 
 
   if (!curso_id || !disciplina_id) {
@@ -49,11 +50,12 @@ router.post("/", async (req, res) => {
 
   const semestreVal = semestre_disciplina ? Number(semestre_disciplina) : null;
   const isOptativa = disciplina_optativa === true;
+  const isAtual = disciplina_atual !== false;
 
   try {
     const result = await pool.query(
-      "INSERT INTO curso_disciplinas (curso_id, disciplina_id, semestre_disciplina, disciplina_optativa) VALUES ($1, $2, $3, $4) RETURNING *",
-      [Number(curso_id), Number(disciplina_id), semestreVal, isOptativa],
+      "INSERT INTO curso_disciplinas (curso_id, disciplina_id, semestre_disciplina, disciplina_optativa, disciplina_atual) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+      [Number(curso_id), Number(disciplina_id), semestreVal, isOptativa, isAtual],
     );
 
     res.status(201).json(result.rows[0]);

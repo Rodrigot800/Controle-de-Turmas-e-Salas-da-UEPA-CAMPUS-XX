@@ -55,11 +55,18 @@ export default function ModalAlocacaoPeriodo({
   let disciplinasFiltradas = [];
 
   if (cursoIdDaTurma) {
-    // Filtra disciplinas do curso cujo semestre seja <= semestre atual da turma
-    const relacoesCurso = cursoDisciplinas.filter(cd => 
-      cd.curso_id === cursoIdDaTurma && 
-      cd.semestre_disciplina <= semestreAtualDaTurma
-    );
+    // Filtra disciplinas do curso cujo semestre seja <= semestre atual da turma e que sejam atuais (ou em edicao)
+    const relacoesCurso = cursoDisciplinas.filter(cd => {
+      const isAtual = cd.disciplina_atual !== false && 
+                      cd.disciplina_atual !== 'false' && 
+                      cd.disciplina_atual !== 0 && 
+                      cd.disciplina_atual !== 'f';
+      return (
+        Number(cd.curso_id) === Number(cursoIdDaTurma) && 
+        cd.semestre_disciplina <= semestreAtualDaTurma &&
+        (isAtual || Number(cd.disciplina_id) === Number(disciplinaId))
+      );
+    });
     
     // Ordem decrescente de semestres (do semestre atual pra trás)
     relacoesCurso.sort((a, b) => (b.semestre_disciplina || 0) - (a.semestre_disciplina || 0));
@@ -308,8 +315,8 @@ export default function ModalAlocacaoPeriodo({
       <div className="modal" ref={modalRef}>
         <div className="modal-header">
           <div className="modal-header-left">
-            <h2>{editandoId ? "Editar Alocação de Período" : "Nova Alocação de Período"}</h2>
-            <span className="modal-badge">{alocacoesDisciplinas.length} alocações</span>
+            <h2>{editandoId ? "Editar Alocação" : "Nova Alocação"}</h2>
+            <span className="modal-badge">{alocacoesDisciplinas.length} aloc.</span>
           </div>
           <button className="btn-close-icon" onClick={onClose}>×</button>
         </div>
@@ -317,7 +324,7 @@ export default function ModalAlocacaoPeriodo({
         <div className="modal-body">
           {editandoId && (
             <div className="edit-banner">
-              <span>Editando alocação da grade curricular.</span>
+              <span>Editando alocação</span>
               <button className="edit-banner-cancel" onClick={cancelarEdicao}>Cancelar</button>
             </div>
           )}
@@ -416,7 +423,7 @@ export default function ModalAlocacaoPeriodo({
           </div>
 
           <button className="btn-primary" onClick={salvar}>
-            {editandoId ? "Salvar alterações" : "+ Adicionar na Grade"}
+            {editandoId ? "Salvar" : "Alocar"}
           </button>
 
           <div className="modal-divider" />

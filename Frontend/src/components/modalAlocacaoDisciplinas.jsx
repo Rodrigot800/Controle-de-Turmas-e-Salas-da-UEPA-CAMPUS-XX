@@ -6,7 +6,7 @@ import API_BASE from "../config/api";
 
 export default function ModalAlocacaoDisciplinas({ 
   alocacoesDisciplinas, setAlocacoesDisciplinas, 
-  turmas, disciplinas, professores, salas, onClose 
+  turmas, disciplinas, professores, salas, cursoDisciplinas = [], onClose 
 }) {
   const [turmaId, setTurmaId] = useState("");
   const [disciplinaId, setDisciplinaId] = useState("");
@@ -19,6 +19,24 @@ export default function ModalAlocacaoDisciplinas({
 
   const [pesquisa, setPesquisa] = useState("");
   const [editandoId, setEditandoId] = useState(null);
+
+  const turmaSelecionada = turmas.find(t => Number(t.id) === Number(turmaId));
+  const cursoIdDaTurma = turmaSelecionada?.curso_id ?? null;
+
+  const disciplinasFiltradas = disciplinas.filter(d => {
+    if (!cursoIdDaTurma) return true;
+    const aloc = (cursoDisciplinas || []).find(cd => Number(cd.disciplina_id) === Number(d.id) && Number(cd.curso_id) === Number(cursoIdDaTurma));
+    if (aloc) {
+      const isAtual = aloc.disciplina_atual !== false && 
+                      aloc.disciplina_atual !== 'false' && 
+                      aloc.disciplina_atual !== 0 && 
+                      aloc.disciplina_atual !== 'f';
+      if (!isAtual && Number(d.id) !== Number(disciplinaId)) {
+        return false;
+      }
+    }
+    return true;
+  });
 
   const modalRef = useRef(null);
   const primeiroInputRef = useRef(null);
@@ -238,7 +256,7 @@ export default function ModalAlocacaoDisciplinas({
               <label>Disciplina</label>
               <select value={disciplinaId} onChange={(e) => setDisciplinaId(e.target.value)}>
                 <option value="">Selecione uma disciplina</option>
-                {disciplinas.map(d => (
+                {disciplinasFiltradas.map(d => (
                   <option key={d.id} value={d.id}>{d.nome}</option>
                 ))}
               </select>

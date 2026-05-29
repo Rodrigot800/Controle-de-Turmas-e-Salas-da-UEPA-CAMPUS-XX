@@ -10,12 +10,14 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
   const [cursoId, setCursoId] = useState("");
   const [semestre, setSemestre] = useState(1);
   const [isOptativa, setIsOptativa] = useState(false);
+  const [disciplinaAtual, setDisciplinaAtual] = useState(true);
   const [pesquisa, setPesquisa] = useState("");
 
   const [cursosExpandidos, setCursosExpandidos] = useState({});
   const [semestresExpandidos, setSemestresExpandidos] = useState({});
 
   const [editandoId, setEditandoId] = useState(null);
+  const [editandoAlocacaoId, setEditandoAlocacaoId] = useState(null);
 
   const modalRef = useRef(null);
   const nomeInputRef = useRef(null);
@@ -53,12 +55,14 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
 
   function iniciarEdicao(disciplina) {
     setEditandoId(disciplina.id);
+    const alocacao = disciplina.alocacao || cursoDisciplinas.find(cd => Number(cd.disciplina_id) === Number(disciplina.id));
+    setEditandoAlocacaoId(alocacao ? alocacao.id : null);
     setNome(disciplina.nome);
     setDuracao(disciplina.duracao || 60);
-    const alocacao = cursoDisciplinas.find(cd => Number(cd.disciplina_id) === Number(disciplina.id));
     setCursoId(alocacao ? String(alocacao.curso_id) : "");
     setSemestre(alocacao ? (Number(alocacao.semestre_disciplina) || 1) : 1);
     setIsOptativa(alocacao ? Boolean(alocacao.disciplina_optativa) : false);
+    setDisciplinaAtual(alocacao ? alocacao.disciplina_atual !== false : true);
     
     if (modalRef.current) {
       modalRef.current.scrollTo({ top: 0, behavior: "smooth" });
@@ -71,6 +75,7 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
 
   function cancelarEdicao() {
     setEditandoId(null);
+    setEditandoAlocacaoId(null);
     limparFormulario();
   }
 
@@ -95,23 +100,26 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
 
       // Substitui a disciplina
       setDisciplinas((prev) =>
-        prev.map((d) => (d.id === editandoId ? disciplinaEditada : d)),
+        prev.map((d) => (d.id === editandoId ? { ...disciplinaEditada, duracao: disciplinaEditada.duracao || duracao } : d)),
       );
 
       // Agora atualiza a alocação (se mudou o curso, semestre ou optativa)
-      const alocacaoAntiga = cursoDisciplinas.find(cd => Number(cd.disciplina_id) === Number(editandoId));
+      const alocacaoAntiga = cursoDisciplinas.find(cd => Number(cd.id) === Number(editandoAlocacaoId)) ||
+                             cursoDisciplinas.find(cd => Number(cd.disciplina_id) === Number(editandoId));
       
       const alocacaoBody = { 
         curso_id: Number(cursoId), 
         disciplina_id: editandoId, 
         semestre_disciplina: isOptativa ? null : Number(semestre),
-        disciplina_optativa: isOptativa 
+        disciplina_optativa: isOptativa,
+        disciplina_atual: disciplinaAtual
       };
 
       if (alocacaoAntiga) {
         if (Number(alocacaoAntiga.curso_id) !== Number(cursoId) || 
             Number(alocacaoAntiga.semestre_disciplina) !== Number(semestre) ||
-            Boolean(alocacaoAntiga.disciplina_optativa) !== isOptativa) {
+            Boolean(alocacaoAntiga.disciplina_optativa) !== isOptativa ||
+            Boolean(alocacaoAntiga.disciplina_atual) !== disciplinaAtual) {
           // Deleta a alocação antiga
           await fetch(`${API_BASE}/curso-disciplinas/${alocacaoAntiga.id}`, { method: "DELETE" });
           // Cria nova
@@ -135,6 +143,7 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
       }
 
       setEditandoId(null);
+      setEditandoAlocacaoId(null);
       limparFormulario();
       success("Disciplina atualizada com sucesso!");
     } catch (err) {
@@ -179,7 +188,8 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
           curso_id: Number(cursoId),
           disciplina_id: disciplinaCriada.id,
           semestre_disciplina: isOptativa ? null : Number(semestre),
-          disciplina_optativa: isOptativa
+          disciplina_optativa: isOptativa,
+          disciplina_atual: disciplinaAtual
         }),
       });
 
@@ -229,25 +239,38 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
     setCursoId("");
     setSemestre(1);
     setIsOptativa(false);
+    setDisciplinaAtual(true);
   }
 
   function getNomeCurso(disciplinaId) {
-    const alocacao = cursoDisciplinas.find(cd => Number(cd.disciplina_id) === Number(disciplinaId));
-    if (!alocacao) return "Sem curso vinculado";
-    const curso = cursos.find(c => c.id === alocacao.curso_id);
-    return curso ? curso.nome : "Curso desconhecido";
+    const alocacoes = cursoDisciplinas.filter(cd => Number(cd.disciplina_id) === Number(disciplinaId));
+    if (alocacoes.length === 0) return "Sem curso vinculado";
+    const nomes = alocacoes.map(aloc => {
+      const curso = cursos.find(c => c.id === aloc.curso_id);
+      return curso ? curso.nome : "Curso desconhecido";
+    });
+    return nomes.join(", ");
   }
 
   function getSemestre(disciplinaId) {
-    const alocacao = cursoDisciplinas.find(cd => Number(cd.disciplina_id) === Number(disciplinaId));
-    return alocacao ? alocacao.semestre_disciplina : null;
+    const alocacoes = cursoDisciplinas.filter(cd => Number(cd.disciplina_id) === Number(disciplinaId));
+    if (alocacoes.length === 0) return null;
+    return alocacoes.map(aloc => aloc.semestre_disciplina).filter(Boolean).join(", ") || null;
   }
 
   const disciplinasFiltradas = disciplinas.filter((disciplina) => {
     const nomeD = disciplina.nome.toLowerCase();
-    const nomeC = getNomeCurso(disciplina.id).toLowerCase();
+    const alocacoes = cursoDisciplinas.filter(cd => Number(cd.disciplina_id) === Number(disciplina.id));
+    const nomesCursos = alocacoes.map(aloc => {
+      const curso = cursos.find(c => c.id === aloc.curso_id);
+      return curso ? curso.nome.toLowerCase() : "";
+    });
     const termo = pesquisa.toLowerCase();
-    return nomeD.includes(termo) || nomeC.includes(termo);
+    return (
+      nomeD.includes(termo) ||
+      nomesCursos.some(nomeC => nomeC.includes(termo)) ||
+      (alocacoes.length === 0 && "sem curso vinculado".includes(termo))
+    );
   });
 
   const groupedData = {};
@@ -255,17 +278,42 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
   cursos.forEach(c => { groupedData[c.id] = { nome: c.nome, semestres: {} }; });
 
   disciplinasFiltradas.forEach(d => {
-    const alocacao = cursoDisciplinas.find(cd => Number(cd.disciplina_id) === Number(d.id));
-    let cId = "sem-curso";
-    let sem = "null";
+    const alocacoes = cursoDisciplinas.filter(cd => Number(cd.disciplina_id) === Number(d.id));
 
-    if (alocacao) {
-      if (groupedData[alocacao.curso_id]) cId = alocacao.curso_id;
-      sem = alocacao.disciplina_optativa ? "Optativas" : String(alocacao.semestre_disciplina || "null");
+    if (alocacoes.length === 0) {
+      const dComAloc = {
+        ...d,
+        disciplina_atual: true,
+        alocacao: null
+      };
+      groupedData["sem-curso"].semestres["null"].push(dComAloc);
+      return;
     }
 
-    if (!groupedData[cId].semestres[sem]) groupedData[cId].semestres[sem] = [];
-    groupedData[cId].semestres[sem].push(d);
+    alocacoes.forEach(alocacao => {
+      let cId = "sem-curso";
+      let sem = "null";
+
+      if (groupedData[alocacao.curso_id]) cId = alocacao.curso_id;
+      sem = alocacao.disciplina_optativa ? "Optativas" : String(alocacao.semestre_disciplina || "null");
+
+      const isAtual = alocacao.disciplina_atual !== false && 
+                      alocacao.disciplina_atual !== 'false' && 
+                      alocacao.disciplina_atual !== 0 && 
+                      alocacao.disciplina_atual !== 'f';
+      
+      // Se não for atual, não exibe na lista
+      if (!isAtual) return;
+
+      const dComAloc = {
+        ...d,
+        disciplina_atual: true,
+        alocacao: alocacao
+      };
+
+      if (!groupedData[cId].semestres[sem]) groupedData[cId].semestres[sem] = [];
+      groupedData[cId].semestres[sem].push(dComAloc);
+    });
   });
 
   return (
@@ -346,6 +394,19 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
                 </label>
               </div>
             </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px', marginBottom: '16px', opacity: 0.9 }}>
+              <input 
+                type="checkbox" 
+                id="check-atual" 
+                checked={disciplinaAtual}
+                onChange={(e) => setDisciplinaAtual(e.target.checked)}
+                style={{ width: '16px', height: '16px', cursor: 'pointer', margin: 0 }}
+              />
+              <label htmlFor="check-atual" style={{ margin: 0, cursor: 'pointer', fontWeight: '500', fontSize: '0.9rem', color: '#374151' }}>
+                Esta é a disciplina atual na grade do curso
+              </label>
+            </div>
           </div>
 
           {editandoId ? (
@@ -421,9 +482,39 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
                               {isSemExpanded && (
                                 <ul style={{ padding: 0, margin: 0, listStyle: 'none', width: '100%', border: '1px solid #f0f0f0', borderTop: 'none', borderRadius: '0 0 4px 4px' }}>
                                   {disciplinasDoSemestre.map((disciplina) => (
-                                    <li key={disciplina.id} className="item-curso" style={{ borderBottom: '1px solid #f0f0f0', padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <li 
+                                      key={`${disciplina.id}-${disciplina.alocacao ? disciplina.alocacao.id : 'sem-aloc'}`} 
+                                      className="item-curso" 
+                                      style={{ 
+                                        borderBottom: '1px solid #f0f0f0', 
+                                        padding: '10px 12px', 
+                                        display: 'flex', 
+                                        justifyContent: 'space-between', 
+                                        alignItems: 'center',
+                                        opacity: disciplina.disciplina_atual ? 1 : 0.6
+                                      }}
+                                    >
                                       <div className="item-info">
-                                        <span className="item-nome">{disciplina.nome}</span>
+                                        <span className="item-nome">
+                                          {disciplina.nome}
+                                          {!disciplina.disciplina_atual && (
+                                            <span 
+                                              className="pill" 
+                                              style={{ 
+                                                marginLeft: '8px', 
+                                                background: '#fee2e2', 
+                                                color: '#ef4444', 
+                                                border: '1px solid #fecaca',
+                                                fontSize: '11px',
+                                                fontWeight: '500',
+                                                padding: '2px 6px',
+                                                borderRadius: '4px'
+                                              }}
+                                            >
+                                              Inativa/Antiga
+                                            </span>
+                                          )}
+                                        </span>
                                         <div className="item-meta">
                                           <span className="pill">{disciplina.duracao}h</span>
                                         </div>
