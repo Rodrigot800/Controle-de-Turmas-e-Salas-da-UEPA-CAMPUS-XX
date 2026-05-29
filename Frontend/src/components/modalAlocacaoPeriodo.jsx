@@ -129,13 +129,22 @@ export default function ModalAlocacaoPeriodo({
     return data;
   }
 
+  function normalizarTurnoCapitalizado(turno) {
+    if (!turno) return "";
+    const t = turno.toLowerCase();
+    if (t.includes("manh") || t.includes("manhã")) return "Manhã";
+    if (t.includes("tard")) return "Tarde";
+    if (t.includes("noit")) return "Noite";
+    return turno;
+  }
+
   function handleTurmaChange(novoTurmaId) {
     setTurmaId(novoTurmaId);
     setDisciplinaId("");
     setProfessorId("");
     // Preencher turno automaticamente da turma
     const turma = turmas.find(t => String(t.id) === String(novoTurmaId));
-    if (turma?.turno) setTurno(turma.turno);
+    if (turma?.turno) setTurno(normalizarTurnoCapitalizado(turma.turno));
     else setTurno("");
   }
 
@@ -150,7 +159,7 @@ export default function ModalAlocacaoPeriodo({
     setTurmaId(aloc.turma_id || "");
     setDisciplinaId(aloc.disciplina_id || "optativa");
     setProfessorId(aloc.professor_id || "");
-    setTurno(aloc.turno || "");
+    setTurno(aloc.turno ? normalizarTurnoCapitalizado(aloc.turno) : "");
     setTipoDisciplina(aloc.tipo_disciplina || "MODULAR");
     setDiaSemana(aloc.dia_semana ?? "");
     

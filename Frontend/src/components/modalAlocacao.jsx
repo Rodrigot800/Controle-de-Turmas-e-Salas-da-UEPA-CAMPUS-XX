@@ -31,10 +31,21 @@ export default function ModalAlocacoes({
 
   const { alert, showAlert, showConfirm, error, success } = useAlert();
 
+  function normalizarTurnoMinusc(turno) {
+    if (!turno) return "";
+    const t = turno.toLowerCase();
+    if (t.includes("manh") || t.includes("manhã")) return "manhã";
+    if (t.includes("tard")) return "tarde";
+    if (t.includes("noit")) return "noite";
+    return t;
+  }
+
   function selecionarTurma(id) {
     setTurmaId(id);
     const turma = turmas.find((t) => t.id === Number(id));
-    if (turma) setTurno(turma.turno);
+    if (turma && turma.turno) {
+      setTurno(normalizarTurnoMinusc(turma.turno));
+    }
   }
 
   function validarEntrada() {
@@ -62,7 +73,7 @@ export default function ModalAlocacoes({
     setEditandoId(alocacao.id);
     setTurmaId(alocacao.turma_id);
     setSalaId(alocacao.sala_id);
-    setTurno(alocacao.turno);
+    setTurno(alocacao.turno ? normalizarTurnoMinusc(alocacao.turno) : "manhã");
     setTimeAlocacao(alocacao.time_alocacao);
     setAnoTemp(alocacao.ano_temp || anoAtual);
     setSemestreTemp(alocacao.semestre_temp || semestreAtual);
