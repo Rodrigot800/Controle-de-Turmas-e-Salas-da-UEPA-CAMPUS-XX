@@ -301,13 +301,10 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
                       alocacao.disciplina_atual !== 'false' && 
                       alocacao.disciplina_atual !== 0 && 
                       alocacao.disciplina_atual !== 'f';
-      
-      // Se não for atual, não exibe na lista
-      if (!isAtual) return;
 
       const dComAloc = {
         ...d,
-        disciplina_atual: true,
+        disciplina_atual: isAtual,
         alocacao: alocacao
       };
 
