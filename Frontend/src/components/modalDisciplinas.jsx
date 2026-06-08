@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import "../style/modal.shared.css";
 import AlertModal from "./AlertModal";
 import { useAlert } from "../hooks/useAlert";
@@ -291,16 +291,19 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
     }
 
     alocacoes.forEach(alocacao => {
+      const isAtual = alocacao.disciplina_atual !== false && 
+                      alocacao.disciplina_atual !== 'false' && 
+                      alocacao.disciplina_atual !== 0 && 
+                      alocacao.disciplina_atual !== 'f';
+
+      // Mostra apenas as disciplinas que são true (atual)
+      if (!isAtual) return;
+
       let cId = "sem-curso";
       let sem = "null";
 
       if (groupedData[alocacao.curso_id]) cId = alocacao.curso_id;
       sem = alocacao.disciplina_optativa ? "Optativas" : String(alocacao.semestre_disciplina || "null");
-
-      const isAtual = alocacao.disciplina_atual !== false && 
-                      alocacao.disciplina_atual !== 'false' && 
-                      alocacao.disciplina_atual !== 0 && 
-                      alocacao.disciplina_atual !== 'f';
 
       const dComAloc = {
         ...d,
@@ -313,13 +316,25 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
     });
   });
 
+  const totalAtivasCount = (() => {
+    const idsExibidos = new Set();
+    Object.keys(groupedData).forEach(cId => {
+      Object.keys(groupedData[cId].semestres).forEach(sem => {
+        groupedData[cId].semestres[sem].forEach(d => {
+          idsExibidos.add(d.id);
+        });
+      });
+    });
+    return idsExibidos.size;
+  })();
+
   return (
     <div className="modal-backdrop">
       <div className="modal" ref={modalRef}>
         <div className="modal-header">
           <div className="modal-header-left">
             <h2>{editandoId ? "Editar disciplina" : "Gerenciar disciplinas"}</h2>
-            <span className="modal-badge">{disciplinas.length} cadastradas</span>
+            <span className="modal-badge">{totalAtivasCount} cadastradas</span>
           </div>
           <button className="btn-close-icon" onClick={onClose}>×</button>
         </div>
@@ -390,19 +405,6 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
                   Optativa
                 </label>
               </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px', marginBottom: '16px', opacity: 0.9 }}>
-              <input 
-                type="checkbox" 
-                id="check-atual" 
-                checked={disciplinaAtual}
-                onChange={(e) => setDisciplinaAtual(e.target.checked)}
-                style={{ width: '16px', height: '16px', cursor: 'pointer', margin: 0 }}
-              />
-              <label htmlFor="check-atual" style={{ margin: 0, cursor: 'pointer', fontWeight: '500', fontSize: '0.9rem', color: '#374151' }}>
-                Esta é a disciplina atual na grade do curso
-              </label>
             </div>
           </div>
 
@@ -487,30 +489,12 @@ export default function ModalDisciplinas({ disciplinas, setDisciplinas, cursos, 
                                         padding: '10px 12px', 
                                         display: 'flex', 
                                         justifyContent: 'space-between', 
-                                        alignItems: 'center',
-                                        opacity: disciplina.disciplina_atual ? 1 : 0.6
+                                        alignItems: 'center'
                                       }}
                                     >
                                       <div className="item-info">
                                         <span className="item-nome">
                                           {disciplina.nome}
-                                          {!disciplina.disciplina_atual && (
-                                            <span 
-                                              className="pill" 
-                                              style={{ 
-                                                marginLeft: '8px', 
-                                                background: '#fee2e2', 
-                                                color: '#ef4444', 
-                                                border: '1px solid #fecaca',
-                                                fontSize: '11px',
-                                                fontWeight: '500',
-                                                padding: '2px 6px',
-                                                borderRadius: '4px'
-                                              }}
-                                            >
-                                              Inativa/Antiga
-                                            </span>
-                                          )}
                                         </span>
                                         <div className="item-meta">
                                           <span className="pill">{disciplina.duracao}h</span>

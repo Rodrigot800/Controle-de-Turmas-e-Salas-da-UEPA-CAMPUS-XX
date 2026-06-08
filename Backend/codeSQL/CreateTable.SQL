@@ -95,6 +95,7 @@ CREATE TABLE alocacoes_periodo (
   data_fim DATE,
 
   dia_semana INTEGER, -- 1=Seg, 2=Ter... (usado se for SEMANAL)
+  reoferta BOOLEAN DEFAULT false,
 
   FOREIGN KEY (sala_id)
     REFERENCES salas(id)

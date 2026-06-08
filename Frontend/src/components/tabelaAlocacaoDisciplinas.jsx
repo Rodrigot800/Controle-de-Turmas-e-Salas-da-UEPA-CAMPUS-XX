@@ -402,8 +402,25 @@ export default function TabelaAlocacaoDisciplinas({ salas, turmas = [], cursos =
                             </td>
                             
                             <td className={!isPrimeiraAlocacaoDaTurma ? "cell-bordered-top" : ""}>
-                               <strong>{aloc.disciplina_nome || "Optativa"}</strong>
-                             </td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <strong>{aloc.disciplina_nome || "Optativa"}</strong>
+                                {aloc.reoferta && (
+                                  <span className="badge-reoferta" style={{
+                                    fontSize: '10px',
+                                    fontWeight: '700',
+                                    background: '#fffbeb',
+                                    color: '#d97706',
+                                    border: '1px solid #fde68a',
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.5px'
+                                  }}>
+                                    Reoferta
+                                  </span>
+                                )}
+                              </div>
+                            </td>
                             
                             <td className={!isPrimeiraAlocacaoDaTurma ? "cell-bordered-top" : ""}>
                               <div className="periodo-wrapper">

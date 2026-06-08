@@ -24,6 +24,7 @@ export default function ModalAlocacaoPeriodo({
   const [diaSemana, setDiaSemana] = useState("");
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
+  const [reoferta, setReoferta] = useState(false);
 
   const [editandoId, setEditandoId] = useState(null);
   const [pesquisa, setPesquisa] = useState("");
@@ -55,17 +56,26 @@ export default function ModalAlocacaoPeriodo({
   let disciplinasFiltradas = [];
 
   if (cursoIdDaTurma) {
-    // Filtra disciplinas do curso cujo semestre seja <= semestre atual da turma e que sejam atuais (ou em edicao)
+    // Filtra disciplinas do curso baseando-se no seletor de reoferta
     const relacoesCurso = cursoDisciplinas.filter(cd => {
       const isAtual = cd.disciplina_atual !== false && 
                       cd.disciplina_atual !== 'false' && 
                       cd.disciplina_atual !== 0 && 
                       cd.disciplina_atual !== 'f';
-      return (
-        Number(cd.curso_id) === Number(cursoIdDaTurma) && 
-        cd.semestre_disciplina <= semestreAtualDaTurma &&
-        (isAtual || Number(cd.disciplina_id) === Number(disciplinaId))
-      );
+      
+      const ehDessaTurma = Number(cd.curso_id) === Number(cursoIdDaTurma);
+      if (!ehDessaTurma) return false;
+
+      // Se for a disciplina atualmente selecionada, mostramos sempre para não quebrar a UI
+      const ehEdicao = Number(cd.disciplina_id) === Number(disciplinaId);
+
+      if (reoferta) {
+        // Mostra TODAS as disciplinas de semestres anteriores (independente de disciplina_atual)
+        return cd.semestre_disciplina < semestreAtualDaTurma || ehEdicao;
+      } else {
+        // Mostra apenas as disciplinas do semestre atual da turma (ativas)
+        return (cd.semestre_disciplina === semestreAtualDaTurma && (isAtual || ehEdicao));
+      }
     });
     
     // Ordem decrescente de semestres (do semestre atual pra trás)
@@ -169,6 +179,7 @@ export default function ModalAlocacaoPeriodo({
     setTurno(aloc.turno ? normalizarTurnoCapitalizado(aloc.turno) : "");
     setTipoDisciplina(aloc.tipo_disciplina || "MODULAR");
     setDiaSemana(aloc.dia_semana ?? "");
+    setReoferta(aloc.reoferta || false);
     
     setDataInicio(aloc.data_inicio ? aloc.data_inicio.split('T')[0] : "");
     setDataFim(aloc.data_fim ? aloc.data_fim.split('T')[0] : "");
@@ -199,7 +210,8 @@ export default function ModalAlocacaoPeriodo({
       tipo_disciplina: tipoDisciplina,
       dia_semana: tipoDisciplina === "SEMANAL" ? Number(diaSemana) : null,
       data_inicio: formatarDataEnvio(dataInicio),
-      data_fim: formatarDataEnvio(dataFim)
+      data_fim: formatarDataEnvio(dataFim),
+      reoferta: reoferta
     };
 
     try {
@@ -231,7 +243,8 @@ export default function ModalAlocacaoPeriodo({
         ano_inicio: turma?.ano_inicio ?? null,
         disciplina_nome: disc?.nome || "Optativa",
         professor_nome: prof?.nome,
-        sala_nome: sala?.nome
+        sala_nome: sala?.nome,
+        reoferta: alocacaoSalva.reoferta
       };
 
       if (editandoId) {
@@ -278,6 +291,7 @@ export default function ModalAlocacaoPeriodo({
     setDiaSemana("");
     setDataInicio("");
     setDataFim("");
+    setReoferta(false);
   }
 
   const alocacoesFiltradas = alocacoesDisciplinas.filter(aloc => {
@@ -351,8 +365,24 @@ export default function ModalAlocacaoPeriodo({
             </div>
 
             <div className="form-group full">
-              <label>Disciplina *</label>
-              <select value={disciplinaId} onChange={e => handleDisciplinaChange(e.target.value)} disabled={!turmaId}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <label style={{ margin: 0 }}>Disciplina *</label>
+                {turmaId && (
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', fontWeight: '500', color: '#4b5563', cursor: 'pointer', margin: 0 }}>
+                    <input 
+                      type="checkbox" 
+                      checked={reoferta} 
+                      onChange={e => {
+                        setReoferta(e.target.checked);
+                        setDisciplinaId("");
+                      }} 
+                      style={{ width: '14px', height: '14px', cursor: 'pointer', margin: 0 }}
+                    />
+                    Reoferta (semestres anteriores)
+                  </label>
+                )}
+              </div>
+              <select value={disciplinaId} onChange={e => handleDisciplinaChange(e.target.value)} disabled={!turmaId} style={{ marginTop: '6px' }}>
                 <option value="">{turmaId ? "Selecione a Disciplina" : "Selecione uma turma primeiro"}</option>
                 {disciplinasFiltradas.map(d => <option key={d.id} value={d.id}>{d.nomeFormatado}</option>)}
                 {turmaId && <option value="optativa">Optativa</option>}

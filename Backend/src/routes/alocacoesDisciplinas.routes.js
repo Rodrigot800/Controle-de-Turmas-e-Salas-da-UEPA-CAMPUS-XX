@@ -17,6 +17,7 @@ router.get("/", async (req, res) => {
         ad.dia_semana, 
         ad.data_inicio, 
         ad.data_fim, 
+        ad.reoferta,
         t.nome as turma_nome,
         t.ano_inicio as ano_inicio,
         t.turno as turno_turma,
@@ -39,7 +40,7 @@ router.get("/", async (req, res) => {
 
 // Criar nova alocação de período
 router.post("/", async (req, res) => {
-  const { turma_id, disciplina_id, professor_id, sala_id, turno, tipo_disciplina, dia_semana, data_inicio, data_fim } = req.body;
+  const { turma_id, disciplina_id, professor_id, sala_id, turno, tipo_disciplina, dia_semana, data_inicio, data_fim, reoferta } = req.body;
 
   if (!turma_id || !sala_id || !tipo_disciplina) {
     return res.status(400).json({ erro: "Campos turma, sala e tipo_disciplina são obrigatórios" });
@@ -48,10 +49,10 @@ router.post("/", async (req, res) => {
   try {
     const result = await pool.query(
       `INSERT INTO alocacoes_periodo 
-       (turma_id, disciplina_id, professor_id, sala_id, turno, tipo_disciplina, dia_semana, data_inicio, data_fim) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
+       (turma_id, disciplina_id, professor_id, sala_id, turno, tipo_disciplina, dia_semana, data_inicio, data_fim, reoferta) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
        RETURNING *`,
-      [turma_id, disciplina_id || null, professor_id || null, sala_id, turno || null, tipo_disciplina, dia_semana || null, data_inicio || null, data_fim || null]
+      [turma_id, disciplina_id || null, professor_id || null, sala_id, turno || null, tipo_disciplina, dia_semana || null, data_inicio || null, data_fim || null, reoferta || false]
     );
     res.status(201).json(result.rows[0]);
     if (req.io) req.io.emit("db_updated", { entity: "alocacoesDisciplinas", action: "create" });
@@ -64,7 +65,7 @@ router.post("/", async (req, res) => {
 // Editar alocação de período
 router.put("/:id", async (req, res) => {
   const { id } = req.params;
-  const { turma_id, disciplina_id, professor_id, sala_id, turno, tipo_disciplina, dia_semana, data_inicio, data_fim } = req.body;
+  const { turma_id, disciplina_id, professor_id, sala_id, turno, tipo_disciplina, dia_semana, data_inicio, data_fim, reoferta } = req.body;
 
   if (!turma_id || !sala_id || !tipo_disciplina) {
     return res.status(400).json({ erro: "Campos turma, sala e tipo_disciplina são obrigatórios" });
@@ -74,10 +75,10 @@ router.put("/:id", async (req, res) => {
     const result = await pool.query(
       `UPDATE alocacoes_periodo 
        SET turma_id = $1, disciplina_id = $2, professor_id = $3, sala_id = $4, 
-           turno = $5, tipo_disciplina = $6, dia_semana = $7, data_inicio = $8, data_fim = $9 
-       WHERE id = $10 
+           turno = $5, tipo_disciplina = $6, dia_semana = $7, data_inicio = $8, data_fim = $9, reoferta = $10
+       WHERE id = $11 
        RETURNING *`,
-      [turma_id, disciplina_id || null, professor_id || null, sala_id, turno || null, tipo_disciplina, dia_semana || null, data_inicio || null, data_fim || null, id]
+      [turma_id, disciplina_id || null, professor_id || null, sala_id, turno || null, tipo_disciplina, dia_semana || null, data_inicio || null, data_fim || null, reoferta || false, id]
     );
 
     if (result.rows.length === 0) {
