@@ -25,6 +25,7 @@ export default function ModalAlocacaoPeriodo({
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
   const [reoferta, setReoferta] = useState(false);
+  const [optativa, setOptativa] = useState(false);
 
   const [editandoId, setEditandoId] = useState(null);
   const [pesquisa, setPesquisa] = useState("");
@@ -56,7 +57,7 @@ export default function ModalAlocacaoPeriodo({
   let disciplinasFiltradas = [];
 
   if (cursoIdDaTurma) {
-    // Filtra disciplinas do curso baseando-se no seletor de reoferta
+    // Filtra disciplinas do curso baseando-se no seletor de reoferta e optativa
     const relacoesCurso = cursoDisciplinas.filter(cd => {
       const isAtual = cd.disciplina_atual !== false && 
                       cd.disciplina_atual !== 'false' && 
@@ -68,6 +69,21 @@ export default function ModalAlocacaoPeriodo({
 
       // Se for a disciplina atualmente selecionada, mostramos sempre para não quebrar a UI
       const ehEdicao = Number(cd.disciplina_id) === Number(disciplinaId);
+
+      const cdOptativa = cd.disciplina_optativa === true || 
+                         cd.disciplina_optativa === 'true' || 
+                         cd.disciplina_optativa === 1 || 
+                         cd.disciplina_optativa === 't';
+
+      if (optativa) {
+        if (!cdOptativa && !ehEdicao) return false;
+      } else {
+        if (cdOptativa && !ehEdicao) return false;
+      }
+
+      if (cdOptativa) {
+        return isAtual || ehEdicao;
+      }
 
       if (reoferta) {
         // Mostra TODAS as disciplinas de semestres anteriores (independente de disciplina_atual)
@@ -84,9 +100,15 @@ export default function ModalAlocacaoPeriodo({
     disciplinasFiltradas = relacoesCurso.map(cd => {
       const disc = disciplinas.find(d => d.id === cd.disciplina_id);
       if (!disc) return null;
+      const cdOptativa = cd.disciplina_optativa === true || 
+                         cd.disciplina_optativa === 'true' || 
+                         cd.disciplina_optativa === 1 || 
+                         cd.disciplina_optativa === 't';
       return {
         ...disc,
-        nomeFormatado: cd.semestre_disciplina ? `${cd.semestre_disciplina}º Sem - ${disc.nome}` : disc.nome
+        nomeFormatado: cdOptativa 
+          ? `[Optativa] ${disc.nome}` 
+          : (cd.semestre_disciplina ? `${cd.semestre_disciplina}º Sem - ${disc.nome}` : disc.nome)
       };
     }).filter(Boolean);
   } else {
@@ -159,6 +181,8 @@ export default function ModalAlocacaoPeriodo({
     setTurmaId(novoTurmaId);
     setDisciplinaId("");
     setProfessorId("");
+    setReoferta(false);
+    setOptativa(false);
     // Preencher turno automaticamente da turma
     const turma = turmas.find(t => String(t.id) === String(novoTurmaId));
     if (turma?.turno) setTurno(normalizarTurnoCapitalizado(turma.turno));
@@ -176,11 +200,18 @@ export default function ModalAlocacaoPeriodo({
     setTurmaId(aloc.turma_id || "");
     setDisciplinaId(aloc.disciplina_id || "optativa");
     setProfessorId(aloc.professor_id || "");
-    setTurno(aloc.turno ? normalizarTurnoCapitalizado(aloc.turno) : "");
+    setTurno(aloc.turno ? normalizarTurnoCapitalizado(aloc.turno) : "Manhã");
     setTipoDisciplina(aloc.tipo_disciplina || "MODULAR");
     setDiaSemana(aloc.dia_semana ?? "");
     setReoferta(aloc.reoferta || false);
     
+    const isAlocOptativa = !aloc.disciplina_id || 
+      cursoDisciplinas.some(cd => 
+        Number(cd.disciplina_id) === Number(aloc.disciplina_id) && 
+        (cd.disciplina_optativa === true || cd.disciplina_optativa === 'true' || cd.disciplina_optativa === 1 || cd.disciplina_optativa === 't')
+      );
+    setOptativa(isAlocOptativa);
+
     setDataInicio(aloc.data_inicio ? aloc.data_inicio.split('T')[0] : "");
     setDataFim(aloc.data_fim ? aloc.data_fim.split('T')[0] : "");
     
@@ -292,6 +323,7 @@ export default function ModalAlocacaoPeriodo({
     setDataInicio("");
     setDataFim("");
     setReoferta(false);
+    setOptativa(false);
   }
 
   const alocacoesFiltradas = alocacoesDisciplinas.filter(aloc => {
@@ -365,21 +397,37 @@ export default function ModalAlocacaoPeriodo({
             </div>
 
             <div className="form-group full">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
                 <label style={{ margin: 0 }}>Disciplina *</label>
                 {turmaId && (
-                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', fontWeight: '500', color: '#4b5563', cursor: 'pointer', margin: 0 }}>
-                    <input 
-                      type="checkbox" 
-                      checked={reoferta} 
-                      onChange={e => {
-                        setReoferta(e.target.checked);
-                        setDisciplinaId("");
-                      }} 
-                      style={{ width: '14px', height: '14px', cursor: 'pointer', margin: 0 }}
-                    />
-                    Reoferta (semestres anteriores)
-                  </label>
+                  <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', fontWeight: '500', color: '#4b5563', cursor: 'pointer', margin: 0 }}>
+                      <input 
+                        type="checkbox" 
+                        checked={reoferta} 
+                        onChange={e => {
+                          setReoferta(e.target.checked);
+                          if (e.target.checked) setOptativa(false);
+                          setDisciplinaId("");
+                        }} 
+                        style={{ width: '14px', height: '14px', cursor: 'pointer', margin: 0 }}
+                      />
+                      Reoferta
+                    </label>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', fontWeight: '500', color: '#4b5563', cursor: 'pointer', margin: 0 }}>
+                      <input 
+                        type="checkbox" 
+                        checked={optativa} 
+                        onChange={e => {
+                          setOptativa(e.target.checked);
+                          if (e.target.checked) setReoferta(false);
+                          setDisciplinaId("");
+                        }} 
+                        style={{ width: '14px', height: '14px', cursor: 'pointer', margin: 0 }}
+                      />
+                      Optativa
+                    </label>
+                  </div>
                 )}
               </div>
               <select value={disciplinaId} onChange={e => handleDisciplinaChange(e.target.value)} disabled={!turmaId} style={{ marginTop: '6px' }}>

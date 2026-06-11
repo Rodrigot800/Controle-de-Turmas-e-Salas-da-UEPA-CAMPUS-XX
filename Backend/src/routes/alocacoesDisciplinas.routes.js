@@ -18,6 +18,7 @@ router.get("/", async (req, res) => {
         ad.data_inicio, 
         ad.data_fim, 
         ad.reoferta,
+        COALESCE(cd.disciplina_optativa, false) as optativa,
         t.nome as turma_nome,
         t.ano_inicio as ano_inicio,
         t.turno as turno_turma,
@@ -27,6 +28,7 @@ router.get("/", async (req, res) => {
       FROM alocacoes_periodo ad
       JOIN turmas t ON ad.turma_id = t.id
       LEFT JOIN disciplinas d ON ad.disciplina_id = d.id
+      LEFT JOIN curso_disciplinas cd ON ad.disciplina_id = cd.disciplina_id AND t.curso_id = cd.curso_id
       LEFT JOIN professores p ON ad.professor_id = p.id
       JOIN salas s ON ad.sala_id = s.id
       ORDER BY s.nome, ad.dia_semana

@@ -419,6 +419,21 @@ export default function TabelaAlocacaoDisciplinas({ salas, turmas = [], cursos =
                                     Reoferta
                                   </span>
                                 )}
+                                {aloc.optativa && (
+                                  <span className="badge-optativa" style={{
+                                    fontSize: '10px',
+                                    fontWeight: '700',
+                                    background: '#f0fdfa',
+                                    color: '#0d9488',
+                                    border: '1px solid #99f6e4',
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.5px'
+                                  }}>
+                                    Optativa
+                                  </span>
+                                )}
                               </div>
                             </td>
                             
