@@ -79,7 +79,7 @@ router.put("/:id", async (req, res) => {
        SET turma_id = $1, disciplina_id = $2, professor_id = $3, sala_id = $4, 
            turno = $5, tipo_disciplina = $6, dia_semana = $7, data_inicio = $8, data_fim = $9, reoferta = $10
        WHERE id = $11 
-       RETURNING *`,
+         RETURNING *`,
       [turma_id, disciplina_id || null, professor_id || null, sala_id, turno || null, tipo_disciplina, dia_semana || null, data_inicio || null, data_fim || null, reoferta || false, id]
     );
 

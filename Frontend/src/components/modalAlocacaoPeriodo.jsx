@@ -433,14 +433,12 @@ export default function ModalAlocacaoPeriodo({
               <select value={disciplinaId} onChange={e => handleDisciplinaChange(e.target.value)} disabled={!turmaId} style={{ marginTop: '6px' }}>
                 <option value="">{turmaId ? "Selecione a Disciplina" : "Selecione uma turma primeiro"}</option>
                 {disciplinasFiltradas.map(d => <option key={d.id} value={d.id}>{d.nomeFormatado}</option>)}
-                {turmaId && <option value="optativa">Optativa</option>}
               </select>
             </div>
 
             <div className="form-group full">
               <label>Professor (Opcional)</label>
               <select value={professorId} onChange={e => setProfessorId(e.target.value)} disabled={!turmaId}>
-                <option value="">{turmaId ? "A Definir" : "Selecione uma turma primeiro"}</option>
                 {professoresFiltrados.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
               </select>
             </div>
