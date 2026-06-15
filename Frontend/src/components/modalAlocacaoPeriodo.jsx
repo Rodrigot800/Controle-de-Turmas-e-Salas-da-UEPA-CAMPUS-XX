@@ -174,7 +174,7 @@ export default function ModalAlocacaoPeriodo({
     if (t.includes("manh") || t.includes("manhã")) return "Manhã";
     if (t.includes("tard")) return "Tarde";
     if (t.includes("noit")) return "Noite";
-    return turno;
+    return turno.charAt(0).toUpperCase() + turno.slice(1).toLowerCase();
   }
 
   function handleTurmaChange(novoTurmaId) {

@@ -17,7 +17,7 @@ export default function ModalAlocacoes({
 
   const [turmaId, setTurmaId] = useState("");
   const [salaId, setSalaId] = useState("");
-  const [turno, setTurno] = useState("manhã");
+  const [turno, setTurno] = useState("Manhã");
   const [timeAlocacao, setTimeAlocacao] = useState("definitivo");
   const [anoTemp, setAnoTemp] = useState(anoAtual);
   const [semestreTemp, setSemestreTemp] = useState(semestreAtual);
@@ -31,20 +31,20 @@ export default function ModalAlocacoes({
 
   const { alert, showAlert, showConfirm, error, success } = useAlert();
 
-  function normalizarTurnoMinusc(turno) {
+  function normalizarTurnoCapitalizado(turno) {
     if (!turno) return "";
     const t = turno.toLowerCase();
-    if (t.includes("manh") || t.includes("manhã")) return "manhã";
-    if (t.includes("tard")) return "tarde";
-    if (t.includes("noit")) return "noite";
-    return t;
+    if (t.includes("manh") || t.includes("manhã")) return "Manhã";
+    if (t.includes("tard")) return "Tarde";
+    if (t.includes("noit")) return "Noite";
+    return turno.charAt(0).toUpperCase() + turno.slice(1).toLowerCase();
   }
 
   function selecionarTurma(id) {
     setTurmaId(id);
     const turma = turmas.find((t) => t.id === Number(id));
     if (turma && turma.turno) {
-      setTurno(normalizarTurnoMinusc(turma.turno));
+      setTurno(normalizarTurnoCapitalizado(turma.turno));
     }
   }
 
@@ -73,7 +73,7 @@ export default function ModalAlocacoes({
     setEditandoId(alocacao.id);
     setTurmaId(alocacao.turma_id);
     setSalaId(alocacao.sala_id);
-    setTurno(alocacao.turno ? normalizarTurnoMinusc(alocacao.turno) : "manhã");
+    setTurno(alocacao.turno ? normalizarTurnoCapitalizado(alocacao.turno) : "Manhã");
     setTimeAlocacao(alocacao.time_alocacao);
     setAnoTemp(alocacao.ano_temp || anoAtual);
     setSemestreTemp(alocacao.semestre_temp || semestreAtual);
@@ -190,7 +190,7 @@ export default function ModalAlocacoes({
   function limparFormulario() {
     setTurmaId("");
     setSalaId("");
-    setTurno("manhã");
+    setTurno("Manhã");
     setTimeAlocacao("definitivo");
     setAnoTemp(anoAtual);
     setSemestreTemp(semestreAtual);
@@ -278,9 +278,9 @@ export default function ModalAlocacoes({
             <div className="form-group">
               <label>Turno</label>
               <select value={turno} onChange={(e) => setTurno(e.target.value)}>
-                <option value="manhã">Manhã</option>
-                <option value="tarde">Tarde</option>
-                <option value="noite">Noite</option>
+                <option value="Manhã">Manhã</option>
+                <option value="Tarde">Tarde</option>
+                <option value="Noite">Noite</option>
               </select>
             </div>
 

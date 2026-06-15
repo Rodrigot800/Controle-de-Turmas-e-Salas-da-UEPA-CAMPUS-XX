@@ -47,8 +47,17 @@ export default function TabelaAlocacaoDisciplinas({ salas, turmas = [], cursos =
     return "Noite";
   });
 
+  function normalizarTurnoCapitalizado(turno) {
+    if (!turno) return "";
+    const t = turno.toLowerCase();
+    if (t.includes("manh") || t.includes("manhã")) return "Manhã";
+    if (t.includes("tard")) return "Tarde";
+    if (t.includes("noit")) return "Noite";
+    return turno.charAt(0).toUpperCase() + turno.slice(1).toLowerCase();
+  }
+
   const turnosUnicos = useMemo(() => {
-    const turnos = alocacoesDisciplinas.map(a => a.turno).filter(Boolean);
+    const turnos = alocacoesDisciplinas.map(a => normalizarTurnoCapitalizado(a.turno)).filter(Boolean);
     return [...new Set(turnos)].sort();
   }, [alocacoesDisciplinas]);
 
@@ -123,7 +132,7 @@ export default function TabelaAlocacaoDisciplinas({ salas, turmas = [], cursos =
     }
 
     if (filtroTurno) {
-      alocsFiltradas = alocsFiltradas.filter(a => a.turno === filtroTurno);
+      alocsFiltradas = alocsFiltradas.filter(a => normalizarTurnoCapitalizado(a.turno) === filtroTurno);
     }
 
     if (termo) {

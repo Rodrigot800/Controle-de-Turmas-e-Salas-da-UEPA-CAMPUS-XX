@@ -46,12 +46,21 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
     return true;
   }
 
+  function normalizarTurnoCapitalizado(turno) {
+    if (!turno) return "";
+    const t = turno.toLowerCase();
+    if (t.includes("manh") || t.includes("manhã")) return "Manhã";
+    if (t.includes("tard")) return "Tarde";
+    if (t.includes("noit")) return "Noite";
+    return turno.charAt(0).toUpperCase() + turno.slice(1).toLowerCase();
+  }
+
   // Preenche o formulário com os dados da turma e entra em modo edição
   function iniciarEdicao(turma) {
     setEditandoId(turma.id);
     setNome(turma.nome);
     setCursoId(turma.curso_id);
-    setTurno(turma.turno);
+    setTurno(normalizarTurnoCapitalizado(turma.turno));
     setSemestreInicio(turma.semestre_inicio);
     setAnoInicio(turma.ano_inicio);
     
@@ -259,9 +268,9 @@ export default function ModalTurmas({ turmas, setTurmas, cursos, onClose }) {
               <label>Turno</label>
               <select value={turno} onChange={(e) => setTurno(e.target.value)}>
                 <option value="">Selecione o turno</option>
-                <option value="manhã">Manhã</option>
-                <option value="tarde">Tarde</option>
-                <option value="noite">Noite</option>
+                <option value="Manhã">Manhã</option>
+                <option value="Tarde">Tarde</option>
+                <option value="Noite">Noite</option>
               </select>
             </div>
 
