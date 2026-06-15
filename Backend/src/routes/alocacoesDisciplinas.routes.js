@@ -6,32 +6,35 @@ const pool = require("../db/pool");
 router.get("/", async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT 
-        ad.id, 
-        ad.turma_id, 
-        ad.disciplina_id, 
-        ad.professor_id, 
-        ad.sala_id, 
-        ad.turno,
-        ad.tipo_disciplina,
-        ad.dia_semana, 
-        ad.data_inicio, 
-        ad.data_fim, 
-        ad.reoferta,
-        COALESCE(cd.disciplina_optativa, false) as optativa,
-        t.nome as turma_nome,
-        t.ano_inicio as ano_inicio,
-        t.turno as turno_turma,
-        d.nome as disciplina_nome,
-        p.nome as professor_nome,
-        s.nome as sala_nome
-      FROM alocacoes_periodo ad
-      JOIN turmas t ON ad.turma_id = t.id
-      LEFT JOIN disciplinas d ON ad.disciplina_id = d.id
-      LEFT JOIN curso_disciplinas cd ON ad.disciplina_id = cd.disciplina_id AND t.curso_id = cd.curso_id
-      LEFT JOIN professores p ON ad.professor_id = p.id
-      JOIN salas s ON ad.sala_id = s.id
-      ORDER BY s.nome, ad.dia_semana
+      SELECT * FROM (
+        SELECT DISTINCT ON (ad.id)
+          ad.id, 
+          ad.turma_id, 
+          ad.disciplina_id, 
+          ad.professor_id, 
+          ad.sala_id, 
+          ad.turno,
+          ad.tipo_disciplina,
+          ad.dia_semana, 
+          ad.data_inicio, 
+          ad.data_fim, 
+          ad.reoferta,
+          COALESCE(cd.disciplina_optativa, false) as optativa,
+          t.nome as turma_nome,
+          t.ano_inicio as ano_inicio,
+          t.turno as turno_turma,
+          d.nome as disciplina_nome,
+          p.nome as professor_nome,
+          s.nome as sala_nome
+        FROM alocacoes_periodo ad
+        JOIN turmas t ON ad.turma_id = t.id
+        LEFT JOIN disciplinas d ON ad.disciplina_id = d.id
+        LEFT JOIN curso_disciplinas cd ON ad.disciplina_id = cd.disciplina_id AND t.curso_id = cd.curso_id
+        LEFT JOIN professores p ON ad.professor_id = p.id
+        JOIN salas s ON ad.sala_id = s.id
+        ORDER BY ad.id
+      ) AS sub
+      ORDER BY sala_nome, dia_semana
     `);
     res.json(result.rows);
   } catch (error) {
