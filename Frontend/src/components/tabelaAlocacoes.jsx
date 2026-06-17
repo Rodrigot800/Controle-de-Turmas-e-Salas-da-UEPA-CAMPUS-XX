@@ -44,10 +44,13 @@ export default function TabelaAlocacoes({ salas, turmas, cursos, alocacoes, onOp
   }
 
   function turmaPorSalaETurno(salaId, turno) {
+    const normalizar = (str) => str ? str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : "";
+    const turnoNormalizado = normalizar(turno);
+
     const alocacoesFiltradas = alocacoes.filter(
       (a) =>
         Number(a.sala_id) === Number(salaId) &&
-        a.turno?.toLowerCase() === turno.toLowerCase()
+        normalizar(a.turno) === turnoNormalizado
     );
 
     const alocacaoTemp = alocacoesFiltradas.find(
