@@ -11,6 +11,7 @@ import ModalConflitoAlocacao from "./components/modalConflitoAlocacao";
 import ModalProfessores from "./components/modalProfessores";
 import ModalDisciplinas from "./components/modalDisciplinas";
 import ModalAlocacaoPeriodo from "./components/modalAlocacaoPeriodo";
+import PaginaMetricas from "./components/paginaMetricas";
 
 import Sidebar from "./components/sidebar";
 import API_BASE from "./config/api";
@@ -340,6 +341,7 @@ function App() {
         {menuAtivo === "metricas" && (
           <div>
             <Header title="Métricas" subtitle="Indicadores do sistema" />
+            <PaginaMetricas />
           </div>
         )}
       </div>
