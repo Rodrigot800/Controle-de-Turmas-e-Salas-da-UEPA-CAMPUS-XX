@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:14-alpine
@@ -9,7 +7,7 @@ services:
       POSTGRES_PASSWORD: "systemhidrazil@2026"
       POSTGRES_DB: hydrazil_db
     ports:
-      - "192.168.10.231:5432:5432"
+      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./Backend/codeSQL/CreateTable.SQL:/docker-entrypoint-initdb.d/01-CreateTable.sql
@@ -35,8 +33,8 @@ services:
       context: ./Frontend
     container_name: hydrazil_frontend
     ports:
-      - "192.168.10.231:443:443"
-      - "192.168.10.231:3001:3001"
+      - "443:443"
+      - "3001:3001"
     depends_on:
       - backend
     restart: unless-stopped
