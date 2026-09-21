@@ -24,9 +24,37 @@ services:
       DB_PASSWORD: "systemhidrazil@2026"
       DB_NAME: hydrazil_db
       DB_PORT: 5432
+      OLLAMA_HOST: ${OLLAMA_HOST:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5-coder:7b}
+      AI_ALLOW_WRITES: ${AI_ALLOW_WRITES:-true}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - db
     restart: unless-stopped
+
+  # Ferramenta interativa. A rede do host permite acessar um Ollama que esteja
+  # escutando somente em 127.0.0.1, sem expor sua API na rede local.
+  ai:
+    build:
+      context: ./Backend
+    network_mode: host
+    environment:
+      DB_HOST: 127.0.0.1
+      DB_USER: postgres
+      DB_PASSWORD: "systemhidrazil@2026"
+      DB_NAME: hydrazil_db
+      DB_PORT: ${AI_DB_PORT:-5433}
+      OLLAMA_HOST: ${OLLAMA_HOST:-http://127.0.0.1:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5-coder:7b}
+      AI_ALLOW_WRITES: ${AI_ALLOW_WRITES:-true}
+    stdin_open: true
+    tty: true
+    depends_on:
+      - db
+    profiles:
+      - tools
+    command: npm run ai
 
   frontend:
     build:

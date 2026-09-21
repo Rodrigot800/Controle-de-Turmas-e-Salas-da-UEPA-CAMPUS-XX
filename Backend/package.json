@@ -4,7 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node src/server.js",
+    "ai": "node src/ai/cli.js",
+    "ai:check": "node src/ai/cli.js --check",
+    "test": "node --test test/*.test.js"
   },
   "keywords": [],
   "author": "",
