@@ -1,7 +1,10 @@
-const { SYSTEM_PROMPT } = require("./systemPrompt");
+const { createSystemPrompt } = require("./systemPrompt");
 const { toolDefinitions, WRITE_TOOLS, executeTool, ToolError } = require("./tools");
 
 const KNOWN_TOOLS = new Set(toolDefinitions.map((tool) => tool.function.name));
+const TOOL_PARAMETERS = new Map(
+  toolDefinitions.map((tool) => [tool.function.name, tool.function.parameters]),
+);
 
 function parseToolArguments(value) {
   if (value == null) return {};
@@ -19,6 +22,71 @@ function publicError(error) {
   return "Erro interno ao executar a operação no backend.";
 }
 
+function missingRequiredArguments(name, args) {
+  const schema = TOOL_PARAMETERS.get(name);
+  if (!schema) return [];
+  return (schema.required || []).filter((field) =>
+    args[field] === undefined || args[field] === null || args[field] === "",
+  );
+}
+
+function collectToolReferences(name, args) {
+  const references = [];
+  const add = (entity, value, field) => {
+    if (value !== undefined && value !== null && value !== "") {
+      references.push({ entity, id: Number(value), field });
+    }
+  };
+  const commonAllocation = () => {
+    add("turmas", args.turma_id, "turma_id");
+    add("disciplinas", args.disciplina_id, "disciplina_id");
+    add("professores", args.professor_id, "professor_id");
+    add("salas", args.sala_id, "sala_id");
+  };
+
+  if (name === "cadastrar_turma") add("cursos", args.curso_id, "curso_id");
+  if (name === "cadastrar_professor") {
+    for (const id of args.cursos_ids || []) add("cursos", id, "cursos_ids");
+  }
+  if (name === "vincular_disciplina_curso") {
+    add("cursos", args.curso_id, "curso_id");
+    add("disciplinas", args.disciplina_id, "disciplina_id");
+  }
+  if (name === "cadastrar_alocacao_sala") {
+    add("turmas", args.turma_id, "turma_id");
+    add("salas", args.sala_id, "sala_id");
+  }
+  if (name === "cadastrar_alocacao_periodo") commonAllocation();
+  if (name === "atualizar_alocacao_periodo") {
+    add("alocacoes_periodo", args.id, "id");
+    commonAllocation();
+  }
+  if (name === "atualizar_cadastro") {
+    const entityMap = {
+      curso: "cursos",
+      sala: "salas",
+      turma: "turmas",
+      professor: "professores",
+      disciplina: "disciplinas",
+    };
+    add(entityMap[args.entidade], args.id, "id");
+    if (args.entidade === "turma") add("cursos", args.dados?.curso_id, "dados.curso_id");
+    if (args.entidade === "professor") {
+      for (const id of args.dados?.cursos_ids || []) add("cursos", id, "dados.cursos_ids");
+    }
+  }
+  return references.filter((reference) => reference.entity && Number.isInteger(reference.id));
+}
+
+function normalizeText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
 function extractContentToolCalls(content) {
   const raw = String(content || "").trim();
   if (!raw) return [];
@@ -27,6 +95,11 @@ function extractContentToolCalls(content) {
   if (fenced) candidates.unshift(fenced[1].trim());
   const tagged = raw.match(/<tool_call>\s*([\s\S]*?)\s*<\/tool_call>/i);
   if (tagged) candidates.unshift(tagged[1].trim());
+  const firstBrace = raw.indexOf("{");
+  const lastBrace = raw.lastIndexOf("}");
+  if (firstBrace >= 0 && lastBrace > firstBrace) {
+    candidates.push(raw.slice(firstBrace, lastBrace + 1));
+  }
 
   for (const candidate of candidates) {
     let parsed;
@@ -55,6 +128,7 @@ class AcademicAgent {
     db,
     allowWrites = true,
     maxToolRounds = 12,
+    currentYear = new Date().getFullYear(),
     confirmWrite = async () => false,
     onEvent = () => {},
   }) {
@@ -62,13 +136,66 @@ class AcademicAgent {
     this.db = db;
     this.allowWrites = allowWrites;
     this.maxToolRounds = maxToolRounds;
+    this.currentYear = currentYear;
     this.confirmWrite = confirmWrite;
     this.onEvent = onEvent;
     this.reset();
   }
 
   reset() {
-    this.messages = [{ role: "system", content: SYSTEM_PROMPT }];
+    this.messages = [{ role: "system", content: createSystemPrompt(this.currentYear) }];
+    this.verifiedRecords = new Map();
+  }
+
+  rememberRecords(result) {
+    if (!result || !result.entidade || !Array.isArray(result.registros)) return;
+    if (!this.verifiedRecords.has(result.entidade)) {
+      this.verifiedRecords.set(result.entidade, new Map());
+    }
+    const records = this.verifiedRecords.get(result.entidade);
+    for (const record of result.registros) {
+      if (Number.isInteger(Number(record.id))) records.set(Number(record.id), record);
+    }
+  }
+
+  unverifiedReferences(name, args) {
+    return collectToolReferences(name, args).filter((reference) =>
+      !this.verifiedRecords.get(reference.entity)?.has(reference.id),
+    );
+  }
+
+  referenceDetails(name, args) {
+    return collectToolReferences(name, args).map((reference) => ({
+      campo: reference.field,
+      entidade: reference.entity,
+      id: reference.id,
+      registro: this.verifiedRecords.get(reference.entity)?.get(reference.id),
+    }));
+  }
+
+  intentMismatch(name, args) {
+    if (!["cadastrar_alocacao_periodo", "atualizar_alocacao_periodo"].includes(name)) {
+      return null;
+    }
+    const selected = this.verifiedRecords.get("disciplinas")?.get(Number(args.disciplina_id));
+    if (!selected?.nome) return null;
+
+    if (name === "atualizar_alocacao_periodo") {
+      const target = this.verifiedRecords.get("alocacoes_periodo")?.get(Number(args.id));
+      if (Number(target?.disciplina_id) === Number(args.disciplina_id)) return null;
+    }
+
+    const userHistory = normalizeText(
+      this.messages
+        .filter((message) => message.role === "user")
+        .map((message) => message.content)
+        .join(" "),
+    );
+    const selectedName = normalizeText(selected.nome);
+    if (selectedName && !userHistory.includes(selectedName)) {
+      return `O disciplina_id ${args.disciplina_id} corresponde a '${selected.nome}', mas esse nome não aparece no pedido do usuário. Consulte a disciplina correta ou peça confirmação da opção; não prossiga com este ID.`;
+    }
+    return null;
   }
 
   async executeToolCall(toolCall) {
@@ -78,11 +205,35 @@ class AcademicAgent {
     const isWrite = WRITE_TOOLS.has(name);
     this.onEvent({ type: "tool_start", name, args, isWrite });
 
+    const missing = missingRequiredArguments(name, args);
+    if (missing.length > 0) {
+      return {
+        ok: false,
+        error: `Campos obrigatórios ausentes: ${missing.join(", ")}. Consulte os dados necessários e tente novamente.`,
+      };
+    }
+    if (isWrite) {
+      const unverified = this.unverifiedReferences(name, args);
+      if (unverified.length > 0) {
+        const fields = unverified.map(({ field, id }) => `${field}=${id}`).join(", ");
+        return {
+          ok: false,
+          error: `IDs ainda não verificados no backend: ${fields}. Use consultar_dados para cada registro antes de tentar a escrita novamente; não invente IDs.`,
+        };
+      }
+      const mismatch = this.intentMismatch(name, args);
+      if (mismatch) return { ok: false, error: mismatch };
+    }
+
     if (isWrite && !this.allowWrites) {
       return { ok: false, error: "As inserções estão desativadas por AI_ALLOW_WRITES=false." };
     }
     if (isWrite) {
-      const approved = await this.confirmWrite({ name, args });
+      const approved = await this.confirmWrite({
+        name,
+        args,
+        references: this.referenceDetails(name, args),
+      });
       if (!approved) {
         return {
           ok: false,
@@ -93,7 +244,8 @@ class AcademicAgent {
     }
 
     try {
-      const data = await executeTool(name, args, this.db);
+      const data = await executeTool(name, args, this.db, { currentYear: this.currentYear });
+      if (name === "consultar_dados") this.rememberRecords(data);
       this.onEvent({ type: "tool_end", name, ok: true, data });
       return { ok: true, data };
     } catch (error) {
@@ -145,4 +297,11 @@ class AcademicAgent {
   }
 }
 
-module.exports = { AcademicAgent, parseToolArguments, extractContentToolCalls };
+module.exports = {
+  AcademicAgent,
+  parseToolArguments,
+  extractContentToolCalls,
+  missingRequiredArguments,
+  collectToolReferences,
+  normalizeText,
+};

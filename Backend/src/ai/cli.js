@@ -61,14 +61,26 @@ async function main() {
     db: pool,
     allowWrites: config.allowWrites,
     maxToolRounds: config.maxToolRounds,
-    confirmWrite: async ({ name, args }) => {
-      console.log(`\nInserção proposta: ${name}`);
+    currentYear: config.currentYear,
+    confirmWrite: async ({ name, args, references }) => {
+      const action = name.startsWith("atualizar_") ? "Alteração" : "Inserção";
+      console.log(`\n${action} proposta: ${name}`);
       console.log(compactJson(args));
+      if (references.length > 0) {
+        console.log("Referências verificadas no backend:");
+        for (const reference of references) {
+          const label = reference.registro?.nome ||
+            reference.registro?.disciplina_nome ||
+            reference.registro?.turma_nome ||
+            `registro ${reference.id}`;
+          console.log(`- ${reference.campo}: ${label} (${reference.entidade} #${reference.id})`);
+        }
+      }
       if (autoApprove) {
         console.log("Confirmada automaticamente por --yes.");
         return true;
       }
-      const answer = await rl.question("Confirma esta inserção? [s/N] ");
+      const answer = await rl.question(`Confirma esta ${action.toLowerCase()}? [s/N] `);
       return ["s", "sim", "y", "yes"].includes(answer.trim().toLowerCase());
     },
     onEvent: ({ type, name, ok, isWrite, error }) => {

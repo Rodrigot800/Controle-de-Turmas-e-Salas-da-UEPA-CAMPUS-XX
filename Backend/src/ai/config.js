@@ -14,6 +14,7 @@ function getConfig(env = process.env) {
     temperature: Number(env.AI_TEMPERATURE || 0.1),
     contextSize: Number(env.AI_CONTEXT_SIZE || 8192),
     maxToolRounds: Number(env.AI_MAX_TOOL_ROUNDS || 12),
+    currentYear: Number(env.AI_CURRENT_YEAR || new Date().getFullYear()),
     allowWrites: toBoolean(env.AI_ALLOW_WRITES, true),
   };
 }

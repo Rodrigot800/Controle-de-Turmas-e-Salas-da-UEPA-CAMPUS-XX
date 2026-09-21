@@ -13,14 +13,14 @@ const ENTITY_CONFIG = {
     select: "c.id, c.nome, c.vagas, c.semestres",
     from: "cursos c",
     search: ["c.nome"],
-    filters: {},
+    filters: { id: "c.id" },
     order: "c.nome",
   },
   salas: {
     select: "s.id, s.nome, s.capacidade, s.piso, s.tipo_sala",
     from: "salas s",
     search: ["s.nome", "s.piso", "s.tipo_sala"],
-    filters: {},
+    filters: { id: "s.id" },
     order: "s.nome",
   },
   turmas: {
@@ -29,6 +29,7 @@ const ENTITY_CONFIG = {
     from: "turmas t JOIN cursos c ON c.id = t.curso_id",
     search: ["t.nome", "c.nome", "t.turno"],
     filters: {
+      id: "t.id",
       curso_id: "t.curso_id",
       ano: "t.ano_inicio",
       semestre: "t.semestre_inicio",
@@ -42,7 +43,7 @@ const ENTITY_CONFIG = {
     from:
       "professores p LEFT JOIN professor_cursos pc ON pc.professor_id = p.id LEFT JOIN cursos c ON c.id = pc.curso_id",
     search: ["p.nome", "c.nome"],
-    filters: { curso_id: "pc.curso_id" },
+    filters: { id: "p.id", curso_id: "pc.curso_id" },
     groupBy: "p.id, p.nome",
     order: "p.nome",
   },
@@ -50,7 +51,7 @@ const ENTITY_CONFIG = {
     select: "d.id, d.nome, d.carga_horaria",
     from: "disciplinas d",
     search: ["d.nome"],
-    filters: {},
+    filters: { id: "d.id" },
     order: "d.nome",
   },
   curso_disciplinas: {
@@ -60,6 +61,7 @@ const ENTITY_CONFIG = {
       "curso_disciplinas cd JOIN cursos c ON c.id = cd.curso_id JOIN disciplinas d ON d.id = cd.disciplina_id",
     search: ["c.nome", "d.nome"],
     filters: {
+      id: "cd.id",
       curso_id: "cd.curso_id",
       disciplina_id: "cd.disciplina_id",
       semestre: "cd.semestre_disciplina",
@@ -73,6 +75,7 @@ const ENTITY_CONFIG = {
       "alocacoes a JOIN turmas t ON t.id = a.turma_id JOIN salas s ON s.id = a.sala_id",
     search: ["t.nome", "s.nome", "a.turno", "a.time_alocacao"],
     filters: {
+      id: "a.id",
       turma_id: "a.turma_id",
       sala_id: "a.sala_id",
       ano: "a.ano_temp",
@@ -95,6 +98,7 @@ const ENTITY_CONFIG = {
       "ap.tipo_disciplina",
     ],
     filters: {
+      id: "ap.id",
       turma_id: "ap.turma_id",
       sala_id: "ap.sala_id",
       professor_id: "ap.professor_id",
@@ -106,6 +110,7 @@ const ENTITY_CONFIG = {
 };
 
 const READ_FILTER_PROPERTIES = {
+  id: { type: "integer", minimum: 1, description: "ID exato do registro." },
   busca: { type: "string", description: "Texto parcial para procurar por nome ou descrição." },
   limite: { type: "integer", minimum: 1, maximum: 100, description: "Máximo de registros; padrão 30." },
   curso_id: { type: "integer", minimum: 1 },
@@ -301,11 +306,69 @@ const toolDefinitions = [
           turno: { type: "string" },
           tipo_disciplina: { type: "string", enum: ["SEMANAL", "MODULAR"] },
           dia_semana: { type: "integer", minimum: 1, maximum: 7 },
-          data_inicio: { type: "string", description: "Data ISO YYYY-MM-DD." },
-          data_fim: { type: "string", description: "Data ISO YYYY-MM-DD." },
+          data_inicio: { type: "string", description: "Preserve a data do usuário em DD/MM ou DD/MM/AAAA. Se não houver ano, a ferramenta usa o ano atual." },
+          data_fim: { type: "string", description: "Preserve a data do usuário em DD/MM ou DD/MM/AAAA. Se não houver ano, a ferramenta usa o ano atual." },
           reoferta: { type: "boolean" },
         },
-        required: ["turma_id", "sala_id", "tipo_disciplina"],
+        required: ["turma_id", "disciplina_id", "sala_id", "tipo_disciplina"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "atualizar_alocacao_periodo",
+      description:
+        "Corrige uma alocação de disciplina existente. Use o ID da alocação, nunca crie outra alocação para fazer uma correção.",
+      parameters: {
+        type: "object",
+        properties: {
+          id: { type: "integer", minimum: 1, description: "ID da alocação de período existente." },
+          turma_id: { type: "integer", minimum: 1 },
+          disciplina_id: { type: "integer", minimum: 1 },
+          professor_id: { type: "integer", minimum: 1 },
+          sala_id: { type: "integer", minimum: 1 },
+          turno: { type: "string" },
+          tipo_disciplina: { type: "string", enum: ["SEMANAL", "MODULAR"] },
+          dia_semana: { type: "integer", minimum: 1, maximum: 7 },
+          data_inicio: { type: "string", description: "Nova data em DD/MM ou DD/MM/AAAA; sem ano usa o ano atual." },
+          data_fim: { type: "string", description: "Nova data em DD/MM ou DD/MM/AAAA; sem ano usa o ano atual." },
+          reoferta: { type: "boolean" },
+        },
+        required: ["id", "disciplina_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "atualizar_cadastro",
+      description:
+        "Atualiza dados de um curso, sala, turma, professor ou disciplina existente. Informe somente os campos que devem mudar.",
+      parameters: {
+        type: "object",
+        properties: {
+          entidade: { type: "string", enum: ["curso", "sala", "turma", "professor", "disciplina"] },
+          id: { type: "integer", minimum: 1 },
+          dados: {
+            type: "object",
+            properties: {
+              nome: { type: "string" },
+              vagas: { type: "integer", minimum: 1 },
+              semestres: { type: "integer", minimum: 1 },
+              capacidade: { type: "integer", minimum: 1 },
+              piso: { type: "string" },
+              tipo_sala: { type: "string" },
+              curso_id: { type: "integer", minimum: 1 },
+              semestre_inicio: { type: "integer", minimum: 1, maximum: 2 },
+              ano_inicio: { type: "integer", minimum: 2000, maximum: 2200 },
+              turno: { type: "string" },
+              cursos_ids: { type: "array", items: { type: "integer", minimum: 1 } },
+              carga_horaria: { type: "integer", minimum: 1 },
+            },
+          },
+        },
+        required: ["entidade", "id", "dados"],
       },
     },
   },
@@ -360,7 +423,11 @@ const toolDefinitions = [
 const WRITE_TOOLS = new Set(
   toolDefinitions
     .map((tool) => tool.function.name)
-    .filter((name) => name.startsWith("cadastrar_") || name.startsWith("vincular_")),
+    .filter((name) =>
+      name.startsWith("cadastrar_") ||
+      name.startsWith("vincular_") ||
+      name.startsWith("atualizar_"),
+    ),
 );
 
 function positiveInteger(value, field, { min = 1, max = Number.MAX_SAFE_INTEGER } = {}) {
@@ -384,6 +451,38 @@ function optionalDate(value, field) {
     throw new ToolError(`${field} deve estar no formato YYYY-MM-DD.`);
   }
   return text;
+}
+
+function normalizeAcademicDate(value, field, currentYear = new Date().getFullYear()) {
+  if (value === undefined || value === null || value === "") return value;
+  const text = String(value).trim();
+  let year;
+  let month;
+  let day;
+
+  const brazilian = text.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?$/);
+  const iso = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (brazilian) {
+    day = Number(brazilian[1]);
+    month = Number(brazilian[2]);
+    year = Number(brazilian[3] || currentYear);
+  } else if (iso) {
+    year = Number(iso[1]);
+    month = Number(iso[2]);
+    day = Number(iso[3]);
+  } else {
+    throw new ToolError(`${field} deve estar em DD/MM, DD/MM/AAAA ou YYYY-MM-DD.`);
+  }
+
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    throw new ToolError(`${field} contém uma data inexistente.`);
+  }
+  return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 async function ensureExists(client, table, id, label) {
@@ -713,7 +812,7 @@ async function cadastrarAlocacaoSala(args, db = pool) {
 async function cadastrarAlocacaoPeriodo(args, db = pool) {
   const turmaId = positiveInteger(args.turma_id, "turma_id");
   const salaId = positiveInteger(args.sala_id, "sala_id");
-  const disciplinaId = args.disciplina_id == null ? null : positiveInteger(args.disciplina_id, "disciplina_id");
+  const disciplinaId = positiveInteger(args.disciplina_id, "disciplina_id");
   const professorId = args.professor_id == null ? null : positiveInteger(args.professor_id, "professor_id");
   const tipo = requiredText(args.tipo_disciplina, "tipo_disciplina").toUpperCase();
   if (!["SEMANAL", "MODULAR"].includes(tipo)) throw new ToolError("tipo_disciplina deve ser SEMANAL ou MODULAR.");
@@ -738,6 +837,173 @@ async function cadastrarAlocacaoPeriodo(args, db = pool) {
         diaSemana, dataInicio, dataFim, args.reoferta === true],
     );
     return result.rows[0];
+  }, db);
+}
+
+function hasOwn(object, key) {
+  return Object.prototype.hasOwnProperty.call(object, key);
+}
+
+async function atualizarAlocacaoPeriodo(args, db = pool) {
+  const id = positiveInteger(args.id, "id");
+  const patchFields = [
+    "turma_id", "disciplina_id", "professor_id", "sala_id", "turno",
+    "tipo_disciplina", "dia_semana", "data_inicio", "data_fim", "reoferta",
+  ];
+  if (!patchFields.some((field) => hasOwn(args, field))) {
+    throw new ToolError("Informe pelo menos um campo para atualizar a alocação.");
+  }
+
+  return withTransaction(async (client) => {
+    const currentResult = await client.query(
+      "SELECT * FROM alocacoes_periodo WHERE id = $1 FOR UPDATE",
+      [id],
+    );
+    if (currentResult.rowCount === 0) throw new ToolError(`Alocação de período com ID ${id} não encontrada.`);
+    const current = currentResult.rows[0];
+
+    const turmaId = hasOwn(args, "turma_id") ? positiveInteger(args.turma_id, "turma_id") : current.turma_id;
+    const disciplinaId = positiveInteger(args.disciplina_id, "disciplina_id");
+    const professorId = hasOwn(args, "professor_id")
+      ? (args.professor_id == null ? null : positiveInteger(args.professor_id, "professor_id"))
+      : current.professor_id;
+    const salaId = hasOwn(args, "sala_id") ? positiveInteger(args.sala_id, "sala_id") : current.sala_id;
+    const turno = hasOwn(args, "turno") ? requiredText(args.turno, "turno") : current.turno;
+    const tipo = hasOwn(args, "tipo_disciplina")
+      ? requiredText(args.tipo_disciplina, "tipo_disciplina").toUpperCase()
+      : current.tipo_disciplina;
+    if (!["SEMANAL", "MODULAR"].includes(tipo)) throw new ToolError("tipo_disciplina deve ser SEMANAL ou MODULAR.");
+    const diaSemana = hasOwn(args, "dia_semana")
+      ? (args.dia_semana == null ? null : positiveInteger(args.dia_semana, "dia_semana", { min: 1, max: 7 }))
+      : current.dia_semana;
+    const dataInicio = hasOwn(args, "data_inicio") ? optionalDate(args.data_inicio, "data_inicio") : current.data_inicio;
+    const dataFim = hasOwn(args, "data_fim") ? optionalDate(args.data_fim, "data_fim") : current.data_fim;
+    const reoferta = hasOwn(args, "reoferta") ? args.reoferta === true : current.reoferta;
+
+    if (tipo === "SEMANAL" && !diaSemana) throw new ToolError("dia_semana é obrigatório para disciplina SEMANAL.");
+    if (tipo === "MODULAR" && (!dataInicio || !dataFim)) throw new ToolError("data_inicio e data_fim são obrigatórias para disciplina MODULAR.");
+    if (dataInicio && dataFim && String(dataInicio) > String(dataFim)) {
+      throw new ToolError("data_fim não pode ser anterior a data_inicio.");
+    }
+
+    await ensureExists(client, "turmas", turmaId, "Turma");
+    await ensureExists(client, "disciplinas", disciplinaId, "Disciplina");
+    await ensureExists(client, "salas", salaId, "Sala");
+    if (professorId) await ensureExists(client, "professores", professorId, "Professor");
+
+    const result = await client.query(
+      `UPDATE alocacoes_periodo SET
+       turma_id = $1, disciplina_id = $2, professor_id = $3, sala_id = $4,
+       turno = $5, tipo_disciplina = $6, dia_semana = $7, data_inicio = $8,
+       data_fim = $9, reoferta = $10
+       WHERE id = $11 RETURNING *`,
+      [turmaId, disciplinaId, professorId, salaId, turno, tipo, diaSemana,
+        dataInicio, dataFim, reoferta, id],
+    );
+    return result.rows[0];
+  }, db);
+}
+
+const UPDATE_ENTITY_CONFIG = {
+  curso: {
+    table: "cursos",
+    fields: {
+      nome: (value) => requiredText(value, "nome"),
+      vagas: (value) => positiveInteger(value, "vagas"),
+      semestres: (value) => positiveInteger(value, "semestres"),
+    },
+  },
+  sala: {
+    table: "salas",
+    fields: {
+      nome: (value) => requiredText(value, "nome"),
+      capacidade: (value) => positiveInteger(value, "capacidade"),
+      piso: (value) => requiredText(value, "piso"),
+      tipo_sala: (value) => requiredText(value, "tipo_sala"),
+    },
+  },
+  turma: {
+    table: "turmas",
+    fields: {
+      nome: (value) => requiredText(value, "nome"),
+      curso_id: (value) => positiveInteger(value, "curso_id"),
+      semestre_inicio: (value) => positiveInteger(value, "semestre_inicio", { min: 1, max: 2 }),
+      ano_inicio: (value) => positiveInteger(value, "ano_inicio", { min: 2000, max: 2200 }),
+      turno: (value) => requiredText(value, "turno"),
+    },
+  },
+  professor: {
+    table: "professores",
+    fields: { nome: (value) => requiredText(value, "nome") },
+  },
+  disciplina: {
+    table: "disciplinas",
+    fields: {
+      nome: (value) => requiredText(value, "nome"),
+      carga_horaria: (value) => positiveInteger(value, "carga_horaria"),
+    },
+  },
+};
+
+async function atualizarCadastro(args, db = pool) {
+  const id = positiveInteger(args.id, "id");
+  const config = UPDATE_ENTITY_CONFIG[args.entidade];
+  if (!config) throw new ToolError("Entidade inválida para atualização.");
+  const data = args.dados && typeof args.dados === "object" ? args.dados : {};
+
+  return withTransaction(async (client) => {
+    const current = await client.query(`SELECT * FROM ${config.table} WHERE id = $1 FOR UPDATE`, [id]);
+    if (current.rowCount === 0) throw new ToolError(`${args.entidade} com ID ${id} não encontrado(a).`);
+
+    const columns = [];
+    const values = [];
+    for (const [field, validator] of Object.entries(config.fields)) {
+      if (hasOwn(data, field)) {
+        columns.push(field);
+        values.push(validator(data[field]));
+      }
+    }
+    const updateCourses = args.entidade === "professor" && hasOwn(data, "cursos_ids");
+    if (columns.length === 0 && !updateCourses) {
+      throw new ToolError("Nenhum campo válido foi informado para atualização.");
+    }
+
+    if (hasOwn(data, "nome")) {
+      const duplicate = await client.query(
+        `SELECT id FROM ${config.table} WHERE LOWER(nome) = LOWER($1) AND id <> $2`,
+        [requiredText(data.nome, "nome"), id],
+      );
+      if (duplicate.rowCount > 0) throw new ToolError(`Já existe outro registro com esse nome, ID ${duplicate.rows[0].id}.`);
+    }
+    if (args.entidade === "turma" && hasOwn(data, "curso_id")) {
+      await ensureExists(client, "cursos", positiveInteger(data.curso_id, "curso_id"), "Curso");
+    }
+
+    let updated = current.rows[0];
+    if (columns.length > 0) {
+      values.push(id);
+      const assignments = columns.map((column, index) => `${column} = $${index + 1}`);
+      const result = await client.query(
+        `UPDATE ${config.table} SET ${assignments.join(", ")} WHERE id = $${values.length} RETURNING *`,
+        values,
+      );
+      updated = result.rows[0];
+    }
+
+    if (updateCourses) {
+      if (!Array.isArray(data.cursos_ids)) throw new ToolError("cursos_ids deve ser uma lista.");
+      const courseIds = [...new Set(data.cursos_ids.map((courseId) => positiveInteger(courseId, "cursos_ids")))];
+      for (const courseId of courseIds) await ensureExists(client, "cursos", courseId, "Curso");
+      await client.query("DELETE FROM professor_cursos WHERE professor_id = $1", [id]);
+      for (const courseId of courseIds) {
+        await client.query(
+          "INSERT INTO professor_cursos (professor_id, curso_id) VALUES ($1, $2)",
+          [id, courseId],
+        );
+      }
+      updated.cursos_ids = courseIds;
+    }
+    return updated;
   }, db);
 }
 
@@ -817,6 +1083,8 @@ const handlers = {
   vincular_disciplina_curso: vincularDisciplinaCurso,
   cadastrar_alocacao_sala: cadastrarAlocacaoSala,
   cadastrar_alocacao_periodo: cadastrarAlocacaoPeriodo,
+  atualizar_alocacao_periodo: atualizarAlocacaoPeriodo,
+  atualizar_cadastro: atualizarCadastro,
   cadastrar_estrutura_curso: cadastrarEstruturaCurso,
 };
 
@@ -828,11 +1096,29 @@ function friendlyDatabaseError(error) {
   return error;
 }
 
-async function executeTool(name, args, db = pool) {
+function normalizeToolArguments(name, args, currentYear) {
+  const normalized = { ...(args || {}) };
+  if (["cadastrar_alocacao_periodo", "atualizar_alocacao_periodo"].includes(name)) {
+    if (hasOwn(normalized, "data_inicio")) {
+      normalized.data_inicio = normalizeAcademicDate(normalized.data_inicio, "data_inicio", currentYear);
+    }
+    if (hasOwn(normalized, "data_fim")) {
+      normalized.data_fim = normalizeAcademicDate(normalized.data_fim, "data_fim", currentYear);
+    }
+  }
+  return normalized;
+}
+
+async function executeTool(name, args, db = pool, options = {}) {
   const handler = handlers[name];
   if (!handler) throw new ToolError(`Ferramenta desconhecida: ${name}.`);
   try {
-    return await handler(args || {}, db);
+    const normalizedArgs = normalizeToolArguments(
+      name,
+      args,
+      options.currentYear || new Date().getFullYear(),
+    );
+    return await handler(normalizedArgs, db);
   } catch (error) {
     throw friendlyDatabaseError(error);
   }
@@ -847,5 +1133,7 @@ module.exports = {
   gerarRelatorio,
   positiveInteger,
   optionalDate,
+  normalizeAcademicDate,
+  normalizeToolArguments,
   allocationRange,
 };
