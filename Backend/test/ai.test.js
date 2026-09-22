@@ -13,6 +13,7 @@ const {
   schemaValidationErrors,
   parseBulkGradeIntent,
   parseStructuredGrade,
+  parseStructuredAllocation,
 } = require("../src/ai/agent");
 const {
   positiveInteger,
@@ -166,6 +167,41 @@ test("grade com uma disciplina e sem código preserva o código como ausente", (
   });
 });
 
+test("pedido completo de alocação é extraído sem perder dados após consultas", () => {
+  assert.deepEqual(
+    parseStructuredAllocation(
+      "Aloque a disciplina Matemática Discreta, com carga horária de 80h, " +
+      "ministrada pelo professor Gustavo Nogueira Dias, no período de 19/02/2026 a 07/03/2026, " +
+      "em formato modular, na Sala 06, para a turma BES 2026.",
+    ),
+    {
+      disciplina: "Matemática Discreta",
+      cargaHoraria: 80,
+      docente: "Gustavo Nogueira Dias",
+      dataInicio: "19/02/2026",
+      dataFim: "07/03/2026",
+      tipoDisciplina: "MODULAR",
+      salaNumero: 6,
+      turmaNome: "BES",
+      turmaAno: 2026,
+      turno: null,
+    },
+  );
+});
+
+test("alocação aceita 'disciplina de', 'turma de' e carga omitida", () => {
+  const parsed = parseStructuredAllocation(
+    "Quero alocar a disciplina de Matemática Discreta com o professor Gustavo Nogueira Dias " +
+    "no período de 19/02 a 07/03, em formato modular, para a turma de BES 2026 na sala 06.",
+  );
+  assert.equal(parsed.disciplina, "Matemática Discreta");
+  assert.equal(parsed.cargaHoraria, null);
+  assert.equal(parsed.docente, "Gustavo Nogueira Dias");
+  assert.equal(parsed.turmaNome, "BES");
+  assert.equal(parsed.turmaAno, 2026);
+  assert.equal(parsed.salaNumero, 6);
+});
+
 test("ID de disciplina com nome diferente do pedido é rejeitado", () => {
   const agent = new AcademicAgent({ ollama: {} });
   agent.messages.push({
@@ -217,6 +253,69 @@ test("datas de uma grade em lote são normalizadas pelo ano letivo", () => {
     inicio: "2026-02-19",
     fim: "2026-03-07",
   });
+});
+
+test("consulta de disciplina pode ser limitada ao curso da turma", async () => {
+  let captured;
+  const db = {
+    query: async (sql, values) => {
+      captured = { sql, values };
+      return { rowCount: 0, rows: [] };
+    },
+  };
+  await executeTool(
+    "consultar_dados",
+    { entidade: "disciplinas", busca: "Matemática Discreta", curso_id: 4 },
+    db,
+  );
+  assert.match(captured.sql, /EXISTS \(\s*SELECT 1 FROM curso_disciplinas/);
+  assert.deepEqual(captured.values.slice(0, 2), ["%Matemática Discreta%", 4]);
+});
+
+test("alocação bloqueia disciplina que não pertence ao curso da turma", async () => {
+  let rolledBack = false;
+  const client = {
+    query: async (sql, values = []) => {
+      if (sql === "ROLLBACK") rolledBack = true;
+      if (sql.includes("FROM turmas t JOIN cursos c")) {
+        return {
+          rowCount: 1,
+          rows: [{
+            id: 29,
+            nome: "BES 26",
+            curso_id: 4,
+            turno: "Tarde",
+            curso_nome: "Engenharia de Software",
+          }],
+        };
+      }
+      if (sql.startsWith("SELECT id FROM salas") || sql.startsWith("SELECT id FROM disciplinas")) {
+        return { rowCount: 1, rows: [{ id: values[0] }] };
+      }
+      if (sql.includes("FROM curso_disciplinas")) return { rowCount: 0, rows: [] };
+      return { rowCount: 0, rows: [] };
+    },
+    release: () => {},
+  };
+  const db = { connect: async () => client };
+  await assert.rejects(
+    executeTool(
+      "cadastrar_alocacao_periodo",
+      {
+        turma_id: 29,
+        disciplina_id: 999,
+        sala_id: 7,
+        turno: "Tarde",
+        tipo_disciplina: "MODULAR",
+        data_inicio: "19/02/2026",
+        data_fim: "07/03/2026",
+      },
+      db,
+      { currentYear: 2026 },
+    ),
+    /não está vinculada ao curso 'Engenharia de Software'/,
+  );
+  assert.equal(rolledBack, true);
 });
 
 test("agente executa consulta solicitada pelo modelo e devolve resposta final", async () => {
@@ -301,11 +400,28 @@ test("atualização corrige datas de alocação legada sem criar novo registro",
         };
       }
       if (
-        sql.startsWith("SELECT id FROM turmas") ||
         sql.startsWith("SELECT id FROM salas") ||
         sql.startsWith("SELECT id FROM disciplinas")
       ) {
         return { rowCount: 1, rows: [{ id: values[0] }] };
+      }
+      if (sql.includes("FROM turmas t JOIN cursos c")) {
+        return {
+          rowCount: 1,
+          rows: [{
+            id: 17,
+            nome: "BES",
+            curso_id: 4,
+            turno: "Manhã",
+            curso_nome: "Engenharia de Software",
+          }],
+        };
+      }
+      if (sql.includes("FROM curso_disciplinas")) {
+        return { rowCount: 1, rows: [{ id: 10 }] };
+      }
+      if (sql.includes("SELECT id FROM alocacoes_periodo") && sql.includes("id <>")) {
+        return { rowCount: 0, rows: [] };
       }
       if (sql.includes("UPDATE alocacoes_periodo")) {
         return { rowCount: 1, rows: [{ id: 2, data_inicio: values[7], data_fim: values[8] }] };

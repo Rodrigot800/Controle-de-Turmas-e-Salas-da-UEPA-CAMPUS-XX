@@ -149,7 +149,7 @@ const toolDefinitions = [
     function: {
       name: "gerar_relatorio",
       description:
-        "Executa relatórios agregados ou detalhados: resumo geral, ocupação das salas, carga dos professores, grade de uma turma ou disciplinas de um curso.",
+        "Executa relatórios agregados ou detalhados, incluindo auditoria de incoerências entre os dados relacionados.",
       parameters: {
         type: "object",
         properties: {
@@ -162,6 +162,7 @@ const toolDefinitions = [
               "grade_turma",
               "disciplinas_por_curso",
               "turmas_por_curso",
+              "auditoria_integridade",
             ],
           },
           ano: { type: "integer", minimum: 2000, maximum: 2200 },
@@ -281,18 +282,6 @@ const toolDefinitions = [
         type: "object",
         properties: {
           turma_id: { type: "integer", minimum: 1 },
-          nova_turma: {
-            type: "object",
-            description: "Use somente quando a turma do semestre ainda não existir; ela será criada na mesma transação da grade.",
-            properties: {
-              nome: { type: "string", description: "Nome conforme o padrão das turmas anteriores do curso, por exemplo BES." },
-              curso_id: { type: "integer", minimum: 1 },
-              semestre_inicio: { type: "integer", minimum: 1, maximum: 2 },
-              ano_inicio: { type: "integer", minimum: 2000, maximum: 2200 },
-              turno: { type: "string" },
-            },
-            required: ["nome", "curso_id", "semestre_inicio", "ano_inicio", "turno"],
-          },
           sala_id: { type: "integer", minimum: 1 },
           turno: { type: "string" },
           tipo_alocacao: { type: "string", enum: ["temporario", "definitivo"] },
@@ -376,6 +365,7 @@ const toolDefinitions = [
               ano_inicio: { type: "integer", minimum: 2000, maximum: 2200 },
               turno: { type: "string" },
               cursos_ids: { type: "array", items: { type: "integer", minimum: 1 } },
+              lotacao: { type: "string" },
               carga_horaria: { type: "integer", minimum: 1 },
             },
           },
@@ -580,6 +570,16 @@ async function consultarDados(args, db = pool) {
     conditions.push(`(${searchClauses.join(" OR ")})`);
   }
 
+  if (args.entidade === "disciplinas" && args.curso_id !== undefined && args.curso_id !== null) {
+    values.push(positiveInteger(args.curso_id, "curso_id"));
+    conditions.push(
+      `EXISTS (
+        SELECT 1 FROM curso_disciplinas cd_filtro
+        WHERE cd_filtro.disciplina_id = d.id AND cd_filtro.curso_id = $${values.length}
+      )`,
+    );
+  }
+
   for (const [filter, column] of Object.entries(config.filters)) {
     if (args[filter] !== undefined && args[filter] !== null && args[filter] !== "") {
       values.push(args[filter]);
@@ -684,6 +684,68 @@ async function gerarRelatorio(args, db = pool) {
         GROUP BY t.id, t.nome, t.ano_inicio, t.semestre_inicio, t.turno
         ORDER BY t.ano_inicio DESC, t.semestre_inicio DESC, t.nome`,
       values: [args.curso_id],
+    },
+    auditoria_integridade: {
+      sql: `WITH problemas AS (
+        SELECT 'DISCIPLINA_DUPLICADA'::text AS tipo,
+          LOWER(d.nome)::text AS chave,
+          COUNT(*)::int AS total,
+          ARRAY_AGG(d.id ORDER BY d.id)::integer[] AS ids
+        FROM disciplinas d
+        GROUP BY LOWER(d.nome)
+        HAVING COUNT(*) > 1
+
+        UNION ALL
+
+        SELECT 'VINCULO_CURSO_DISCIPLINA_DUPLICADO'::text,
+          (cd.curso_id::text || ':' || cd.disciplina_id::text),
+          COUNT(*)::int,
+          ARRAY_AGG(cd.id ORDER BY cd.id)::integer[]
+        FROM curso_disciplinas cd
+        GROUP BY cd.curso_id, cd.disciplina_id
+        HAVING COUNT(*) > 1
+
+        UNION ALL
+
+        SELECT 'DISCIPLINA_FORA_DO_CURSO_DA_TURMA'::text,
+          ap.id::text,
+          1::int,
+          ARRAY[ap.id]::integer[]
+        FROM alocacoes_periodo ap
+        JOIN turmas t ON t.id = ap.turma_id
+        WHERE ap.disciplina_id IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM curso_disciplinas cd
+            WHERE cd.curso_id = t.curso_id AND cd.disciplina_id = ap.disciplina_id
+          )
+
+        UNION ALL
+
+        SELECT 'PROFESSOR_FORA_DO_CURSO_DA_TURMA'::text,
+          ap.id::text,
+          1::int,
+          ARRAY[ap.id]::integer[]
+        FROM alocacoes_periodo ap
+        JOIN turmas t ON t.id = ap.turma_id
+        WHERE ap.professor_id IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM professor_cursos pc
+            WHERE pc.curso_id = t.curso_id AND pc.professor_id = ap.professor_id
+          )
+
+        UNION ALL
+
+        SELECT 'TURNO_DIFERENTE_DA_TURMA'::text,
+          ap.id::text,
+          1::int,
+          ARRAY[ap.id]::integer[]
+        FROM alocacoes_periodo ap
+        JOIN turmas t ON t.id = ap.turma_id
+        WHERE ap.turno IS NOT NULL AND t.turno IS NOT NULL
+          AND LOWER(ap.turno) <> LOWER(t.turno)
+      )
+      SELECT tipo, chave, total, ids FROM problemas ORDER BY tipo, chave`,
+      values: [],
     },
   };
 
@@ -901,16 +963,62 @@ async function cadastrarAlocacaoPeriodo(args, db = pool) {
   if (dataInicio && dataFim && dataInicio > dataFim) throw new ToolError("data_fim não pode ser anterior a data_inicio.");
 
   return withTransaction(async (client) => {
-    await ensureExists(client, "turmas", turmaId, "Turma");
+    const turmaResult = await client.query(
+      `SELECT t.id, t.nome, t.curso_id, t.turno, c.nome AS curso_nome
+       FROM turmas t JOIN cursos c ON c.id = t.curso_id
+       WHERE t.id = $1`,
+      [turmaId],
+    );
+    if (turmaResult.rowCount === 0) throw new ToolError(`Turma com ID ${turmaId} não encontrada.`);
+    const turma = turmaResult.rows[0];
     await ensureExists(client, "salas", salaId, "Sala");
-    if (disciplinaId) await ensureExists(client, "disciplinas", disciplinaId, "Disciplina");
-    if (professorId) await ensureExists(client, "professores", professorId, "Professor");
+    await ensureExists(client, "disciplinas", disciplinaId, "Disciplina");
+    const disciplineLink = await client.query(
+      `SELECT id FROM curso_disciplinas
+       WHERE curso_id = $1 AND disciplina_id = $2 LIMIT 1`,
+      [turma.curso_id, disciplinaId],
+    );
+    if (disciplineLink.rowCount === 0) {
+      throw new ToolError(
+        `A disciplina com ID ${disciplinaId} não está vinculada ao curso '${turma.curso_nome}' da turma.`,
+      );
+    }
+    if (professorId) {
+      await ensureExists(client, "professores", professorId, "Professor");
+      const professorLink = await client.query(
+        `SELECT id FROM professor_cursos
+         WHERE professor_id = $1 AND curso_id = $2 LIMIT 1`,
+        [professorId, turma.curso_id],
+      );
+      if (professorLink.rowCount === 0) {
+        throw new ToolError(
+          `O professor com ID ${professorId} não está vinculado ao curso '${turma.curso_nome}' da turma.`,
+        );
+      }
+    }
+    const effectiveShift = args.turno || turma.turno || null;
+    if (args.turno && turma.turno && args.turno.toLowerCase() !== turma.turno.toLowerCase()) {
+      throw new ToolError(
+        `O turno informado (${args.turno}) não corresponde ao turno da turma (${turma.turno}).`,
+      );
+    }
+    const duplicate = await client.query(
+      `SELECT id FROM alocacoes_periodo
+       WHERE turma_id = $1 AND disciplina_id = $2
+         AND data_inicio IS NOT DISTINCT FROM $3::date
+         AND data_fim IS NOT DISTINCT FROM $4::date
+       LIMIT 1`,
+      [turmaId, disciplinaId, dataInicio, dataFim],
+    );
+    if (duplicate.rowCount > 0) {
+      throw new ToolError(`Esta oferta já existe na alocação ${duplicate.rows[0].id}.`);
+    }
     const result = await client.query(
       `INSERT INTO alocacoes_periodo
        (turma_id, disciplina_id, professor_id, sala_id, turno, tipo_disciplina,
         dia_semana, data_inicio, data_fim, reoferta)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
-      [turmaId, disciplinaId, professorId, salaId, args.turno || null, tipo,
+      [turmaId, disciplinaId, professorId, salaId, effectiveShift, tipo,
         diaSemana, dataInicio, dataFim, args.reoferta === true],
     );
     return result.rows[0];
@@ -963,10 +1071,55 @@ async function atualizarAlocacaoPeriodo(args, db = pool) {
       throw new ToolError("data_fim não pode ser anterior a data_inicio.");
     }
 
-    await ensureExists(client, "turmas", turmaId, "Turma");
+    const turmaResult = await client.query(
+      `SELECT t.id, t.nome, t.curso_id, t.turno, c.nome AS curso_nome
+       FROM turmas t JOIN cursos c ON c.id = t.curso_id
+       WHERE t.id = $1`,
+      [turmaId],
+    );
+    if (turmaResult.rowCount === 0) throw new ToolError(`Turma com ID ${turmaId} não encontrada.`);
+    const turma = turmaResult.rows[0];
     await ensureExists(client, "disciplinas", disciplinaId, "Disciplina");
     await ensureExists(client, "salas", salaId, "Sala");
-    if (professorId) await ensureExists(client, "professores", professorId, "Professor");
+    const disciplineLink = await client.query(
+      `SELECT id FROM curso_disciplinas
+       WHERE curso_id = $1 AND disciplina_id = $2 LIMIT 1`,
+      [turma.curso_id, disciplinaId],
+    );
+    if (disciplineLink.rowCount === 0) {
+      throw new ToolError(
+        `A disciplina com ID ${disciplinaId} não está vinculada ao curso '${turma.curso_nome}' da turma.`,
+      );
+    }
+    if (professorId) {
+      await ensureExists(client, "professores", professorId, "Professor");
+      const professorLink = await client.query(
+        `SELECT id FROM professor_cursos
+         WHERE professor_id = $1 AND curso_id = $2 LIMIT 1`,
+        [professorId, turma.curso_id],
+      );
+      if (professorLink.rowCount === 0) {
+        throw new ToolError(
+          `O professor com ID ${professorId} não está vinculado ao curso '${turma.curso_nome}' da turma.`,
+        );
+      }
+    }
+    if (turno && turma.turno && turno.toLowerCase() !== turma.turno.toLowerCase()) {
+      throw new ToolError(
+        `O turno informado (${turno}) não corresponde ao turno da turma (${turma.turno}).`,
+      );
+    }
+    const duplicate = await client.query(
+      `SELECT id FROM alocacoes_periodo
+       WHERE turma_id = $1 AND disciplina_id = $2 AND id <> $3
+         AND data_inicio IS NOT DISTINCT FROM $4::date
+         AND data_fim IS NOT DISTINCT FROM $5::date
+       LIMIT 1`,
+      [turmaId, disciplinaId, id, dataInicio, dataFim],
+    );
+    if (duplicate.rowCount > 0) {
+      throw new ToolError(`Esta oferta já existe na alocação ${duplicate.rows[0].id}.`);
+    }
 
     const result = await client.query(
       `UPDATE alocacoes_periodo SET
@@ -1011,7 +1164,10 @@ const UPDATE_ENTITY_CONFIG = {
   },
   professor: {
     table: "professores",
-    fields: { nome: (value) => requiredText(value, "nome") },
+    fields: {
+      nome: (value) => requiredText(value, "nome"),
+      lotacao: (value) => requiredText(value, "lotacao").toUpperCase(),
+    },
   },
   disciplina: {
     table: "disciplinas",

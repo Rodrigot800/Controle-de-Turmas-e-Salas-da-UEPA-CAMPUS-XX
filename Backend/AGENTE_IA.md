@@ -10,6 +10,8 @@ Grades completas copiadas de PDF, Word ou planilhas também podem ser importadas
 
 No formato `Engenharia de Software — 2026.1`, o cabeçalho é tratado como curso, nunca como disciplina. Se ainda não existir uma turma de ingresso para 2026.1, o agente pode propor a criação da nova turma junto com a grade na mesma transação.
 
+Pedidos completos de alocação em texto livre também são processados deterministicamente. O agente resolve primeiro a turma e seu curso e, em seguida, limita a disciplina e o professor a esse curso. Escritas com disciplina ou professor sem o vínculo correto, turno incompatível ou uma oferta exatamente duplicada são bloqueadas. O relatório `auditoria_integridade` permite localizar duplicidades e relacionamentos antigos incoerentes sem alterá-los automaticamente.
+
 ## Pré-requisitos
 
 No host, inicie o Ollama e confirme o modelo:

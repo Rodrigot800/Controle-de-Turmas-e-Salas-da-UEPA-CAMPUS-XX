@@ -245,26 +245,28 @@ function parseStructuredAllocation(value) {
   if (!/\b(aloque|alocar|alocacao)\b/.test(normalized)) return null;
 
   const discipline = text.match(
-    /\bdisciplina\s+(.+?)(?=,\s*(?:com\s+carga|carga\s+hor[aá]ria|ministrad[ao]|com\s+(?:o\s+|a\s+)?professor|no\s+per[ií]odo|em\s+formato|na\s+sala|para\s+a\s+turma)|$)/i,
+    /\bdisciplina(?:\s+de)?\s+(.+?)(?=,?\s*(?:com\s+carga|carga\s+hor[aá]ria|ministrad[ao]|com\s+(?:o\s+|a\s+)?professor|n[oa]s?\s+per[ií]odo|em\s+formato|na\s+sala|para\s+a\s+turma)|$)/i,
   );
   const workload = text.match(/carga\s+hor[aá]ria\s+(?:de\s+)?(\d+)\s*h\b/i);
   const teacher = text.match(
-    /(?:ministrad[ao]\s+(?:pelo|pela)|com)\s+(?:o\s+|a\s+)?professor(?:a)?\s+(.+?)(?=,\s*(?:no\s+per[ií]odo|em\s+formato|na\s+sala|para\s+a\s+turma)|$)/i,
+    /(?:ministrad[ao]\s+(?:pelo|pela)|com)\s+(?:o\s+|a\s+)?professor(?:a)?\s+(.+?)(?=,?\s*(?:n[oa]s?\s+per[ií]odo|n[oa]\s+parte|turno|em\s+formato|na\s+sala|para\s+a\s+turma)|$)/i,
   );
   const dates = text.match(
     /per[ií]odo\s+de\s+(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\s+a\s+(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)/i,
   );
   const type = text.match(/(?:formato\s+)?\b(modular|semanal)\b/i);
   const room = text.match(/\bsala\s+0*(\d+)\b/i);
-  const classWithYear = text.match(/\bturma\s+(.+?)\s+(20\d{2})(?=\s*[.,;!?]|\s*$)/i);
+  const classWithYear = text.match(
+    /\bturma(?:\s+de)?\s+(.+?)\s+(20\d{2})(?=\s*(?:[.,;!?]|na\s+sala|$))/i,
+  );
   const shift = text.match(/(?:turno|parte\s+da)\s+(manh[aã]|tarde|noite)/i);
 
-  if (!discipline || !workload || !teacher || !dates || !type || !room || !classWithYear) {
+  if (!discipline || !teacher || !dates || !type || !room || !classWithYear) {
     return null;
   }
   return {
     disciplina: discipline[1].trim(),
-    cargaHoraria: Number(workload[1]),
+    cargaHoraria: workload ? Number(workload[1]) : null,
     docente: teacher[1].trim(),
     dataInicio: dates[1],
     dataFim: dates[2],
@@ -659,32 +661,6 @@ class AcademicAgent {
       return result;
     };
 
-    const subjects = await read({ entidade: "disciplinas", busca: intent.disciplina, limite: 20 });
-    const exactSubjects = subjects.registros.filter(
-      (item) => normalizeText(item.nome) === normalizeText(intent.disciplina),
-    );
-    if (exactSubjects.length !== 1) {
-      return exactSubjects.length === 0
-        ? `Não encontrei a disciplina '${intent.disciplina}'. Cadastre-a antes de fazer a alocação.`
-        : `Encontrei mais de uma disciplina chamada '${intent.disciplina}'. Informe o ID correto.`;
-    }
-    const subject = exactSubjects[0];
-    if (Number(subject.carga_horaria) !== intent.cargaHoraria) {
-      return `A disciplina '${subject.nome}' está cadastrada com ${subject.carga_horaria}h, ` +
-        `mas o pedido informa ${intent.cargaHoraria}h. Corrija a carga ou atualize o cadastro antes da alocação.`;
-    }
-
-    const teachers = await read({ entidade: "professores", busca: intent.docente, limite: 20 });
-    const exactTeachers = teachers.registros.filter(
-      (item) => normalizeText(item.nome) === normalizeText(intent.docente),
-    );
-    if (exactTeachers.length !== 1) {
-      return exactTeachers.length === 0
-        ? `Não encontrei o professor '${intent.docente}'. Cadastre-o antes de fazer a alocação.`
-        : `Encontrei mais de um professor chamado '${intent.docente}'. Informe o ID correto.`;
-    }
-    const teacher = exactTeachers[0];
-
     const rooms = await read({ entidade: "salas", busca: `Sala ${intent.salaNumero}`, limite: 20 });
     const exactRooms = rooms.registros.filter(
       (item) => Number(item.nome?.match(/\d+/)?.[0]) === intent.salaNumero,
@@ -741,6 +717,57 @@ class AcademicAgent {
       return `A turma selecionada está cadastrada no turno ${academicClass.turno}, ` +
         `mas o pedido informa ${intent.turno}. Informe qual turno deve ser usado.`;
     }
+
+    const subjects = await read({
+      entidade: "disciplinas",
+      busca: intent.disciplina,
+      curso_id: academicClass.curso_id,
+      limite: 20,
+    });
+    const exactSubjects = subjects.registros.filter(
+      (item) => normalizeText(item.nome) === normalizeText(intent.disciplina),
+    );
+    if (exactSubjects.length === 0) {
+      return `Não encontrei a disciplina '${intent.disciplina}' vinculada ao curso ` +
+        `'${academicClass.curso_nome}'. Cadastre o vínculo antes de fazer a alocação.`;
+    }
+    const compatibleSubjects = intent.cargaHoraria === null
+      ? exactSubjects
+      : exactSubjects.filter((item) => Number(item.carga_horaria) === intent.cargaHoraria);
+    if (compatibleSubjects.length === 0) {
+      const workloads = [...new Set(exactSubjects.map((item) => `${item.carga_horaria}h`))].join(", ");
+      return `A disciplina '${intent.disciplina}' está cadastrada no curso com carga ${workloads}, ` +
+        `mas o pedido informa ${intent.cargaHoraria}h. Corrija a carga antes da alocação.`;
+    }
+    const workloads = new Set(compatibleSubjects.map((item) => Number(item.carga_horaria)));
+    if (workloads.size > 1) {
+      const options = compatibleSubjects
+        .map((item) => `ID ${item.id} (${item.carga_horaria}h)`)
+        .join(", ");
+      return `Existem disciplinas homônimas com cargas diferentes: ${options}. Informe o ID correto.`;
+    }
+    const subjectCodes = new Set(compatibleSubjects.map((item) => normalizeText(item.codigo)).filter(Boolean));
+    if (subjectCodes.size > 1) {
+      const options = compatibleSubjects.map((item) => `ID ${item.id} (${item.codigo})`).join(", ");
+      return `Existem disciplinas homônimas com códigos diferentes: ${options}. Informe o ID correto.`;
+    }
+    const subject = compatibleSubjects.sort((left, right) => Number(left.id) - Number(right.id))[0];
+
+    const teachers = await read({
+      entidade: "professores",
+      busca: intent.docente,
+      curso_id: academicClass.curso_id,
+      limite: 20,
+    });
+    const exactTeachers = teachers.registros.filter(
+      (item) => normalizeText(item.nome) === normalizeText(intent.docente),
+    );
+    if (exactTeachers.length !== 1) {
+      return exactTeachers.length === 0
+        ? `Não encontrei o professor '${intent.docente}' vinculado ao curso '${academicClass.curso_nome}'.`
+        : `Encontrei mais de um professor chamado '${intent.docente}' nesse curso. Informe o ID correto.`;
+    }
+    const teacher = exactTeachers[0];
 
     const result = await this.executeToolCall({
       function: {
