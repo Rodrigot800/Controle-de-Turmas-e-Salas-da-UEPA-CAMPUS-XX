@@ -39,16 +39,16 @@ const ENTITY_CONFIG = {
   },
   professores: {
     select:
-      "p.id, p.nome, COALESCE(array_agg(DISTINCT c.nome) FILTER (WHERE c.id IS NOT NULL), ARRAY[]::varchar[]) AS cursos",
+      "p.id, p.nome, p.lotacao, COALESCE(array_agg(DISTINCT c.nome) FILTER (WHERE c.id IS NOT NULL), ARRAY[]::varchar[]) AS cursos",
     from:
       "professores p LEFT JOIN professor_cursos pc ON pc.professor_id = p.id LEFT JOIN cursos c ON c.id = pc.curso_id",
     search: ["p.nome", "c.nome"],
     filters: { id: "p.id", curso_id: "pc.curso_id" },
-    groupBy: "p.id, p.nome",
+    groupBy: "p.id, p.nome, p.lotacao",
     order: "p.nome",
   },
   disciplinas: {
-    select: "d.id, d.nome, d.carga_horaria",
+    select: "d.id, d.codigo, d.nome, d.carga_horaria",
     from: "disciplinas d",
     search: ["d.nome"],
     filters: { id: "d.id" },
@@ -86,9 +86,9 @@ const ENTITY_CONFIG = {
   },
   alocacoes_periodo: {
     select:
-      "ap.id, ap.turma_id, t.nome AS turma_nome, ap.disciplina_id, d.nome AS disciplina_nome, ap.professor_id, p.nome AS professor_nome, ap.sala_id, s.nome AS sala_nome, ap.turno, ap.tipo_disciplina, ap.dia_semana, ap.data_inicio, ap.data_fim, ap.reoferta",
+      "ap.id, ap.turma_id, t.nome AS turma_nome, ap.disciplina_id, d.codigo AS disciplina_codigo, d.nome AS disciplina_nome, ap.professor_id, p.nome AS professor_nome, p.lotacao AS professor_lotacao, ap.sala_id, s.nome AS sala_nome, ap.turno, ap.tipo_disciplina, ap.dia_semana, ap.data_inicio, ap.data_fim, ap.reoferta, ap.ano_letivo, ap.semestre_letivo, ap.periodos, ap.observacao, ap.importacao_id",
     from:
-      "alocacoes_periodo ap JOIN turmas t ON t.id = ap.turma_id LEFT JOIN disciplinas d ON d.id = ap.disciplina_id LEFT JOIN professores p ON p.id = ap.professor_id JOIN salas s ON s.id = ap.sala_id",
+      "alocacoes_periodo ap JOIN turmas t ON t.id = ap.turma_id LEFT JOIN disciplinas d ON d.id = ap.disciplina_id LEFT JOIN professores p ON p.id = ap.professor_id LEFT JOIN salas s ON s.id = ap.sala_id",
     search: [
       "t.nome",
       "d.nome",
@@ -418,6 +418,59 @@ const toolDefinitions = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "importar_grade_semestre",
+      description:
+        "Organiza e insere, em uma única transação, uma grade semestral colada de PDF/planilha. Cria disciplinas e docentes inexistentes, vincula-os ao curso da turma e aceita sala pendente e vários intervalos por disciplina.",
+      parameters: {
+        type: "object",
+        properties: {
+          turma_id: { type: "integer", minimum: 1 },
+          ano_letivo: { type: "integer", minimum: 2000, maximum: 2200 },
+          semestre_letivo: { type: "integer", minimum: 1, maximum: 2 },
+          periodo_turma: { type: "integer", minimum: 1 },
+          turno: { type: "string" },
+          sala_id: { type: "integer", minimum: 1, description: "Sala comum opcional. Omita quando ainda não houver sala definida." },
+          texto_origem: { type: "string", description: "Texto bruto colado pelo usuário, preservado para auditoria." },
+          itens: {
+            type: "array",
+            minItems: 1,
+            items: {
+              type: "object",
+              properties: {
+                codigo: { type: "string", description: "Código como DMEI1024." },
+                disciplina: { type: "string" },
+                carga_horaria: { type: "integer", minimum: 1 },
+                docente: { type: "string", description: "Nome completo; omita se não estiver identificado." },
+                lotacao_docente: { type: "string", description: "Sigla como DSCI ou DLLT." },
+                tipo_disciplina: { type: "string", enum: ["MODULAR", "SEMANAL", "PENDENTE"] },
+                dia_semana: { type: "integer", minimum: 1, maximum: 7 },
+                sala_id: { type: "integer", minimum: 1 },
+                periodos: {
+                  type: "array",
+                  minItems: 1,
+                  items: {
+                    type: "object",
+                    properties: {
+                      inicio: { type: "string", description: "DD/MM, DD/MM/AA ou DD/MM/AAAA." },
+                      fim: { type: "string", description: "DD/MM, DD/MM/AA ou DD/MM/AAAA." },
+                    },
+                    required: ["inicio", "fim"],
+                  },
+                },
+                observacao: { type: "string", description: "Ex.: TERÇAS – 20H EAD; considerar sábados." },
+                reoferta: { type: "boolean" },
+              },
+              required: ["codigo", "disciplina", "carga_horaria", "tipo_disciplina", "periodos"],
+            },
+          },
+        },
+        required: ["turma_id", "ano_letivo", "semestre_letivo", "periodo_turma", "turno", "texto_origem", "itens"],
+      },
+    },
+  },
 ];
 
 const WRITE_TOOLS = new Set(
@@ -426,7 +479,8 @@ const WRITE_TOOLS = new Set(
     .filter((name) =>
       name.startsWith("cadastrar_") ||
       name.startsWith("vincular_") ||
-      name.startsWith("atualizar_"),
+      name.startsWith("atualizar_") ||
+      name.startsWith("importar_"),
     ),
 );
 
@@ -460,12 +514,13 @@ function normalizeAcademicDate(value, field, currentYear = new Date().getFullYea
   let month;
   let day;
 
-  const brazilian = text.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?$/);
+  const brazilian = text.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2}|\d{4}))?$/);
   const iso = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (brazilian) {
     day = Number(brazilian[1]);
     month = Number(brazilian[2]);
     year = Number(brazilian[3] || currentYear);
+    if (year < 100) year += 2000;
   } else if (iso) {
     year = Number(iso[1]);
     month = Number(iso[2]);
@@ -1007,6 +1062,217 @@ async function atualizarCadastro(args, db = pool) {
   }, db);
 }
 
+async function importarGradeSemestre(args, db = pool) {
+  const turmaId = positiveInteger(args.turma_id, "turma_id");
+  const anoLetivo = positiveInteger(args.ano_letivo, "ano_letivo", { min: 2000, max: 2200 });
+  const semestreLetivo = positiveInteger(args.semestre_letivo, "semestre_letivo", { min: 1, max: 2 });
+  const periodoTurma = positiveInteger(args.periodo_turma, "periodo_turma");
+  const turno = requiredText(args.turno, "turno");
+  const textoOrigem = requiredText(args.texto_origem, "texto_origem");
+  if (!Array.isArray(args.itens) || args.itens.length === 0) {
+    throw new ToolError("A grade deve conter pelo menos uma disciplina.");
+  }
+  if (args.itens.length > 100) throw new ToolError("Uma importação aceita no máximo 100 disciplinas.");
+
+  const items = args.itens.map((item, index) => {
+    const prefix = `itens[${index}]`;
+    const tipo = requiredText(item.tipo_disciplina, `${prefix}.tipo_disciplina`).toUpperCase();
+    if (!["MODULAR", "SEMANAL", "PENDENTE"].includes(tipo)) {
+      throw new ToolError(`${prefix}.tipo_disciplina deve ser MODULAR, SEMANAL ou PENDENTE.`);
+    }
+    if (!Array.isArray(item.periodos) || item.periodos.length === 0) {
+      throw new ToolError(`${prefix}.periodos deve conter pelo menos um intervalo.`);
+    }
+    const periods = item.periodos.map((period, periodIndex) => {
+      const start = optionalDate(period.inicio, `${prefix}.periodos[${periodIndex}].inicio`);
+      const end = optionalDate(period.fim, `${prefix}.periodos[${periodIndex}].fim`);
+      if (!start || !end || start > end) {
+        throw new ToolError(`Intervalo inválido em ${prefix}.periodos[${periodIndex}].`);
+      }
+      return { inicio: start, fim: end };
+    });
+    return {
+      codigo: requiredText(item.codigo, `${prefix}.codigo`).toUpperCase().replace(/\s+/g, ""),
+      disciplina: requiredText(item.disciplina, `${prefix}.disciplina`),
+      cargaHoraria: positiveInteger(item.carga_horaria, `${prefix}.carga_horaria`),
+      docente: item.docente ? requiredText(item.docente, `${prefix}.docente`) : null,
+      lotacao: item.lotacao_docente ? requiredText(item.lotacao_docente, `${prefix}.lotacao_docente`).toUpperCase() : null,
+      tipo,
+      diaSemana: item.dia_semana == null
+        ? null
+        : positiveInteger(item.dia_semana, `${prefix}.dia_semana`, { min: 1, max: 7 }),
+      salaId: item.sala_id == null
+        ? (args.sala_id == null ? null : positiveInteger(args.sala_id, "sala_id"))
+        : positiveInteger(item.sala_id, `${prefix}.sala_id`),
+      periodos: periods,
+      observacao: item.observacao ? String(item.observacao).trim() : null,
+      reoferta: item.reoferta === true,
+    };
+  });
+
+  const uniqueCodes = new Set(items.map((item) => item.codigo));
+  if (uniqueCodes.size !== items.length) throw new ToolError("Há códigos de disciplina repetidos no mesmo lote.");
+
+  return withTransaction(async (client) => {
+    const classResult = await client.query(
+      `SELECT t.id, t.nome, t.curso_id, c.nome AS curso_nome
+       FROM turmas t JOIN cursos c ON c.id = t.curso_id
+       WHERE t.id = $1 FOR UPDATE`,
+      [turmaId],
+    );
+    if (classResult.rowCount === 0) throw new ToolError(`Turma com ID ${turmaId} não encontrada.`);
+    const turma = classResult.rows[0];
+
+    const importResult = await client.query(
+      `INSERT INTO importacoes_grade
+       (turma_id, ano_letivo, semestre_letivo, periodo_turma, turno, texto_origem, payload)
+       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb) RETURNING id, criado_em`,
+      [turmaId, anoLetivo, semestreLetivo, periodoTurma, turno, textoOrigem, JSON.stringify(args)],
+    );
+    const importId = importResult.rows[0].id;
+    const imported = [];
+    const warnings = [];
+
+    for (const item of items) {
+      const subjectResult = await client.query(
+        `SELECT * FROM disciplinas
+         WHERE (codigo IS NOT NULL AND LOWER(codigo) = LOWER($1)) OR LOWER(nome) = LOWER($2)
+         FOR UPDATE`,
+        [item.codigo, item.disciplina],
+      );
+      if (subjectResult.rowCount > 1) {
+        throw new ToolError(`O código/nome '${item.codigo} — ${item.disciplina}' corresponde a mais de uma disciplina.`);
+      }
+      let subject = subjectResult.rows[0];
+      let subjectCreated = false;
+      if (subject) {
+        if (subject.codigo && subject.codigo.toLowerCase() !== item.codigo.toLowerCase()) {
+          throw new ToolError(`A disciplina '${item.disciplina}' já usa o código ${subject.codigo}, não ${item.codigo}.`);
+        }
+        if (subject.nome.toLowerCase() !== item.disciplina.toLowerCase()) {
+          throw new ToolError(`O código ${item.codigo} já pertence à disciplina '${subject.nome}'.`);
+        }
+        if (Number(subject.carga_horaria) !== item.cargaHoraria) {
+          throw new ToolError(
+            `${item.codigo} já possui carga horária ${subject.carga_horaria}, diferente de ${item.cargaHoraria}.`,
+          );
+        }
+        if (!subject.codigo) {
+          const updated = await client.query(
+            "UPDATE disciplinas SET codigo = $1 WHERE id = $2 RETURNING *",
+            [item.codigo, subject.id],
+          );
+          subject = updated.rows[0];
+        }
+      } else {
+        const inserted = await client.query(
+          "INSERT INTO disciplinas (codigo, nome, carga_horaria) VALUES ($1, $2, $3) RETURNING *",
+          [item.codigo, item.disciplina, item.cargaHoraria],
+        );
+        subject = inserted.rows[0];
+        subjectCreated = true;
+      }
+
+      const existingLink = await client.query(
+        "SELECT id FROM curso_disciplinas WHERE curso_id = $1 AND disciplina_id = $2",
+        [turma.curso_id, subject.id],
+      );
+      if (existingLink.rowCount === 0) {
+        await client.query(
+          `INSERT INTO curso_disciplinas
+           (curso_id, disciplina_id, semestre_disciplina, disciplina_optativa, disciplina_atual)
+           VALUES ($1, $2, $3, false, true)`,
+          [turma.curso_id, subject.id, periodoTurma],
+        );
+      }
+
+      let professor = null;
+      let professorCreated = false;
+      if (item.docente) {
+        const professorResult = await client.query(
+          "SELECT * FROM professores WHERE LOWER(nome) = LOWER($1) FOR UPDATE",
+          [item.docente],
+        );
+        professor = professorResult.rows[0];
+        if (!professor) {
+          const inserted = await client.query(
+            "INSERT INTO professores (nome, lotacao) VALUES ($1, $2) RETURNING *",
+            [item.docente, item.lotacao],
+          );
+          professor = inserted.rows[0];
+          professorCreated = true;
+        } else if (item.lotacao && !professor.lotacao) {
+          const updated = await client.query(
+            "UPDATE professores SET lotacao = $1 WHERE id = $2 RETURNING *",
+            [item.lotacao, professor.id],
+          );
+          professor = updated.rows[0];
+        } else if (item.lotacao && professor.lotacao && professor.lotacao !== item.lotacao) {
+          warnings.push(
+            `Lotação de ${professor.nome} mantida como ${professor.lotacao}; o lote informou ${item.lotacao}.`,
+          );
+        }
+        await client.query(
+          `INSERT INTO professor_cursos (professor_id, curso_id)
+           SELECT $1, $2 WHERE NOT EXISTS (
+             SELECT 1 FROM professor_cursos WHERE professor_id = $1 AND curso_id = $2
+           )`,
+          [professor.id, turma.curso_id],
+        );
+      }
+
+      if (item.salaId) await ensureExists(client, "salas", item.salaId, "Sala");
+      const duplicate = await client.query(
+        `SELECT id FROM alocacoes_periodo
+         WHERE turma_id = $1 AND disciplina_id = $2
+           AND ano_letivo = $3 AND semestre_letivo = $4`,
+        [turmaId, subject.id, anoLetivo, semestreLetivo],
+      );
+      if (duplicate.rowCount > 0) {
+        throw new ToolError(
+          `${item.codigo} já está na grade ${anoLetivo}.${semestreLetivo} desta turma (alocação ${duplicate.rows[0].id}).`,
+        );
+      }
+
+      const starts = item.periodos.map((period) => period.inicio).sort();
+      const ends = item.periodos.map((period) => period.fim).sort();
+      const allocationResult = await client.query(
+        `INSERT INTO alocacoes_periodo
+         (turma_id, disciplina_id, professor_id, sala_id, turno, tipo_disciplina,
+          dia_semana, data_inicio, data_fim, reoferta, ano_letivo, semestre_letivo,
+          periodos, observacao, importacao_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::jsonb, $14, $15)
+         RETURNING *`,
+        [turmaId, subject.id, professor?.id || null, item.salaId, turno,
+          item.tipo === "PENDENTE" ? null : item.tipo,
+          item.diaSemana, starts[0], ends[ends.length - 1], item.reoferta,
+          anoLetivo, semestreLetivo, JSON.stringify(item.periodos), item.observacao, importId],
+      );
+      imported.push({
+        codigo: item.codigo,
+        disciplina_id: subject.id,
+        disciplina: subject.nome,
+        disciplina_criada: subjectCreated,
+        professor_id: professor?.id || null,
+        docente: professor?.nome || null,
+        professor_criado: professorCreated,
+        alocacao_id: allocationResult.rows[0].id,
+        periodos: item.periodos,
+        sala_pendente: !item.salaId,
+      });
+    }
+
+    return {
+      importacao_id: importId,
+      turma,
+      semestre: `${anoLetivo}.${semestreLetivo}`,
+      total_importado: imported.length,
+      itens: imported,
+      avisos: warnings,
+    };
+  }, db);
+}
+
 async function cadastrarEstruturaCurso(args, db = pool) {
   if (!args.curso || typeof args.curso !== "object") throw new ToolError("curso é obrigatório.");
   const curso = {
@@ -1086,6 +1352,7 @@ const handlers = {
   atualizar_alocacao_periodo: atualizarAlocacaoPeriodo,
   atualizar_cadastro: atualizarCadastro,
   cadastrar_estrutura_curso: cadastrarEstruturaCurso,
+  importar_grade_semestre: importarGradeSemestre,
 };
 
 function friendlyDatabaseError(error) {
@@ -1105,6 +1372,18 @@ function normalizeToolArguments(name, args, currentYear) {
     if (hasOwn(normalized, "data_fim")) {
       normalized.data_fim = normalizeAcademicDate(normalized.data_fim, "data_fim", currentYear);
     }
+  }
+  if (name === "importar_grade_semestre" && Array.isArray(normalized.itens)) {
+    const year = Number(normalized.ano_letivo) || currentYear;
+    normalized.itens = normalized.itens.map((item) => ({
+      ...item,
+      periodos: Array.isArray(item.periodos)
+        ? item.periodos.map((period, index) => ({
+            inicio: normalizeAcademicDate(period.inicio, `periodos[${index}].inicio`, year),
+            fim: normalizeAcademicDate(period.fim, `periodos[${index}].fim`, year),
+          }))
+        : item.periodos,
+    }));
   }
   return normalized;
 }

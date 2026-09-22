@@ -105,6 +105,7 @@ test("validadores rejeitam inteiros e datas inválidos", () => {
   assert.equal(optionalDate("2026-09-21", "data"), "2026-09-21");
   assert.throws(() => optionalDate("21/09/2026", "data"), /YYYY-MM-DD/);
   assert.equal(normalizeAcademicDate("11/09", "data", 2026), "2026-09-11");
+  assert.equal(normalizeAcademicDate("19/02/26", "data", 2026), "2026-02-19");
   assert.equal(normalizeAcademicDate("12/10/2027", "data", 2026), "2027-10-12");
   assert.throws(() => normalizeAcademicDate("31/02", "data", 2026), /data inexistente/);
   assert.deepEqual(
@@ -116,6 +117,21 @@ test("validadores rejeitam inteiros e datas inválidos", () => {
     { id: 2, data_inicio: "2026-09-11", data_fim: "2026-10-12" },
   );
   assert.deepEqual(allocationRange(2026, 2, 4), [4053, 4056]);
+});
+
+test("datas de uma grade em lote são normalizadas pelo ano letivo", () => {
+  const normalized = normalizeToolArguments(
+    "importar_grade_semestre",
+    {
+      ano_letivo: 2026,
+      itens: [{ periodos: [{ inicio: "19/02/26", fim: "07/03/26" }] }],
+    },
+    2030,
+  );
+  assert.deepEqual(normalized.itens[0].periodos[0], {
+    inicio: "2026-02-19",
+    fim: "2026-03-07",
+  });
 });
 
 test("agente executa consulta solicitada pelo modelo e devolve resposta final", async () => {

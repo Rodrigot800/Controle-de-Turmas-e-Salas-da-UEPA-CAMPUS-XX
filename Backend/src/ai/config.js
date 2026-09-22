@@ -12,7 +12,7 @@ function getConfig(env = process.env) {
     ollamaHost: (env.OLLAMA_HOST || DEFAULT_OLLAMA_HOST).replace(/\/$/, ""),
     model: env.OLLAMA_MODEL || "qwen2.5-coder:7b",
     temperature: Number(env.AI_TEMPERATURE || 0.1),
-    contextSize: Number(env.AI_CONTEXT_SIZE || 8192),
+    contextSize: Number(env.AI_CONTEXT_SIZE || 16384),
     maxToolRounds: Number(env.AI_MAX_TOOL_ROUNDS || 12),
     currentYear: Number(env.AI_CURRENT_YEAR || new Date().getFullYear()),
     allowWrites: toBoolean(env.AI_ALLOW_WRITES, true),

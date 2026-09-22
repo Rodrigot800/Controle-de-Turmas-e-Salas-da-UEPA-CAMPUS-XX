@@ -43,7 +43,8 @@ CREATE TABLE alocacoes (
 
 CREATE TABLE professores (
   id SERIAL PRIMARY KEY,
-  nome VARCHAR(100) NOT NULL
+  nome VARCHAR(100) NOT NULL,
+  lotacao VARCHAR(30)
 );
 
 CREATE TABLE professor_cursos (
@@ -60,6 +61,7 @@ CREATE TABLE professor_cursos (
 
 CREATE TABLE disciplinas (
   id SERIAL PRIMARY KEY,
+  codigo VARCHAR(30) UNIQUE,
   nome VARCHAR(100) NOT NULL,
   carga_horaria INTEGER NOT NULL
 );
@@ -79,10 +81,23 @@ CREATE TABLE curso_disciplinas (
     ON DELETE CASCADE 
 );
 
+CREATE TABLE importacoes_grade (
+  id SERIAL PRIMARY KEY,
+  turma_id INTEGER NOT NULL,
+  ano_letivo INTEGER NOT NULL,
+  semestre_letivo INTEGER NOT NULL CHECK (semestre_letivo IN (1, 2)),
+  periodo_turma INTEGER,
+  turno VARCHAR(20),
+  texto_origem TEXT,
+  payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+  criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  FOREIGN KEY (turma_id) REFERENCES turmas(id) ON DELETE RESTRICT
+);
+
 CREATE TABLE alocacoes_periodo (
   id SERIAL PRIMARY KEY,
 
-  sala_id INTEGER NOT NULL,
+  sala_id INTEGER,
   disciplina_id INTEGER,
   professor_id INTEGER,
   turma_id INTEGER NOT NULL,
@@ -96,6 +111,11 @@ CREATE TABLE alocacoes_periodo (
 
   dia_semana INTEGER, -- 1=Seg, 2=Ter... (usado se for SEMANAL)
   reoferta BOOLEAN DEFAULT false,
+  ano_letivo INTEGER,
+  semestre_letivo INTEGER,
+  periodos JSONB NOT NULL DEFAULT '[]'::jsonb,
+  observacao TEXT,
+  importacao_id INTEGER,
 
   FOREIGN KEY (sala_id)
     REFERENCES salas(id)
@@ -111,5 +131,9 @@ CREATE TABLE alocacoes_periodo (
 
   FOREIGN KEY (turma_id)
     REFERENCES turmas(id)
-    ON DELETE RESTRICT
+    ON DELETE RESTRICT,
+
+  FOREIGN KEY (importacao_id)
+    REFERENCES importacoes_grade(id)
+    ON DELETE SET NULL
 );

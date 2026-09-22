@@ -3,6 +3,7 @@ require("dotenv").config();
 const readline = require("node:readline/promises");
 const { stdin, stdout } = require("node:process");
 const pool = require("../db/pool");
+const { runMigrations } = require("../db/migrate");
 const { getConfig } = require("./config");
 const { OllamaClient } = require("./ollamaClient");
 const { AcademicAgent } = require("./agent");
@@ -13,6 +14,30 @@ const autoApprove = flags.has("--yes");
 
 function compactJson(value) {
   return JSON.stringify(value, null, 2);
+}
+
+function printWritePreview(name, args) {
+  if (name !== "importar_grade_semestre") {
+    console.log(compactJson(args));
+    return;
+  }
+  console.log(
+    `Semestre ${args.ano_letivo}.${args.semestre_letivo} | ` +
+    `turma #${args.turma_id} (${args.periodo_turma}º período) | ` +
+    `turno ${args.turno} | ${args.itens?.length || 0} disciplina(s)`,
+  );
+  for (const [index, item] of (args.itens || []).entries()) {
+    const periods = (item.periodos || [])
+      .map((period) => `${period.inicio}–${period.fim}`)
+      .join(", ");
+    console.log(
+      `${index + 1}. ${item.codigo} — ${item.disciplina} (${item.carga_horaria}h)\n` +
+      `   Docente: ${item.docente || "PENDENTE"}` +
+      `${item.lotacao_docente ? ` [${item.lotacao_docente}]` : ""} | ` +
+      `Sala: ${item.sala_id || args.sala_id || "PENDENTE"} | ${item.tipo_disciplina}\n` +
+      `   Períodos: ${periods}${item.observacao ? ` | ${item.observacao}` : ""}`,
+    );
+  }
 }
 
 async function checkDependencies(ollama) {
@@ -41,6 +66,7 @@ async function checkDependencies(ollama) {
 }
 
 async function main() {
+  await runMigrations(pool);
   const ollama = new OllamaClient({
     host: config.ollamaHost,
     model: config.model,
@@ -65,7 +91,7 @@ async function main() {
     confirmWrite: async ({ name, args, references }) => {
       const action = name.startsWith("atualizar_") ? "Alteração" : "Inserção";
       console.log(`\n${action} proposta: ${name}`);
-      console.log(compactJson(args));
+      printWritePreview(name, args);
       if (references.length > 0) {
         console.log("Referências verificadas no backend:");
         for (const reference of references) {

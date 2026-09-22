@@ -6,6 +6,8 @@ O modelo **não recebe acesso a SQL livre**. Consultas, relatórios, inserções
 
 Datas em formato brasileiro são tratadas deterministicamente: `11/09` significa 11 de setembro e, sem ano explícito, usa o ano corrente (2026 neste momento). Pedidos de correção usam atualização do registro existente, sem criar uma segunda alocação.
 
+Grades completas copiadas de PDF, Word ou planilhas também podem ser importadas. O agente organiza códigos, disciplinas, cargas horárias, docentes, lotações, intervalos e observações; apresenta uma prévia legível; e grava todo o lote em uma transação. Disciplinas e docentes ausentes são criados e vinculados ao curso da turma. Sala e docente podem permanecer pendentes quando não constarem da fonte. O texto original é preservado para auditoria.
+
 ## Pré-requisitos
 
 No host, inicie o Ollama e confirme o modelo:
@@ -50,6 +52,7 @@ Cadastre a sala Lab 4, capacidade 35, piso térreo, tipo laboratório.
 Crie o curso Ciência de Dados com 40 vagas, 8 semestres e as disciplinas Estatística (60h, 1º semestre) e Python (80h, 1º semestre).
 Corrija a alocação ID 2: o período correto é de 11/09 a 12/10 deste ano.
 Altere a capacidade da sala 6 para 45 pessoas.
+Importe a grade abaixo para a turma BES 2026, semestre 2026.1. Organize os dados, mostre as ambiguidades e peça confirmação antes de inserir: [cole a tabela].
 ```
 
 Comandos da conversa:
@@ -66,7 +69,7 @@ Variáveis opcionais:
 - `OLLAMA_MODEL`: padrão `qwen2.5-coder:7b`;
 - `AI_ALLOW_WRITES=false`: desativa todas as inserções;
 - `AI_TEMPERATURE`: padrão `0.1`;
-- `AI_CONTEXT_SIZE`: padrão `8192`;
+- `AI_CONTEXT_SIZE`: padrão `16384`;
 - `AI_MAX_TOOL_ROUNDS`: padrão `12`.
 - `AI_CURRENT_YEAR`: substitui o ano corrente usado para datas sem ano;
 

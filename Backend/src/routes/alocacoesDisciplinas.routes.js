@@ -19,19 +19,26 @@ router.get("/", async (req, res) => {
           ad.data_inicio, 
           ad.data_fim, 
           ad.reoferta,
+          ad.ano_letivo,
+          ad.semestre_letivo,
+          ad.periodos,
+          ad.observacao,
+          ad.importacao_id,
           COALESCE(cd.disciplina_optativa, false) as optativa,
           t.nome as turma_nome,
           t.ano_inicio as ano_inicio,
           t.turno as turno_turma,
           d.nome as disciplina_nome,
+          d.codigo as disciplina_codigo,
           p.nome as professor_nome,
+          p.lotacao as professor_lotacao,
           s.nome as sala_nome
         FROM alocacoes_periodo ad
         JOIN turmas t ON ad.turma_id = t.id
         LEFT JOIN disciplinas d ON ad.disciplina_id = d.id
         LEFT JOIN curso_disciplinas cd ON ad.disciplina_id = cd.disciplina_id AND t.curso_id = cd.curso_id
         LEFT JOIN professores p ON ad.professor_id = p.id
-        JOIN salas s ON ad.sala_id = s.id
+        LEFT JOIN salas s ON ad.sala_id = s.id
         ORDER BY ad.id
       ) AS sub
       ORDER BY sala_nome, dia_semana
@@ -47,8 +54,8 @@ router.get("/", async (req, res) => {
 router.post("/", async (req, res) => {
   const { turma_id, disciplina_id, professor_id, sala_id, turno, tipo_disciplina, dia_semana, data_inicio, data_fim, reoferta } = req.body;
 
-  if (!turma_id || !sala_id || !tipo_disciplina) {
-    return res.status(400).json({ erro: "Campos turma, sala e tipo_disciplina são obrigatórios" });
+  if (!turma_id || !tipo_disciplina) {
+    return res.status(400).json({ erro: "Campos turma e tipo_disciplina são obrigatórios" });
   }
 
   try {
@@ -72,8 +79,8 @@ router.put("/:id", async (req, res) => {
   const { id } = req.params;
   const { turma_id, disciplina_id, professor_id, sala_id, turno, tipo_disciplina, dia_semana, data_inicio, data_fim, reoferta } = req.body;
 
-  if (!turma_id || !sala_id || !tipo_disciplina) {
-    return res.status(400).json({ erro: "Campos turma, sala e tipo_disciplina são obrigatórios" });
+  if (!turma_id || !tipo_disciplina) {
+    return res.status(400).json({ erro: "Campos turma e tipo_disciplina são obrigatórios" });
   }
 
   try {

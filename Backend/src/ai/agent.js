@@ -75,6 +75,14 @@ function collectToolReferences(name, args) {
       for (const id of args.dados?.cursos_ids || []) add("cursos", id, "dados.cursos_ids");
     }
   }
+  if (name === "importar_grade_semestre") {
+    add("turmas", args.turma_id, "turma_id");
+    add("cursos", args.nova_turma?.curso_id, "nova_turma.curso_id");
+    add("salas", args.sala_id, "sala_id");
+    for (const [index, item] of (args.itens || []).entries()) {
+      add("salas", item.sala_id, `itens[${index}].sala_id`);
+    }
+  }
   return references.filter((reference) => reference.entity && Number.isInteger(reference.id));
 }
 
@@ -85,6 +93,26 @@ function normalizeText(value) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
+}
+
+function isBulkGradeRequest(value) {
+  const text = String(value || "");
+  const codes = text.match(/\b[A-ZÀ-Ú]{3,6}\d{3,5}\b/g) || [];
+  return /semestre\s*[:\-]?\s*\d{4}[.]\d/i.test(text) &&
+    /(c[oó]digo|c[oó]d[.]?\s*disc|\bCH\b)/i.test(text) &&
+    codes.length >= 2;
+}
+
+function gradeRoutingContext() {
+  return `[ROTEAMENTO OBRIGATÓRIO — IMPORTAÇÃO DE GRADE]
+Este texto é uma grade semestral em lote, não uma consulta sobre uma disciplina.
+- O título antes do semestre (por exemplo, "Engenharia de Software") é o CURSO. Nunca o procure em disciplinas.
+- "Turma: 1º período" indica o período acadêmico da turma, não o nome de uma disciplina.
+- Cada linha iniciada por código (por exemplo, DMEI1024) é uma disciplina da grade.
+- Primeiro consulte cursos pelo título, turmas pelo curso/ano/semestre/turno e salas pelo número.
+- Se o curso existir mas a turma de ingresso do semestre informado não existir, use nova_turma dentro de importar_grade_semestre; inspecione as turmas anteriores do curso para manter o padrão de nome.
+- Use uma única chamada importar_grade_semestre para a turma e todo o lote.
+- Não procure o título do curso na entidade disciplinas.`;
 }
 
 function extractContentToolCalls(content) {
@@ -202,6 +230,9 @@ class AcademicAgent {
     const fn = toolCall.function || {};
     const name = fn.name;
     const args = parseToolArguments(fn.arguments);
+    if (name === "importar_grade_semestre" && this.lastUserText) {
+      args.texto_origem = this.lastUserText;
+    }
     const isWrite = WRITE_TOOLS.has(name);
     this.onEvent({ type: "tool_start", name, args, isWrite });
 
@@ -258,7 +289,11 @@ class AcademicAgent {
   async ask(userText) {
     const content = String(userText || "").trim();
     if (!content) return "Digite uma pergunta ou solicitação.";
-    this.messages.push({ role: "user", content });
+    this.lastUserText = content;
+    const routedContent = isBulkGradeRequest(content)
+      ? `${gradeRoutingContext()}\n\n[TEXTO ORIGINAL DO USUÁRIO]\n${content}`
+      : content;
+    this.messages.push({ role: "user", content: routedContent });
 
     for (let round = 0; round < this.maxToolRounds; round += 1) {
       const response = await this.ollama.chat(this.messages, toolDefinitions);
@@ -304,4 +339,5 @@ module.exports = {
   missingRequiredArguments,
   collectToolReferences,
   normalizeText,
+  isBulkGradeRequest,
 };
