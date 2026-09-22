@@ -239,6 +239,43 @@ function parseStructuredGrade(value) {
   return { intent, items };
 }
 
+function parseStructuredAllocation(value) {
+  const text = String(value || "").trim();
+  const normalized = normalizeText(text);
+  if (!/\b(aloque|alocar|alocacao)\b/.test(normalized)) return null;
+
+  const discipline = text.match(
+    /\bdisciplina\s+(.+?)(?=,\s*(?:com\s+carga|carga\s+hor[aá]ria|ministrad[ao]|com\s+(?:o\s+|a\s+)?professor|no\s+per[ií]odo|em\s+formato|na\s+sala|para\s+a\s+turma)|$)/i,
+  );
+  const workload = text.match(/carga\s+hor[aá]ria\s+(?:de\s+)?(\d+)\s*h\b/i);
+  const teacher = text.match(
+    /(?:ministrad[ao]\s+(?:pelo|pela)|com)\s+(?:o\s+|a\s+)?professor(?:a)?\s+(.+?)(?=,\s*(?:no\s+per[ií]odo|em\s+formato|na\s+sala|para\s+a\s+turma)|$)/i,
+  );
+  const dates = text.match(
+    /per[ií]odo\s+de\s+(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\s+a\s+(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)/i,
+  );
+  const type = text.match(/(?:formato\s+)?\b(modular|semanal)\b/i);
+  const room = text.match(/\bsala\s+0*(\d+)\b/i);
+  const classWithYear = text.match(/\bturma\s+(.+?)\s+(20\d{2})(?=\s*[.,;!?]|\s*$)/i);
+  const shift = text.match(/(?:turno|parte\s+da)\s+(manh[aã]|tarde|noite)/i);
+
+  if (!discipline || !workload || !teacher || !dates || !type || !room || !classWithYear) {
+    return null;
+  }
+  return {
+    disciplina: discipline[1].trim(),
+    cargaHoraria: Number(workload[1]),
+    docente: teacher[1].trim(),
+    dataInicio: dates[1],
+    dataFim: dates[2],
+    tipoDisciplina: type[1].toUpperCase(),
+    salaNumero: Number(room[1]),
+    turmaNome: classWithYear[1].trim(),
+    turmaAno: Number(classWithYear[2]),
+    turno: shift?.[1] || null,
+  };
+}
+
 function extractContentToolCalls(content) {
   const raw = String(content || "").trim();
   if (!raw) return [];
@@ -605,6 +642,129 @@ class AcademicAgent {
       `ID da importação: ${data.importacao_id}.`;
   }
 
+  async tryStructuredAllocation(content) {
+    const intent = parseStructuredAllocation(content);
+    if (!intent) return null;
+
+    const read = async (args) => {
+      this.onEvent({ type: "tool_start", name: "consultar_dados", args, isWrite: false });
+      const result = await executeTool(
+        "consultar_dados",
+        args,
+        this.db,
+        { currentYear: this.currentYear },
+      );
+      this.rememberRecords(result);
+      this.onEvent({ type: "tool_end", name: "consultar_dados", ok: true, data: result });
+      return result;
+    };
+
+    const subjects = await read({ entidade: "disciplinas", busca: intent.disciplina, limite: 20 });
+    const exactSubjects = subjects.registros.filter(
+      (item) => normalizeText(item.nome) === normalizeText(intent.disciplina),
+    );
+    if (exactSubjects.length !== 1) {
+      return exactSubjects.length === 0
+        ? `Não encontrei a disciplina '${intent.disciplina}'. Cadastre-a antes de fazer a alocação.`
+        : `Encontrei mais de uma disciplina chamada '${intent.disciplina}'. Informe o ID correto.`;
+    }
+    const subject = exactSubjects[0];
+    if (Number(subject.carga_horaria) !== intent.cargaHoraria) {
+      return `A disciplina '${subject.nome}' está cadastrada com ${subject.carga_horaria}h, ` +
+        `mas o pedido informa ${intent.cargaHoraria}h. Corrija a carga ou atualize o cadastro antes da alocação.`;
+    }
+
+    const teachers = await read({ entidade: "professores", busca: intent.docente, limite: 20 });
+    const exactTeachers = teachers.registros.filter(
+      (item) => normalizeText(item.nome) === normalizeText(intent.docente),
+    );
+    if (exactTeachers.length !== 1) {
+      return exactTeachers.length === 0
+        ? `Não encontrei o professor '${intent.docente}'. Cadastre-o antes de fazer a alocação.`
+        : `Encontrei mais de um professor chamado '${intent.docente}'. Informe o ID correto.`;
+    }
+    const teacher = exactTeachers[0];
+
+    const rooms = await read({ entidade: "salas", busca: `Sala ${intent.salaNumero}`, limite: 20 });
+    const exactRooms = rooms.registros.filter(
+      (item) => Number(item.nome?.match(/\d+/)?.[0]) === intent.salaNumero,
+    );
+    if (exactRooms.length !== 1) {
+      return `Não consegui identificar de forma única a Sala ${intent.salaNumero}. Informe o ID da sala.`;
+    }
+    const room = exactRooms[0];
+
+    const directClasses = await read({
+      entidade: "turmas",
+      busca: intent.turmaNome,
+      ano: intent.turmaAno,
+      limite: 100,
+    });
+    let matchingClasses = directClasses.registros.filter(
+      (item) => normalizeText(item.nome) === normalizeText(intent.turmaNome) &&
+        Number(item.ano_inicio) === intent.turmaAno,
+    );
+
+    if (matchingClasses.length === 0) {
+      const historicalClasses = await read({
+        entidade: "turmas",
+        busca: intent.turmaNome,
+        limite: 100,
+      });
+      const courseIds = new Set(
+        historicalClasses.registros
+          .filter((item) => normalizeText(item.nome) === normalizeText(intent.turmaNome))
+          .map((item) => Number(item.curso_id)),
+      );
+      if (courseIds.size === 1) {
+        const courseClasses = await read({
+          entidade: "turmas",
+          curso_id: [...courseIds][0],
+          ano: intent.turmaAno,
+          limite: 100,
+        });
+        matchingClasses = courseClasses.registros;
+      }
+    }
+
+    if (matchingClasses.length !== 1) {
+      if (matchingClasses.length === 0) {
+        return `Não encontrei uma turma que corresponda a '${intent.turmaNome} ${intent.turmaAno}'.`;
+      }
+      const options = matchingClasses
+        .map((item) => `ID ${item.id}: ${item.nome}, ${item.ano_inicio}.${item.semestre_inicio}, ${item.turno}`)
+        .join("; ");
+      return `Encontrei mais de uma turma compatível com '${intent.turmaNome} ${intent.turmaAno}': ${options}. Informe o ID correto.`;
+    }
+    const academicClass = matchingClasses[0];
+    if (intent.turno && normalizeText(academicClass.turno) !== normalizeText(intent.turno)) {
+      return `A turma selecionada está cadastrada no turno ${academicClass.turno}, ` +
+        `mas o pedido informa ${intent.turno}. Informe qual turno deve ser usado.`;
+    }
+
+    const result = await this.executeToolCall({
+      function: {
+        name: "cadastrar_alocacao_periodo",
+        arguments: {
+          turma_id: academicClass.id,
+          disciplina_id: subject.id,
+          professor_id: teacher.id,
+          sala_id: room.id,
+          turno: intent.turno || academicClass.turno,
+          tipo_disciplina: intent.tipoDisciplina,
+          data_inicio: intent.dataInicio,
+          data_fim: intent.dataFim,
+        },
+      },
+    });
+    if (result.cancelado) return "Alocação cancelada. Nenhum dado foi inserido.";
+    if (!result.ok) return `Não foi possível cadastrar a alocação: ${result.error}`;
+    return `Alocação cadastrada com sucesso. ID: ${result.data.id}. ` +
+      `${subject.nome} (${subject.carga_horaria}h), professor ${teacher.nome}, ` +
+      `${room.nome}, turma ${academicClass.nome} ${academicClass.ano_inicio}, ` +
+      `de ${intent.dataInicio} a ${intent.dataFim}, em formato ${intent.tipoDisciplina}.`;
+  }
+
   async executeToolCall(toolCall) {
     const fn = toolCall.function || {};
     const name = fn.name;
@@ -741,6 +901,12 @@ class AcademicAgent {
       }
     }
 
+    const structuredAllocation = await this.tryStructuredAllocation(content);
+    if (structuredAllocation !== null) {
+      this.messages.push({ role: "assistant", content: structuredAllocation });
+      return structuredAllocation;
+    }
+
     for (let round = 0; round < this.maxToolRounds; round += 1) {
       const response = await this.ollama.chat(this.messages, toolDefinitions);
       const message = response.message;
@@ -790,4 +956,5 @@ module.exports = {
   schemaValidationErrors,
   parseBulkGradeIntent,
   parseStructuredGrade,
+  parseStructuredAllocation,
 };
