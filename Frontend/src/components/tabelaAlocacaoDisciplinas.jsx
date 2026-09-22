@@ -162,10 +162,8 @@ export default function TabelaAlocacaoDisciplinas({ salas, turmas = [], cursos =
       }
       
       if (!mapaSalas[salaId].mapaTurmas[turmaId]) {
-        const turmaObj = turmas.find(t => String(t.id) === String(aloc.turma_id));
         mapaSalas[salaId].mapaTurmas[turmaId] = {
           turmaNome: aloc.turma_nome || "Turma Desconhecida",
-          ano_inicio: turmaObj?.ano_inicio ?? aloc.ano_inicio ?? "",
           alocacoes: []
         };
       }
@@ -393,7 +391,7 @@ export default function TabelaAlocacaoDisciplinas({ salas, turmas = [], cursos =
                                 rowSpan={turma.alocacoes.length} 
                                 className={`cell-agrupada cell-turma ${turma === sala.turmas[sala.turmas.length - 1] ? 'ultimo-turma-da-sala' : ''}`}
                               >
-                                {turma.turmaNome}{turma.ano_inicio ? ` ${turma.ano_inicio}` : ""}
+                                {turma.turmaNome}
                               </td>
                             )}
                             
