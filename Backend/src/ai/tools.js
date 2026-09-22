@@ -281,6 +281,18 @@ const toolDefinitions = [
         type: "object",
         properties: {
           turma_id: { type: "integer", minimum: 1 },
+          nova_turma: {
+            type: "object",
+            description: "Use somente quando a turma do semestre ainda não existir; ela será criada na mesma transação da grade.",
+            properties: {
+              nome: { type: "string", description: "Nome conforme o padrão das turmas anteriores do curso, por exemplo BES." },
+              curso_id: { type: "integer", minimum: 1 },
+              semestre_inicio: { type: "integer", minimum: 1, maximum: 2 },
+              ano_inicio: { type: "integer", minimum: 2000, maximum: 2200 },
+              turno: { type: "string" },
+            },
+            required: ["nome", "curso_id", "semestre_inicio", "ano_inicio", "turno"],
+          },
           sala_id: { type: "integer", minimum: 1 },
           turno: { type: "string" },
           tipo_alocacao: { type: "string", enum: ["temporario", "definitivo"] },
@@ -440,7 +452,7 @@ const toolDefinitions = [
             items: {
               type: "object",
               properties: {
-                codigo: { type: "string", description: "Código como DMEI1024." },
+                codigo: { type: "string", description: "Código como DMEI1024. Opcional quando a fonte não o informar; nunca invente um código." },
                 disciplina: { type: "string" },
                 carga_horaria: { type: "integer", minimum: 1 },
                 docente: { type: "string", description: "Nome completo; omita se não estiver identificado." },
@@ -463,11 +475,11 @@ const toolDefinitions = [
                 observacao: { type: "string", description: "Ex.: TERÇAS – 20H EAD; considerar sábados." },
                 reoferta: { type: "boolean" },
               },
-              required: ["codigo", "disciplina", "carga_horaria", "tipo_disciplina", "periodos"],
+              required: ["disciplina", "carga_horaria", "tipo_disciplina", "periodos"],
             },
           },
         },
-        required: ["turma_id", "ano_letivo", "semestre_letivo", "periodo_turma", "turno", "texto_origem", "itens"],
+        required: ["ano_letivo", "semestre_letivo", "periodo_turma", "turno", "texto_origem", "itens"],
       },
     },
   },
@@ -555,7 +567,17 @@ async function consultarDados(args, db = pool) {
   const conditions = [];
   if (args.busca) {
     values.push(`%${String(args.busca).trim()}%`);
-    conditions.push(`(${config.search.map((column) => `${column} ILIKE $${values.length}`).join(" OR ")})`);
+    const searchClauses = config.search.map((column) => `${column} ILIKE $${values.length}`);
+    if (args.entidade === "salas") {
+      const roomNumber = String(args.busca).match(/\d+/)?.[0];
+      if (roomNumber) {
+        values.push(Number(roomNumber));
+        searchClauses.push(
+          `NULLIF(REGEXP_REPLACE(s.nome, '\\D', '', 'g'), '')::integer = $${values.length}`,
+        );
+      }
+    }
+    conditions.push(`(${searchClauses.join(" OR ")})`);
   }
 
   for (const [filter, column] of Object.entries(config.filters)) {
@@ -1063,12 +1085,28 @@ async function atualizarCadastro(args, db = pool) {
 }
 
 async function importarGradeSemestre(args, db = pool) {
-  const turmaId = positiveInteger(args.turma_id, "turma_id");
+  let turmaId = args.turma_id == null ? null : positiveInteger(args.turma_id, "turma_id");
   const anoLetivo = positiveInteger(args.ano_letivo, "ano_letivo", { min: 2000, max: 2200 });
   const semestreLetivo = positiveInteger(args.semestre_letivo, "semestre_letivo", { min: 1, max: 2 });
   const periodoTurma = positiveInteger(args.periodo_turma, "periodo_turma");
   const turno = requiredText(args.turno, "turno");
   const textoOrigem = requiredText(args.texto_origem, "texto_origem");
+  let newClass = null;
+  if (!turmaId) {
+    if (!args.nova_turma || typeof args.nova_turma !== "object") {
+      throw new ToolError("Informe turma_id ou nova_turma para importar a grade.");
+    }
+    newClass = {
+      nome: requiredText(args.nova_turma.nome, "nova_turma.nome"),
+      cursoId: positiveInteger(args.nova_turma.curso_id, "nova_turma.curso_id"),
+      semestre: positiveInteger(args.nova_turma.semestre_inicio, "nova_turma.semestre_inicio", { min: 1, max: 2 }),
+      ano: positiveInteger(args.nova_turma.ano_inicio, "nova_turma.ano_inicio", { min: 2000, max: 2200 }),
+      turno: requiredText(args.nova_turma.turno, "nova_turma.turno"),
+    };
+    if (newClass.ano !== anoLetivo || newClass.semestre !== semestreLetivo) {
+      throw new ToolError("O início da nova turma deve coincidir com o semestre letivo da grade.");
+    }
+  }
   if (!Array.isArray(args.itens) || args.itens.length === 0) {
     throw new ToolError("A grade deve conter pelo menos uma disciplina.");
   }
@@ -1092,7 +1130,9 @@ async function importarGradeSemestre(args, db = pool) {
       return { inicio: start, fim: end };
     });
     return {
-      codigo: requiredText(item.codigo, `${prefix}.codigo`).toUpperCase().replace(/\s+/g, ""),
+      codigo: item.codigo
+        ? requiredText(item.codigo, `${prefix}.codigo`).toUpperCase().replace(/\s+/g, "")
+        : null,
       disciplina: requiredText(item.disciplina, `${prefix}.disciplina`),
       cargaHoraria: positiveInteger(item.carga_horaria, `${prefix}.carga_horaria`),
       docente: item.docente ? requiredText(item.docente, `${prefix}.docente`) : null,
@@ -1110,18 +1150,53 @@ async function importarGradeSemestre(args, db = pool) {
     };
   });
 
-  const uniqueCodes = new Set(items.map((item) => item.codigo));
-  if (uniqueCodes.size !== items.length) throw new ToolError("Há códigos de disciplina repetidos no mesmo lote.");
+  const informedCodes = items.map((item) => item.codigo).filter(Boolean);
+  const uniqueCodes = new Set(informedCodes);
+  if (uniqueCodes.size !== informedCodes.length) {
+    throw new ToolError("Há códigos de disciplina repetidos no mesmo lote.");
+  }
 
   return withTransaction(async (client) => {
-    const classResult = await client.query(
-      `SELECT t.id, t.nome, t.curso_id, c.nome AS curso_nome
-       FROM turmas t JOIN cursos c ON c.id = t.curso_id
-       WHERE t.id = $1 FOR UPDATE`,
-      [turmaId],
-    );
-    if (classResult.rowCount === 0) throw new ToolError(`Turma com ID ${turmaId} não encontrada.`);
-    const turma = classResult.rows[0];
+    let turma;
+    let classCreated = false;
+    if (turmaId) {
+      const classResult = await client.query(
+        `SELECT t.id, t.nome, t.curso_id, c.nome AS curso_nome
+         FROM turmas t JOIN cursos c ON c.id = t.curso_id
+         WHERE t.id = $1 FOR UPDATE`,
+        [turmaId],
+      );
+      if (classResult.rowCount === 0) throw new ToolError(`Turma com ID ${turmaId} não encontrada.`);
+      turma = classResult.rows[0];
+    } else {
+      const courseResult = await client.query(
+        "SELECT id, nome FROM cursos WHERE id = $1 FOR UPDATE",
+        [newClass.cursoId],
+      );
+      if (courseResult.rowCount === 0) throw new ToolError(`Curso com ID ${newClass.cursoId} não encontrado.`);
+      const duplicateClass = await client.query(
+        `SELECT t.id, t.nome, t.curso_id, c.nome AS curso_nome
+         FROM turmas t JOIN cursos c ON c.id = t.curso_id
+         WHERE t.curso_id = $1 AND t.ano_inicio = $2 AND t.semestre_inicio = $3
+           AND LOWER(t.turno) = LOWER($4) AND LOWER(t.nome) = LOWER($5)
+         FOR UPDATE`,
+        [newClass.cursoId, newClass.ano, newClass.semestre, newClass.turno, newClass.nome],
+      );
+      if (duplicateClass.rowCount > 0) {
+        turma = duplicateClass.rows[0];
+        turmaId = turma.id;
+      } else {
+        const insertedClass = await client.query(
+          `INSERT INTO turmas (nome, curso_id, semestre_inicio, ano_inicio, turno)
+           VALUES ($1, $2, $3, $4, $5)
+           RETURNING id, nome, curso_id`,
+          [newClass.nome, newClass.cursoId, newClass.semestre, newClass.ano, newClass.turno],
+        );
+        turma = { ...insertedClass.rows[0], curso_nome: courseResult.rows[0].nome };
+        turmaId = turma.id;
+        classCreated = true;
+      }
+    }
 
     const importResult = await client.query(
       `INSERT INTO importacoes_grade
@@ -1136,28 +1211,30 @@ async function importarGradeSemestre(args, db = pool) {
     for (const item of items) {
       const subjectResult = await client.query(
         `SELECT * FROM disciplinas
-         WHERE (codigo IS NOT NULL AND LOWER(codigo) = LOWER($1)) OR LOWER(nome) = LOWER($2)
+         WHERE ($1::text IS NOT NULL AND codigo IS NOT NULL AND LOWER(codigo) = LOWER($1))
+            OR LOWER(nome) = LOWER($2)
          FOR UPDATE`,
         [item.codigo, item.disciplina],
       );
       if (subjectResult.rowCount > 1) {
-        throw new ToolError(`O código/nome '${item.codigo} — ${item.disciplina}' corresponde a mais de uma disciplina.`);
+        const label = item.codigo ? `${item.codigo} — ${item.disciplina}` : item.disciplina;
+        throw new ToolError(`O código/nome '${label}' corresponde a mais de uma disciplina.`);
       }
       let subject = subjectResult.rows[0];
       let subjectCreated = false;
       if (subject) {
-        if (subject.codigo && subject.codigo.toLowerCase() !== item.codigo.toLowerCase()) {
+        if (item.codigo && subject.codigo && subject.codigo.toLowerCase() !== item.codigo.toLowerCase()) {
           throw new ToolError(`A disciplina '${item.disciplina}' já usa o código ${subject.codigo}, não ${item.codigo}.`);
         }
-        if (subject.nome.toLowerCase() !== item.disciplina.toLowerCase()) {
+        if (item.codigo && subject.nome.toLowerCase() !== item.disciplina.toLowerCase()) {
           throw new ToolError(`O código ${item.codigo} já pertence à disciplina '${subject.nome}'.`);
         }
         if (Number(subject.carga_horaria) !== item.cargaHoraria) {
           throw new ToolError(
-            `${item.codigo} já possui carga horária ${subject.carga_horaria}, diferente de ${item.cargaHoraria}.`,
+            `${item.codigo || item.disciplina} já possui carga horária ${subject.carga_horaria}, diferente de ${item.cargaHoraria}.`,
           );
         }
-        if (!subject.codigo) {
+        if (item.codigo && !subject.codigo) {
           const updated = await client.query(
             "UPDATE disciplinas SET codigo = $1 WHERE id = $2 RETURNING *",
             [item.codigo, subject.id],
@@ -1230,7 +1307,7 @@ async function importarGradeSemestre(args, db = pool) {
       );
       if (duplicate.rowCount > 0) {
         throw new ToolError(
-          `${item.codigo} já está na grade ${anoLetivo}.${semestreLetivo} desta turma (alocação ${duplicate.rows[0].id}).`,
+          `${item.codigo || item.disciplina} já está na grade ${anoLetivo}.${semestreLetivo} desta turma (alocação ${duplicate.rows[0].id}).`,
         );
       }
 
@@ -1265,6 +1342,7 @@ async function importarGradeSemestre(args, db = pool) {
     return {
       importacao_id: importId,
       turma,
+      turma_criada: classCreated,
       semestre: `${anoLetivo}.${semestreLetivo}`,
       total_importado: imported.length,
       itens: imported,

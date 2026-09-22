@@ -6,7 +6,9 @@ O modelo **não recebe acesso a SQL livre**. Consultas, relatórios, inserções
 
 Datas em formato brasileiro são tratadas deterministicamente: `11/09` significa 11 de setembro e, sem ano explícito, usa o ano corrente (2026 neste momento). Pedidos de correção usam atualização do registro existente, sem criar uma segunda alocação.
 
-Grades completas copiadas de PDF, Word ou planilhas também podem ser importadas. O agente organiza códigos, disciplinas, cargas horárias, docentes, lotações, intervalos e observações; apresenta uma prévia legível; e grava todo o lote em uma transação. Disciplinas e docentes ausentes são criados e vinculados ao curso da turma. Sala e docente podem permanecer pendentes quando não constarem da fonte. O texto original é preservado para auditoria.
+Grades completas copiadas de PDF, Word ou planilhas também podem ser importadas, inclusive com uma única disciplina. O agente organiza códigos, disciplinas, cargas horárias, docentes, lotações, intervalos e observações; apresenta uma prévia legível; e grava todo o lote em uma transação. O código da disciplina é opcional: quando não estiver na fonte, o agente procura pelo nome e não inventa um valor. Disciplinas e docentes ausentes são criados e vinculados ao curso da turma. Sala e docente podem permanecer pendentes quando não constarem da fonte. O texto original é preservado para auditoria.
+
+No formato `Engenharia de Software — 2026.1`, o cabeçalho é tratado como curso, nunca como disciplina. Se ainda não existir uma turma de ingresso para 2026.1, o agente pode propor a criação da nova turma junto com a grade na mesma transação.
 
 ## Pré-requisitos
 

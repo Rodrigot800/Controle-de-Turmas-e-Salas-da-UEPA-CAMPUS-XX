@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 require("dotenv").config();
-const readline = require("node:readline/promises");
+const readline = require("node:readline");
 const { stdin, stdout } = require("node:process");
 const pool = require("../db/pool");
 const { runMigrations } = require("../db/migrate");
@@ -12,6 +12,46 @@ const config = getConfig();
 const flags = new Set(process.argv.slice(2));
 const autoApprove = flags.has("--yes");
 
+function createTerminalInput(input, output) {
+  const rl = readline.createInterface({ input, output, terminal: true });
+  const queue = [];
+  const waiters = [];
+  let closed = false;
+
+  rl.on("line", (line) => {
+    const waiter = waiters.shift();
+    if (waiter) waiter(line);
+    else queue.push(line);
+  });
+  rl.on("close", () => {
+    closed = true;
+    while (waiters.length > 0) waiters.shift()(null);
+  });
+
+  async function next(prompt) {
+    output.write(prompt);
+    if (queue.length > 0) return queue.shift();
+    if (closed) return null;
+    return new Promise((resolve) => waiters.push(resolve));
+  }
+
+  async function collectPaste(prompt) {
+    const first = await next(prompt);
+    if (first === null) return null;
+    const lines = [first];
+    let previousSize = -1;
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 60));
+      if (queue.length === previousSize) break;
+      previousSize = queue.length;
+    }
+    while (queue.length > 0) lines.push(queue.shift());
+    return lines.join("\n");
+  }
+
+  return { next, collectPaste, close: () => rl.close() };
+}
+
 function compactJson(value) {
   return JSON.stringify(value, null, 2);
 }
@@ -21,9 +61,14 @@ function printWritePreview(name, args) {
     console.log(compactJson(args));
     return;
   }
+  const classLabel = args.turma_id
+    ? `turma #${args.turma_id}`
+    : `NOVA turma ${args.nova_turma?.nome || "?"} ` +
+      `(curso #${args.nova_turma?.curso_id || "?"}, ` +
+      `${args.nova_turma?.ano_inicio}.${args.nova_turma?.semestre_inicio})`;
   console.log(
     `Semestre ${args.ano_letivo}.${args.semestre_letivo} | ` +
-    `turma #${args.turma_id} (${args.periodo_turma}º período) | ` +
+    `${classLabel} (${args.periodo_turma}º período) | ` +
     `turno ${args.turno} | ${args.itens?.length || 0} disciplina(s)`,
   );
   for (const [index, item] of (args.itens || []).entries()) {
@@ -31,7 +76,7 @@ function printWritePreview(name, args) {
       .map((period) => `${period.inicio}–${period.fim}`)
       .join(", ");
     console.log(
-      `${index + 1}. ${item.codigo} — ${item.disciplina} (${item.carga_horaria}h)\n` +
+      `${index + 1}. ${item.codigo || "SEM CÓDIGO"} — ${item.disciplina} (${item.carga_horaria}h)\n` +
       `   Docente: ${item.docente || "PENDENTE"}` +
       `${item.lotacao_docente ? ` [${item.lotacao_docente}]` : ""} | ` +
       `Sala: ${item.sala_id || args.sala_id || "PENDENTE"} | ${item.tipo_disciplina}\n` +
@@ -81,7 +126,7 @@ async function main() {
     return;
   }
 
-  const rl = readline.createInterface({ input: stdin, output: stdout });
+  const terminal = createTerminalInput(stdin, stdout);
   const agent = new AcademicAgent({
     ollama,
     db: pool,
@@ -106,11 +151,17 @@ async function main() {
         console.log("Confirmada automaticamente por --yes.");
         return true;
       }
-      const answer = await rl.question(`Confirma esta ${action.toLowerCase()}? [s/N] `);
+      const answer = await terminal.next(`Confirma esta ${action.toLowerCase()}? [s/N] `);
+      if (answer === null) return false;
       return ["s", "sim", "y", "yes"].includes(answer.trim().toLowerCase());
     },
-    onEvent: ({ type, name, ok, isWrite, error }) => {
-      if (type === "tool_start" && !isWrite) console.log(`  ↳ consultando ${name}...`);
+    onEvent: ({ type, name, args, ok, isWrite, error }) => {
+      if (type === "tool_start" && !isWrite) {
+        const target = name === "consultar_dados"
+          ? ` ${args.entidade}${args.busca ? ` por "${args.busca}"` : ""}`
+          : "";
+        console.log(`  ↳ consultando ${name}${target}...`);
+      }
       if (type === "tool_end" && ok === false) console.log(`  ↳ operação não executada: ${error}`);
     },
   });
@@ -121,7 +172,8 @@ async function main() {
 
   try {
     while (true) {
-      const input = await rl.question("Você > ");
+      const input = await terminal.collectPaste("Você > ");
+      if (input === null) break;
       const command = input.trim().toLowerCase();
       if (!command) continue;
       if ([":sair", ":exit", ":q"].includes(command)) break;
@@ -149,7 +201,7 @@ async function main() {
       }
     }
   } finally {
-    rl.close();
+    terminal.close();
     await pool.end();
   }
 }

@@ -8,6 +8,11 @@ const {
   missingRequiredArguments,
   collectToolReferences,
   normalizeText,
+  isBulkGradeRequest,
+  routeToolArguments,
+  schemaValidationErrors,
+  parseBulkGradeIntent,
+  parseStructuredGrade,
 } = require("../src/ai/agent");
 const {
   positiveInteger,
@@ -79,6 +84,86 @@ test("referências de escrita são identificadas para impedir IDs inventados", (
 
 test("comparação de intenção ignora maiúsculas e acentos", () => {
   assert.equal(normalizeText("Inteligência Artificial"), "inteligencia artificial");
+});
+
+test("tabela semestral é roteada como importação de grade", () => {
+  assert.equal(
+    isBulkGradeRequest(
+      "Engenharia de Software — 2026.1\nCódigo Disciplina CH\nDMEI1024 Matemática 80\nDENG0769 Linguagens 80\nsemestre 2026.1",
+    ),
+    true,
+  );
+  assert.equal(isBulkGradeRequest("Quais disciplinas de Engenharia de Software?"), false);
+});
+
+test("busca errada do cabeçalho da grade é redirecionada para cursos", () => {
+  assert.deepEqual(
+    routeToolArguments(
+      "consultar_dados",
+      { entidade: "disciplinas", busca: "Engenharia de Software" },
+      true,
+    ),
+    { entidade: "cursos", busca: "Engenharia de Software" },
+  );
+});
+
+test("limites do esquema são validados antes da confirmação", () => {
+  assert.deepEqual(
+    schemaValidationErrors("cadastrar_turma", {
+      nome: "BES",
+      curso_id: 4,
+      semestre_inicio: 2026,
+      ano_inicio: 2026,
+      turno: "Tarde",
+    }),
+    ["argumentos.semestre_inicio deve ser no máximo 2"],
+  );
+});
+
+test("metadados do cabeçalho da grade são extraídos deterministicamente", () => {
+  const intent = parseBulkGradeIntent(
+    "Engenharia de Software — 2026.1\nTurma: 1º período · Turno: Tarde · Sala: 06\nCódigo Disciplina CH Docente\nDMEI1024 Matemática\nDENG0769 Linguagens",
+  );
+  assert.equal(intent.course, "Engenharia de Software");
+  assert.equal(intent.year, 2026);
+  assert.equal(intent.semester, 1);
+  assert.equal(intent.classPeriod, 1);
+  assert.equal(intent.shift, "Tarde");
+  assert.equal(intent.roomNumber, 6);
+  assert.deepEqual(intent.codes, ["DMEI1024", "DENG0769"]);
+});
+
+test("linhas estruturadas da grade são separadas sem depender do modelo", () => {
+  const parsed = parseStructuredGrade(
+    "Engenharia de Software — 2026.1\nTurma: 1º período · Turno: Tarde · Sala: 06\nCódigo Disciplina CH Docente Período\nDMEI1024 Matemática Discreta 80h Gustavo Nogueira Dias 19/02/26 a 07/03/26\nDENG0769 Linguagens Formais 80h Leno Rodrigues Martins 23/03/26 a 15/06/26",
+  );
+  assert.equal(parsed.items.length, 2);
+  assert.deepEqual(parsed.items[0], {
+    codigo: "DMEI1024",
+    disciplina: "Matemática Discreta",
+    carga_horaria: 80,
+    docente: "Gustavo Nogueira Dias",
+    tipo_disciplina: "PENDENTE",
+    periodos: [{ inicio: "19/02/26", fim: "07/03/26" }],
+  });
+});
+
+test("grade com uma disciplina e sem código preserva o código como ausente", () => {
+  const source =
+    "Engenharia de Software — 2026.1\n" +
+    "Turma: 1º período · Turno: Tarde · Sala: 06\n" +
+    "Disciplina\tCH\tDocente\tPeríodo\n" +
+    "Matemática Discreta\t80h\tGustavo Nogueira Dias\t19/02/26 a 07/03/26";
+  assert.equal(isBulkGradeRequest(source), true);
+  const parsed = parseStructuredGrade(source);
+  assert.equal(parsed.items.length, 1);
+  assert.deepEqual(parsed.items[0], {
+    disciplina: "Matemática Discreta",
+    carga_horaria: 80,
+    docente: "Gustavo Nogueira Dias",
+    tipo_disciplina: "PENDENTE",
+    periodos: [{ inicio: "19/02/26", fim: "07/03/26" }],
+  });
 });
 
 test("ID de disciplina com nome diferente do pedido é rejeitado", () => {
