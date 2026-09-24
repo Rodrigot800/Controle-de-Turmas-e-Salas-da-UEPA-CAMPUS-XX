@@ -447,6 +447,10 @@ const toolDefinitions = [
                 codigo: { type: "string", description: "Código como DMEI1024. Opcional quando a fonte não o informar; nunca invente um código." },
                 disciplina: { type: "string" },
                 carga_horaria: { type: "integer", minimum: 1 },
+                corrigir_carga_horaria: {
+                  type: "boolean",
+                  description: "Autoriza corrigir a carga da disciplina existente para a carga comprovada na fonte.",
+                },
                 docente: { type: "string", description: "Nome completo; omita se não estiver identificado." },
                 lotacao_docente: { type: "string", description: "Sigla como DSCI ou DLLT." },
                 tipo_disciplina: { type: "string", enum: ["MODULAR", "SEMANAL", "PENDENTE"] },
@@ -1324,6 +1328,7 @@ async function importarGradeSemestre(args, db = pool) {
         : null,
       disciplina: requiredText(item.disciplina, `${prefix}.disciplina`),
       cargaHoraria: positiveInteger(item.carga_horaria, `${prefix}.carga_horaria`),
+      corrigirCargaHoraria: item.corrigir_carga_horaria === true,
       docente: item.docente ? requiredText(item.docente, `${prefix}.docente`) : null,
       lotacao: item.lotacao_docente ? requiredText(item.lotacao_docente, `${prefix}.lotacao_docente`).toUpperCase() : null,
       tipo,
@@ -1410,6 +1415,7 @@ async function importarGradeSemestre(args, db = pool) {
       }
       let subject = subjectResult.rows[0];
       let subjectCreated = false;
+      let previousWorkload = null;
       if (subject) {
         if (item.codigo && subject.codigo && subject.codigo.toLowerCase() !== item.codigo.toLowerCase()) {
           throw new ToolError(`A disciplina '${item.disciplina}' já usa o código ${subject.codigo}, não ${item.codigo}.`);
@@ -1418,9 +1424,17 @@ async function importarGradeSemestre(args, db = pool) {
           throw new ToolError(`O código ${item.codigo} já pertence à disciplina '${subject.nome}'.`);
         }
         if (Number(subject.carga_horaria) !== item.cargaHoraria) {
-          throw new ToolError(
-            `${item.codigo || item.disciplina} já possui carga horária ${subject.carga_horaria}, diferente de ${item.cargaHoraria}.`,
+          if (!item.corrigirCargaHoraria) {
+            throw new ToolError(
+              `${item.codigo || item.disciplina} já possui carga horária ${subject.carga_horaria}, diferente de ${item.cargaHoraria}.`,
+            );
+          }
+          previousWorkload = Number(subject.carga_horaria);
+          const updated = await client.query(
+            "UPDATE disciplinas SET carga_horaria = $1 WHERE id = $2 RETURNING *",
+            [item.cargaHoraria, subject.id],
           );
+          subject = updated.rows[0];
         }
         if (item.codigo && !subject.codigo) {
           const updated = await client.query(
@@ -1518,6 +1532,9 @@ async function importarGradeSemestre(args, db = pool) {
         disciplina_id: subject.id,
         disciplina: subject.nome,
         disciplina_criada: subjectCreated,
+        carga_horaria: item.cargaHoraria,
+        carga_horaria_atualizada: previousWorkload !== null,
+        ...(previousWorkload !== null ? { carga_horaria_anterior: previousWorkload } : {}),
         professor_id: professor?.id || null,
         docente: professor?.nome || null,
         professor_criado: professorCreated,

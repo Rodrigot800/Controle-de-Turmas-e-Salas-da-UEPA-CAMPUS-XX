@@ -8,9 +8,27 @@ Datas em formato brasileiro são tratadas deterministicamente: `11/09` significa
 
 Grades completas copiadas de PDF, Word ou planilhas também podem ser importadas, inclusive com uma única disciplina. O agente organiza códigos, disciplinas, cargas horárias, docentes, lotações, intervalos e observações; apresenta uma prévia legível; e grava todo o lote em uma transação. O código da disciplina é opcional: quando não estiver na fonte, o agente procura pelo nome e não inventa um valor. Disciplinas e docentes ausentes são criados e vinculados ao curso da turma. Sala e docente podem permanecer pendentes quando não constarem da fonte. O texto original é preservado para auditoria.
 
+Para importar por colagem, não é necessário usar um comando especial. O bloco deve começar com os cinco campos de contexto abaixo e, em seguida, pode receber a tabela ou o texto copiado. A sala é obrigatória nesse fluxo porque ela será conferida quanto a cadastro, capacidade e conflitos:
+
+```text
+CURSO: Engenharia de Software
+SEMESTRE: 1
+TURMA: BES
+TURNO: TARDE
+SALA: 06
+
+[cole aqui as disciplinas]
+```
+
+`SEMESTRE` aceita `1`, `1a`, `1ª`, `2`, `2a`, `2ª` ou a forma completa `2026.1`. Quando o ano for omitido, o agente usa o ano corrente configurado (`2026`). `TURMA` aceita tanto o período (`1º PERÍODO`) quanto o nome (`BES`, `BES 26` ou `BES 2026`). No exemplo acima, `BES` no semestre 1 de 2026 é relacionado à turma iniciada em 2026, cujo nome cadastrado esperado é `BES 26`. O curso continua obrigatório para evitar que uma sigla de turma seja associada ao curso errado.
+
+Quando as colunas copiadas vierem grudadas, o agente separa códigos, cargas e datas antes da extração. Ele também confere se todos os códigos e todas as datas da fonte foram usados exatamente uma vez. Uma associação que continuar ambígua é bloqueada e exibida como pendência; ela nunca é gravada por aproximação. Para resolver uma pendência, coloque cada disciplina em uma linha no formato `CÓDIGO | DISCIPLINA | CH | DOCENTE | DATA INICIAL | DATA FINAL` e cole novamente.
+
 O comando `:pdf` aceita planejamentos com diagramações diferentes, desde que tragam as mesmas informações acadêmicas. Primeiro ele tenta reconhecer cabeçalhos e colunas dinamicamente. Quando o layout não é reconhecido, usa o Ollama como extrator estruturado, página por página. Valores extraídos pela IA precisam ter evidência no texto da página e, depois disso, ainda passam pelo mesmo cruzamento de curso, turma, disciplina, professor, carga horária, datas e sala. O parâmetro `--usar-ia` permite forçar esse segundo extrator para testar um novo layout.
 
 A regra operacional é aplicada pelo intervalo completo: até um mês é `MODULAR`; acima de um mês é exibido como `REGULAR` e armazenado como `SEMANAL`, que é o valor existente no banco. Linhas incompletas, divergências de carga/código, docentes ambíguos, salas ausentes e conflitos de sala são mostrados antes da gravação. O lote de todas as turmas é atômico: se uma delas falhar, nenhuma é gravada.
+
+Quando o código ou o nome identificarem uma única disciplina existente e a carga horária da fonte for diferente, a prévia mostra a correção, por exemplo `80h → 60h`. A confirmação do lote autoriza atualizar a carga da disciplina e inserir as alocações na mesma transação. Se a identificação da disciplina for ambígua, a alteração continua bloqueada.
 
 No formato `Engenharia de Software — 2026.1`, o cabeçalho é tratado como curso, nunca como disciplina. Se ainda não existir uma turma de ingresso para 2026.1, o agente pode propor a criação da nova turma junto com a grade na mesma transação.
 

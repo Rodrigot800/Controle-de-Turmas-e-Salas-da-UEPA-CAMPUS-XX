@@ -153,12 +153,70 @@ function normalizeText(value) {
     .trim();
 }
 
-function isBulkGradeRequest(value) {
+function parseSemesterMetadata(value, currentYear = new Date().getFullYear()) {
   const text = String(value || "");
-  const codes = text.match(/\b[A-ZÀ-Ú]{3,6}\d{3,5}\b/g) || [];
-  const hasSemester = /semestre\s*[:\-]?\s*\d{4}[.][12]/i.test(text) ||
-    /[—-]\s*\d{4}[.][12]\s*$/m.test(text);
-  const hasBasicHeader = /\bdisciplina\b/i.test(text) && /\bCH\b/i.test(text);
+  const heading = text.match(/^\s*(.+?)\s*[—-]\s*(\d{4})[.](1|2)\s*$/m);
+  if (heading) {
+    return {
+      courseHeading: heading[1].trim(),
+      year: Number(heading[2]),
+      semester: Number(heading[3]),
+    };
+  }
+  const field = text.match(
+    /^\s*SEMESTR[A-ZÀ-Ú]*(?:\s+LETIVO)?\s*:?\s*([^\n]+?)\s*$/im,
+  );
+  if (!field) return { courseHeading: null, year: null, semester: null };
+  const raw = field[1].trim();
+  const complete = raw.match(/^(\d{4})\s*[.\/-]\s*([12])$/);
+  if (complete) {
+    return {
+      courseHeading: null,
+      year: Number(complete[1]),
+      semester: Number(complete[2]),
+    };
+  }
+  const short = raw.match(/^([12])\s*(?:[AªºO])?(?:\s*SEMESTRE)?$/i);
+  if (short) {
+    return {
+      courseHeading: null,
+      year: Number(currentYear),
+      semester: Number(short[1]),
+    };
+  }
+  return { courseHeading: null, year: null, semester: null };
+}
+
+function classMetadata(value, year, semester) {
+  const field = String(value || "").match(/^\s*TURMA\s*:\s*(.+?)\s*$/im);
+  if (!field) return { classPeriod: null, className: null, classStartYear: null };
+  const raw = field[1].trim();
+  const period = raw.match(/^(\d+)\s*(?:[º°ªO])?\s*PER[IÍ]ODO\b/i);
+  if (period) {
+    return { classPeriod: Number(period[1]), className: null, classStartYear: null };
+  }
+  const yearSuffix = raw.match(/(?:^|\s)(20\d{2}|\d{2})\s*$/);
+  const classStartYear = yearSuffix
+    ? (Number(yearSuffix[1]) < 100 ? 2000 + Number(yearSuffix[1]) : Number(yearSuffix[1]))
+    : year;
+  const className = yearSuffix ? raw.slice(0, yearSuffix.index).trim() : raw;
+  if (!className || !year || !semester || !classStartYear || classStartYear > year) {
+    return { classPeriod: null, className: className || null, classStartYear };
+  }
+  return {
+    classPeriod: ((year - classStartYear) * 2) + semester,
+    className,
+    classStartYear,
+  };
+}
+
+function isBulkGradeRequest(value, currentYear = new Date().getFullYear()) {
+  const text = String(value || "");
+  const codes = text.match(/[A-ZÀ-Ú]{3,6}\d{3,5}/g) || [];
+  const semester = parseSemesterMetadata(text, currentYear);
+  const hasSemester = Boolean(semester.year && semester.semester);
+  const hasBasicHeader = /disciplina/i.test(text) &&
+    (/\bCH\b/i.test(text) || /DISCIPLINA\s*CH/i.test(text));
   const hasDetailedHeader = hasBasicHeader &&
     /\bdocente\b/i.test(text) && /per[ií]odo/i.test(text);
   const hasDatedRow = /\d+\s*h\s+.+?\d{1,2}\/\d{1,2}\/(?:\d{2}|\d{4})\s+a\s+\d{1,2}\/\d{1,2}\/(?:\d{2}|\d{4})/i.test(text);
@@ -171,6 +229,8 @@ function gradeRoutingContext() {
 Este texto é uma grade semestral em lote, não uma consulta sobre uma disciplina.
 - O título antes do semestre (por exemplo, "Engenharia de Software") é o CURSO. Nunca o procure em disciplinas.
 - "Turma: 1º período" indica o período acadêmico da turma, não o nome de uma disciplina.
+- "Turma: BES" ou "Turma: BES 26" identifica o nome da turma; o sufixo de dois dígitos representa o ano de início.
+- Semestre 1, 1a ou 1ª significa primeiro semestre do ano corrente informado pelo sistema.
 - Cada linha iniciada por código (por exemplo, DMEI1024) é uma disciplina da grade.
 - Primeiro consulte cursos pelo título, turmas pelo curso/ano/semestre/turno e salas pelo número.
 - Se o curso existir mas a turma de ingresso do semestre informado não existir, use nova_turma dentro de importar_grade_semestre; inspecione as turmas anteriores do curso para manter o padrão de nome.
@@ -189,20 +249,21 @@ function routeToolArguments(name, args, hasPendingGrade) {
   return args;
 }
 
-function parseBulkGradeIntent(value) {
+function parseBulkGradeIntent(value, currentYear = new Date().getFullYear()) {
   const text = String(value || "");
-  const heading = text.match(/^\s*(.+?)\s*[—-]\s*(\d{4})[.](1|2)\s*$/m);
+  const semesterMetadata = parseSemesterMetadata(text, currentYear);
   const courseField = text.match(/^\s*CURSO(?:\s+DE)?\s*:\s*(.+?)\s*$/im);
-  const semesterField = text.match(/^\s*SEMESTRE(?:\s+LETIVO)?\s*:?\s*(\d{4})[.](1|2)\s*$/im);
-  const classPeriod = text.match(/turma\s*:\s*(\d+)/i);
+  const turma = classMetadata(text, semesterMetadata.year, semesterMetadata.semester);
   const shift = text.match(/turno\s*:\s*([^·\n]+)/i);
-  const room = text.match(/sala\s*:\s*0*(\d+)/i);
-  const codes = [...new Set(text.match(/\b[A-ZÀ-Ú]{3,6}\d{3,5}\b/g) || [])];
+  const room = text.match(/sala\s*:?\s*0*(\d+)/i);
+  const codes = [...new Set(text.match(/[A-ZÀ-Ú]{3,6}\d{3,5}/g) || [])];
   return {
-    course: heading?.[1]?.trim() || courseField?.[1]?.trim() || null,
-    year: heading ? Number(heading[2]) : (semesterField ? Number(semesterField[1]) : null),
-    semester: heading ? Number(heading[3]) : (semesterField ? Number(semesterField[2]) : null),
-    classPeriod: classPeriod ? Number(classPeriod[1]) : null,
+    course: semesterMetadata.courseHeading || courseField?.[1]?.trim() || null,
+    year: semesterMetadata.year,
+    semester: semesterMetadata.semester,
+    classPeriod: turma.classPeriod,
+    className: turma.className,
+    classStartYear: turma.classStartYear,
     shift: shift?.[1]?.trim() || null,
     roomNumber: room ? Number(room[1]) : null,
     codes,
@@ -211,9 +272,9 @@ function parseBulkGradeIntent(value) {
   };
 }
 
-function parseStructuredGrade(value) {
+function parseStructuredGrade(value, currentYear = new Date().getFullYear()) {
   const text = String(value || "");
-  const intent = parseBulkGradeIntent(text);
+  const intent = parseBulkGradeIntent(text, currentYear);
   if (!intent.course || !intent.year || !intent.semester || !intent.classPeriod || !intent.shift) {
     return null;
   }
@@ -392,9 +453,11 @@ class AcademicAgent {
 
   bulkImportMismatch(args) {
     if (!this.pendingGradeText) return null;
-    const intent = parseBulkGradeIntent(this.pendingGradeText);
+    const intent = parseBulkGradeIntent(this.pendingGradeText, this.currentYear);
     const errors = [];
     const normalizedShift = normalizeText(intent.shift);
+    const expectedStartYear = intent.classStartYear || intent.year;
+    const requestedClassName = normalizeText(intent.className);
     const verifiedCourse = [...(this.verifiedRecords.get("cursos")?.values() || [])]
       .find((course) => normalizeText(course.nome) === normalizeText(intent.course));
 
@@ -402,9 +465,11 @@ class AcademicAgent {
       const selectedClass = this.verifiedRecords.get("turmas")?.get(Number(args.turma_id));
       if (
         !selectedClass ||
-        Number(selectedClass.ano_inicio) !== intent.year ||
-        Number(selectedClass.semestre_inicio) !== intent.semester ||
+        Number(selectedClass.ano_inicio) !== expectedStartYear ||
         normalizeText(selectedClass.turno) !== normalizedShift ||
+        (requestedClassName &&
+          normalizeText(selectedClass.nome) !== requestedClassName &&
+          !normalizeText(selectedClass.nome).startsWith(`${requestedClassName} `)) ||
         (verifiedCourse && Number(selectedClass.curso_id) !== Number(verifiedCourse.id))
       ) {
         errors.push(
@@ -415,10 +480,10 @@ class AcademicAgent {
       if (verifiedCourse && Number(args.nova_turma.curso_id) !== Number(verifiedCourse.id)) {
         errors.push(`nova_turma.curso_id deve ser ${verifiedCourse.id}`);
       }
-      if (Number(args.nova_turma.ano_inicio) !== intent.year) {
-        errors.push(`nova_turma.ano_inicio deve ser ${intent.year}`);
+      if (Number(args.nova_turma.ano_inicio) !== expectedStartYear) {
+        errors.push(`nova_turma.ano_inicio deve ser ${expectedStartYear}`);
       }
-      if (Number(args.nova_turma.semestre_inicio) !== intent.semester) {
+      if (intent.classPeriod === 1 && Number(args.nova_turma.semestre_inicio) !== intent.semester) {
         errors.push(`nova_turma.semestre_inicio deve ser ${intent.semester}`);
       }
       if (normalizeText(args.nova_turma.turno) !== normalizedShift) {
@@ -493,16 +558,20 @@ class AcademicAgent {
   correctBulkProposal(args) {
     if (!this.pendingGradeText) return args;
     const corrected = JSON.parse(JSON.stringify(args));
-    const intent = parseBulkGradeIntent(this.pendingGradeText);
+    const intent = parseBulkGradeIntent(this.pendingGradeText, this.currentYear);
     const course = [...(this.verifiedRecords.get("cursos")?.values() || [])]
       .find((item) => normalizeText(item.nome) === normalizeText(intent.course));
+    const expectedStartYear = intent.classStartYear || intent.year;
+    const requestedClassName = normalizeText(intent.className);
     const selectedClass = corrected.turma_id
       ? this.verifiedRecords.get("turmas")?.get(Number(corrected.turma_id))
       : null;
     const classMatches = selectedClass &&
-      Number(selectedClass.ano_inicio) === intent.year &&
-      Number(selectedClass.semestre_inicio) === intent.semester &&
+      Number(selectedClass.ano_inicio) === expectedStartYear &&
       normalizeText(selectedClass.turno) === normalizeText(intent.shift) &&
+      (!requestedClassName ||
+        normalizeText(selectedClass.nome) === requestedClassName ||
+        normalizeText(selectedClass.nome).startsWith(`${requestedClassName} `)) &&
       (!course || Number(selectedClass.curso_id) === Number(course.id));
 
     if (!classMatches && course) {
@@ -511,13 +580,16 @@ class AcademicAgent {
           .filter((item) => Number(item.curso_id) === Number(course.id))
           .map((item) => item.nome),
       );
-      if (previousNames.size === 1) {
+      const generatedName = intent.className
+        ? `${intent.className} ${String(expectedStartYear).slice(-2)}`
+        : (previousNames.size === 1 ? [...previousNames][0] : null);
+      if (generatedName && intent.classPeriod === 1) {
         delete corrected.turma_id;
         corrected.nova_turma = {
-          nome: [...previousNames][0],
+          nome: generatedName,
           curso_id: course.id,
           semestre_inicio: intent.semester,
-          ano_inicio: intent.year,
+          ano_inicio: expectedStartYear,
           turno: intent.shift,
         };
       }
@@ -554,7 +626,7 @@ class AcademicAgent {
   }
 
   async tryStructuredGradeImport(content) {
-    const parsed = parseStructuredGrade(content);
+    const parsed = parseStructuredGrade(content, this.currentYear);
     if (!parsed) return null;
     const { intent, items } = parsed;
 
@@ -595,27 +667,35 @@ class AcademicAgent {
     }
 
     const classes = await read({ entidade: "turmas", curso_id: course.id, limite: 100 });
+    const expectedStartYear = intent.classStartYear || intent.year;
+    const requestedClassName = normalizeText(intent.className);
     const exactClasses = classes.registros.filter((item) =>
-      Number(item.ano_inicio) === intent.year &&
-      Number(item.semestre_inicio) === intent.semester &&
-      normalizeText(item.turno) === normalizeText(intent.shift),
+      Number(item.ano_inicio) === expectedStartYear &&
+      normalizeText(item.turno) === normalizeText(intent.shift) &&
+      (!requestedClassName ||
+        normalizeText(item.nome) === requestedClassName ||
+        normalizeText(item.nome).startsWith(`${requestedClassName} `)),
     );
     let classArguments;
     if (exactClasses.length === 1) {
       classArguments = { turma_id: exactClasses[0].id };
     } else if (exactClasses.length > 1) {
-      return `Há mais de uma turma de ${intent.course} para ${intent.year}.${intent.semester}, turno ${intent.shift}. Informe o ID correto.`;
+      return `Há mais de uma turma de ${intent.course} iniciada em ${expectedStartYear}, turno ${intent.shift}. Informe o ID correto.`;
     } else {
-      const names = new Set(classes.registros.map((item) => item.nome));
-      if (names.size !== 1) {
-        return `Não existe turma para ${intent.year}.${intent.semester} e não consegui inferir um nome único. Informe o nome da nova turma.`;
+      if (intent.classPeriod !== 1) {
+        return `Não encontrei a turma '${intent.className || "informada"}' iniciada em ${expectedStartYear}. Cadastre ou corrija a turma antes da importação.`;
       }
+      const names = new Set(classes.registros.map((item) => item.nome));
+      const generatedName = intent.className
+        ? `${intent.className} ${String(expectedStartYear).slice(-2)}`
+        : (names.size === 1 ? [...names][0] : null);
+      if (!generatedName) return "Não consegui determinar o nome da nova turma.";
       classArguments = {
         nova_turma: {
-          nome: [...names][0],
+          nome: generatedName,
           curso_id: course.id,
           semestre_inicio: intent.semester,
-          ano_inicio: intent.year,
+          ano_inicio: expectedStartYear,
           turno: intent.shift,
         },
       };
@@ -805,7 +885,7 @@ class AcademicAgent {
       name === "consultar_dados" &&
       args.entidade === "salas"
     ) {
-      const roomNumber = parseBulkGradeIntent(this.pendingGradeText).roomNumber;
+      const roomNumber = parseBulkGradeIntent(this.pendingGradeText, this.currentYear).roomNumber;
       if (roomNumber !== null) args = { ...args, busca: `Sala ${roomNumber}` };
     }
     if (name === "importar_grade_semestre" && (this.pendingGradeText || this.lastUserText)) {
@@ -913,7 +993,7 @@ class AcademicAgent {
     const content = String(userText || "").trim();
     if (!content) return "Digite uma pergunta ou solicitação.";
     this.lastUserText = content;
-    const bulkGrade = isBulkGradeRequest(content);
+    const bulkGrade = isBulkGradeRequest(content, this.currentYear);
     if (bulkGrade) this.pendingGradeText = content;
     const routedContent = bulkGrade
       ? `${gradeRoutingContext()}\n\n[TEXTO ORIGINAL DO USUÁRIO]\n${content}`
@@ -978,6 +1058,8 @@ module.exports = {
   missingRequiredArguments,
   collectToolReferences,
   normalizeText,
+  parseSemesterMetadata,
+  classMetadata,
   isBulkGradeRequest,
   routeToolArguments,
   schemaValidationErrors,

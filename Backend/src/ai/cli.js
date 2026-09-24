@@ -6,8 +6,17 @@ const pool = require("../db/pool");
 const { runMigrations } = require("../db/migrate");
 const { getConfig } = require("./config");
 const { OllamaClient } = require("./ollamaClient");
-const { AcademicAgent } = require("./agent");
-const { parsePlanningPdf } = require("./pdfGradeParser");
+const {
+  AcademicAgent,
+  isBulkGradeRequest,
+  parseBulkGradeIntent,
+  parseStructuredGrade,
+} = require("./agent");
+const {
+  parsePlanningPdf,
+  parsePlanningPdfWithOllama,
+  normalizePastedPlanningText,
+} = require("./pdfGradeParser");
 const { analyzePlanningDocument } = require("./pdfImportService");
 const { importarPlanejamentoSemestre } = require("./tools");
 
@@ -108,10 +117,14 @@ function formatWeekdays(days) {
   return (days || []).map((day) => labels[day] || day).join(" e ");
 }
 
-function printPdfAnalysis(document, analysis) {
-  console.log(`\nPré-validação do PDF: ${analysis.curso?.nome || document.curso} — ${document.semestre}`);
+function printPlanningAnalysis(document, analysis, sourceLabel = "planejamento") {
+  console.log(`\nPré-validação do ${sourceLabel}: ${analysis.curso?.nome || document.curso} — ${document.semestre}`);
   console.log(
-    `Extrator: ${document.estrategia_extracao === "ollama" ? "Ollama (layout flexível)" : "tabela detectada"}`,
+    `Extrator: ${document.estrategia_extracao === "texto-estruturado"
+      ? "linhas estruturadas"
+      : document.estrategia_extracao?.startsWith("ollama")
+        ? "Ollama (texto flexível)"
+        : "tabela detectada"}`,
   );
   console.log(
     `${document.turmas.length} turma(s) | ${analysis.estatisticas?.linhas_fonte ?? document.total_linhas} linha(s) na fonte | ` +
@@ -130,6 +143,12 @@ function printPdfAnalysis(document, analysis) {
       console.log(`  ✓ ${item.fonte}`);
       console.log(`    Disciplina: ${item.disciplina}`);
       console.log(`    Docente: ${item.professor}`);
+      if (item.carga_horaria_anterior !== undefined) {
+        console.log(
+          `    Carga horária será corrigida: ${item.carga_horaria_anterior}h → ` +
+          `${item.carga_horaria_nova}h`,
+        );
+      }
       const days = formatWeekdays(item.dias_semana);
       console.log(
         `    ${item.tipo === "SEMANAL" ? "REGULAR (SEMANAL no banco)" : item.tipo}` +
@@ -146,7 +165,12 @@ function printPdfAnalysis(document, analysis) {
     );
     if (analysis.estatisticas.codigos_a_atualizar > 0) {
       console.log(
-        `${analysis.estatisticas.codigos_a_atualizar} disciplina(s) existente(s) receberão o código que consta no PDF.`,
+        `${analysis.estatisticas.codigos_a_atualizar} disciplina(s) existente(s) receberão o código que consta na fonte.`,
+      );
+    }
+    if (analysis.estatisticas.cargas_horarias_a_atualizar > 0) {
+      console.log(
+        `${analysis.estatisticas.cargas_horarias_a_atualizar} disciplina(s) terão a carga horária corrigida após a confirmação.`,
       );
     }
   }
@@ -182,7 +206,7 @@ async function handlePdfCommand(input, terminal, ollama) {
     roomAssignments: command.rooms,
     ignorePending: command.ignorePending,
   });
-  printPdfAnalysis(document, analysis);
+  printPlanningAnalysis(document, analysis, "PDF");
 
   if (!analysis.pronto) {
     const hasMissingRooms = analysis.pendencias?.some((issue) => issue.includes("informe a sala"));
@@ -200,6 +224,116 @@ async function handlePdfCommand(input, terminal, ollama) {
     } else {
       console.log("\nNenhum dado foi alterado. Corrija os erros acima antes de importar.\n");
     }
+    return;
+  }
+  if (!config.allowWrites) {
+    console.log("\nA importação está pronta, mas AI_ALLOW_WRITES=false impede a gravação.\n");
+    return;
+  }
+
+  let approved = autoApprove;
+  if (autoApprove) console.log("\nImportação confirmada automaticamente por --yes.");
+  else {
+    const answer = await terminal.next(
+      `\nConfirma a importação atômica de ${analysis.estatisticas.importaveis} disciplina(s)? [s/N] `,
+    );
+    approved = answer !== null && ["s", "sim", "y", "yes"].includes(answer.trim().toLowerCase());
+  }
+  if (!approved) {
+    console.log("Importação cancelada. Nenhum dado foi inserido.\n");
+    return;
+  }
+  const result = await importarPlanejamentoSemestre(
+    analysis.gradesForImport,
+    pool,
+    { currentYear: config.currentYear },
+  );
+  console.log(
+    `\nImportação concluída: ${result.total_importado} disciplina(s) em ` +
+    `${result.total_turmas} turma(s). IDs das importações: ` +
+    `${result.importacoes.map((item) => item.importacao_id).join(", ")}.\n`,
+  );
+}
+
+function pastedPlanningRequirements(intent) {
+  const missing = [];
+  if (!intent.course) missing.push("CURSO");
+  if (!intent.year || !intent.semester) missing.push("SEMESTRE");
+  if (!intent.classPeriod) missing.push("TURMA");
+  if (!intent.shift) missing.push("TURNO");
+  if (intent.roomNumber === null) missing.push("SALA");
+  return missing;
+}
+
+function structuredPlanningDocument(content, parsed) {
+  const { intent, items } = parsed;
+  return {
+    curso: intent.course,
+    campus: "",
+    semestre: `${intent.year}.${intent.semester}`,
+    turmas: [{
+      pagina: 1,
+      ano_letivo: intent.year,
+      semestre_letivo: intent.semester,
+      periodo_turma: intent.classPeriod,
+      ...(intent.className ? { turma_nome: intent.className } : {}),
+      ...(intent.classStartYear ? { ano_inicio_turma: intent.classStartYear } : {}),
+      turno: intent.shift,
+      itens: items.map((item) => ({ ...item, pagina: 1, extracao_confiavel: true })),
+      pendencias_extracao: [],
+      texto_origem: content,
+    }],
+    total_linhas: items.length,
+    estrategia_extracao: "texto-estruturado",
+  };
+}
+
+async function handlePastedPlanning(content, terminal, ollama) {
+  const intent = parseBulkGradeIntent(content, config.currentYear);
+  const missing = pastedPlanningRequirements(intent);
+  if (missing.length > 0) {
+    console.log(
+      `\nNão inseri nada. A colagem precisa informar: ${missing.join(", ")}.\n` +
+      "Use no início do bloco, por exemplo:\n" +
+      "CURSO: Engenharia de Software\nSEMESTRE: 1\n" +
+      "TURMA: BES\nTURNO: TARDE\nSALA: 06\n",
+    );
+    return;
+  }
+
+  console.log("\nOrganizando e conferindo o planejamento colado...");
+  const parsed = parseStructuredGrade(content, config.currentYear);
+  let document;
+  if (parsed) {
+    document = structuredPlanningDocument(content, parsed);
+  } else {
+    document = await parsePlanningPdfWithOllama(normalizePastedPlanningText(content), ollama);
+    document.curso = intent.course;
+    document.estrategia_extracao = "ollama-texto";
+    if (document.turmas.length === 1) {
+      Object.assign(document.turmas[0], {
+        ano_letivo: intent.year,
+        semestre_letivo: intent.semester,
+        periodo_turma: intent.classPeriod,
+        ...(intent.className ? { turma_nome: intent.className } : {}),
+        ...(intent.classStartYear ? { ano_inicio_turma: intent.classStartYear } : {}),
+        turno: intent.shift,
+        texto_origem: content,
+      });
+      document.semestre = `${intent.year}.${intent.semester}`;
+    }
+  }
+
+  const roomAssignments = Object.fromEntries(
+    document.turmas.map((grade) => [grade.periodo_turma, intent.roomNumber]),
+  );
+  const analysis = await analyzePlanningDocument(pool, document, { roomAssignments });
+  printPlanningAnalysis(document, analysis, "texto colado");
+  if (!analysis.pronto) {
+    console.log(
+      "\nNenhum dado foi alterado. Corrija as pendências indicadas e cole novamente. " +
+      "Se o texto do PDF estiver muito embaralhado, organize cada disciplina em uma linha.\n",
+    );
     return;
   }
   if (!config.allowWrites) {
@@ -343,7 +477,7 @@ async function main() {
 
   console.log("\nAgente acadêmico UniGestão");
   console.log(`Modelo: ${config.model} | Ollama: ${config.ollamaHost}`);
-  console.log("Comandos: :ajuda, :pdf, :limpar, :sair\n");
+  console.log("Comandos: :ajuda, :pdf, :limpar, :sair — ou cole uma grade diretamente\n");
 
   try {
     while (true) {
@@ -364,6 +498,7 @@ async function main() {
           "- Liste a grade da turma X.\n" +
           "- Cadastre uma sala chamada Lab 4, capacidade 35, piso térreo, tipo laboratório.\n" +
           "- Crie o curso X com 40 vagas, 8 semestres e as disciplinas A (60h) e B (80h).\n" +
+          "- Cole uma grade iniciando com CURSO, SEMESTRE (1, 1a ou 2026.1), TURMA (BES ou 1º PERÍODO), TURNO e SALA.\n" +
           "- :pdf /imports/grade.pdf\n" +
           "- :pdf /imports/grade.pdf --salas 1=6,3=7,5=8 --ignorar-pendentes\n" +
           "- :pdf /imports/grade.pdf --usar-ia  (força o extrator para layouts diferentes)\n",
@@ -375,6 +510,15 @@ async function main() {
           await handlePdfCommand(input.trim(), terminal, ollama);
         } catch (error) {
           console.error(`\nErro no PDF > ${error.message}\n`);
+        }
+        continue;
+      }
+
+      if (isBulkGradeRequest(input, config.currentYear)) {
+        try {
+          await handlePastedPlanning(input, terminal, ollama);
+        } catch (error) {
+          console.error(`\nErro no texto colado > ${error.message}\nNenhum dado foi alterado.\n`);
         }
         continue;
       }

@@ -11,6 +11,8 @@ const {
   isBulkGradeRequest,
   routeToolArguments,
   schemaValidationErrors,
+  parseSemesterMetadata,
+  classMetadata,
   parseBulkGradeIntent,
   parseStructuredGrade,
   parseStructuredAllocation,
@@ -27,11 +29,14 @@ const {
   classifyByDuration,
   extractWeekdays,
   normalizeAiGrade,
+  aiPageCoverageIssue,
+  normalizePastedPlanningText,
   parsePlanningPdfWithOllama,
 } = require("../src/ai/pdfGradeParser");
 const {
   tokenSignature,
   matchNamedRecord,
+  analyzePlanningDocument,
 } = require("../src/ai/pdfImportService");
 
 test("configuração usa o modelo solicitado como padrão", () => {
@@ -144,6 +149,59 @@ test("metadados do cabeçalho da grade são extraídos deterministicamente", () 
   assert.deepEqual(intent.codes, ["DMEI1024", "DENG0769"]);
 });
 
+test("metadados também aceitam campos CURSO, SEMESTRE e SALA sem dois-pontos", () => {
+  const source =
+    "CURSO: Engenharia de Software\nSEMESTRE 2026.1\n" +
+    "TURMA: 1º PERÍODO\nTURNO: TARDE\nSALA 06\n" +
+    "COD DISC.DISCIPLINACHDOCENTE\nDMEI1024MATEMÁTICA DISCRETA80GUSTAVO NOGUEIRA DIAS\n" +
+    "DENG0769LINGUAGENS FORMAIS80LENO RODRIGUES MARTINS";
+  const intent = parseBulkGradeIntent(source);
+  assert.equal(intent.course, "Engenharia de Software");
+  assert.equal(intent.year, 2026);
+  assert.equal(intent.semester, 1);
+  assert.equal(intent.classPeriod, 1);
+  assert.equal(intent.shift, "TARDE");
+  assert.equal(intent.roomNumber, 6);
+  assert.equal(isBulkGradeRequest(source), true);
+});
+
+test("semestre aceita 1, 1a, 1ª e ano.semestre usando o ano configurado", () => {
+  for (const value of ["SEMESTRE: 1", "SEMESTRE: 1a", "SEMESTRE: 1ª", "SEMEstreme: 1"]) {
+    assert.deepEqual(parseSemesterMetadata(value, 2026), {
+      courseHeading: null,
+      year: 2026,
+      semester: 1,
+    });
+  }
+  assert.deepEqual(parseSemesterMetadata("SEMESTRE: 2027.2", 2026), {
+    courseHeading: null,
+    year: 2027,
+    semester: 2,
+  });
+});
+
+test("turma BES usa o ano letivo e BES 25 calcula o período da turma", () => {
+  assert.deepEqual(classMetadata("TURMA: BES", 2026, 1), {
+    classPeriod: 1,
+    className: "BES",
+    classStartYear: 2026,
+  });
+  assert.deepEqual(classMetadata("TURMA: BES 25", 2026, 1), {
+    classPeriod: 3,
+    className: "BES",
+    classStartYear: 2025,
+  });
+  const intent = parseBulkGradeIntent(
+    "CURSO: Engenharia de Software\nSEMESTRE: 1a\nTURMA: BES\nTURNO: TARDE\nSALA: 06",
+    2026,
+  );
+  assert.equal(intent.year, 2026);
+  assert.equal(intent.semester, 1);
+  assert.equal(intent.classPeriod, 1);
+  assert.equal(intent.className, "BES");
+  assert.equal(intent.classStartYear, 2026);
+});
+
 test("linhas estruturadas da grade são separadas sem depender do modelo", () => {
   const parsed = parseStructuredGrade(
     "Engenharia de Software — 2026.1\nTurma: 1º período · Turno: Tarde · Sala: 06\nCódigo Disciplina CH Docente Período\nDMEI1024 Matemática Discreta 80h Gustavo Nogueira Dias 19/02/26 a 07/03/26\nDENG0769 Linguagens Formais 80h Leno Rodrigues Martins 23/03/26 a 15/06/26",
@@ -154,7 +212,7 @@ test("linhas estruturadas da grade são separadas sem depender do modelo", () =>
     disciplina: "Matemática Discreta",
     carga_horaria: 80,
     docente: "Gustavo Nogueira Dias",
-    tipo_disciplina: "PENDENTE",
+    tipo_disciplina: "MODULAR",
     periodos: [{ inicio: "19/02/26", fim: "07/03/26" }],
   });
 });
@@ -172,7 +230,7 @@ test("grade com uma disciplina e sem código preserva o código como ausente", (
     disciplina: "Matemática Discreta",
     carga_horaria: 80,
     docente: "Gustavo Nogueira Dias",
-    tipo_disciplina: "PENDENTE",
+    tipo_disciplina: "MODULAR",
     periodos: [{ inicio: "19/02/26", fim: "07/03/26" }],
   });
 });
@@ -283,6 +341,32 @@ test("tipo modular ou regular é determinado por um mês-calendário", () => {
   );
 });
 
+test("texto colado separa datas, cargas e códigos que vieram grudados do PDF", () => {
+  const normalized = normalizePastedPlanningText(
+    "DMEI1024MATEMÁTICA DISCRETA80GUSTAVO 19/02/2607/03/26DSCI",
+  );
+  assert.match(normalized, /DMEI1024 MATEMÁTICA DISCRETA 80 GUSTAVO/);
+  assert.match(normalized, /19\/02\/26 07\/03\/26 DSCI/);
+});
+
+test("validação global rejeita data atribuída mais vezes do que aparece na fonte", () => {
+  const issue = aiPageCoverageIssue(
+    "DMEI1024 19/02/26 07/03/26 DENG0769 23/03/26 15/06/26",
+    [{
+      itens: [
+        { codigo: "DMEI1024", periodos: [
+          { inicio: "19/02/26", fim: "07/03/26" },
+          { inicio: "23/03/26", fim: "15/06/26" },
+        ] },
+        { codigo: "DENG0769", periodos: [
+          { inicio: "23/03/26", fim: "15/06/26" },
+        ] },
+      ],
+    }],
+  );
+  assert.match(issue, /datas usadas mais vezes/);
+});
+
 test("dias da semana são preservados sem reduzir uma disciplina com dois dias", () => {
   assert.deepEqual(extractWeekdays("QUARTAS – SEXTAS 20H EAD"), [3, 5]);
   assert.deepEqual(extractWeekdays("SEGUNDAS – 20H EAD"), [1]);
@@ -300,6 +384,70 @@ test("nomes equivalentes do PDF são relacionados sem criar duplicatas", () => {
   );
   assert.equal(antonilson.record.id, 11);
   assert.equal(antonilson.mode, "APROXIMADO");
+});
+
+test("pré-validação propõe corrigir carga horária divergente de disciplina inequívoca", async () => {
+  const db = {
+    query: async (sql) => {
+      if (sql.includes("FROM cursos ORDER BY")) {
+        return { rows: [{ id: 4, nome: "Engenharia de Software", vagas: 30, semestres: 8 }] };
+      }
+      if (sql.includes("FROM salas ORDER BY")) {
+        return { rows: [{ id: 7, nome: "Sala 6", capacidade: 40, piso: 1, tipo_sala: "Sala" }] };
+      }
+      if (sql.includes("FROM professores ORDER BY")) {
+        return { rows: [{ id: 40, nome: "JAIRO FADUL DE LIMA", lotacao: "DSCI" }] };
+      }
+      if (sql.includes("FROM turmas WHERE")) {
+        return { rows: [{
+          id: 29,
+          nome: "BES 26",
+          curso_id: 4,
+          semestre_inicio: 1,
+          ano_inicio: 2026,
+          turno: "Tarde",
+        }] };
+      }
+      if (sql.includes("FROM disciplinas d")) {
+        return { rows: [{
+          id: 67,
+          codigo: "DENG0770",
+          nome: "Programação Estruturada",
+          carga_horaria: 80,
+          semestre_disciplina: 1,
+        }] };
+      }
+      if (sql.includes("FROM alocacoes_periodo ap")) return { rows: [] };
+      throw new Error(`Consulta não simulada: ${sql}`);
+    },
+  };
+  const analysis = await analyzePlanningDocument(db, {
+    curso: "Engenharia de Software",
+    semestre: "2026.1",
+    total_linhas: 1,
+    turmas: [{
+      ano_letivo: 2026,
+      semestre_letivo: 1,
+      periodo_turma: 1,
+      turma_nome: "BES",
+      ano_inicio_turma: 2026,
+      turno: "Tarde",
+      texto_origem: "DENG0770 Programação Estruturada 60h Jairo Fadul de Lima",
+      pendencias_extracao: [],
+      itens: [{
+        codigo: "DENG0770",
+        disciplina: "Programação Estruturada",
+        carga_horaria: 60,
+        docente: "Jairo Fadul de Lima",
+        tipo_disciplina: "MODULAR",
+        periodos: [{ inicio: "25/03/26", fim: "17/04/26" }],
+      }],
+    }],
+  }, { roomAssignments: { 1: 6 } });
+  assert.equal(analysis.pronto, true);
+  assert.equal(analysis.estatisticas.cargas_horarias_a_atualizar, 1);
+  assert.equal(analysis.gradesForImport[0].itens[0].corrigir_carga_horaria, true);
+  assert.match(analysis.avisos.join(" "), /80h para 60h/);
 });
 
 test("extração flexível só aceita valores comprovados no texto da página", () => {

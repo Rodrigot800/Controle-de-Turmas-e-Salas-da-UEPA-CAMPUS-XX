@@ -4,6 +4,7 @@ const { execFile } = require("node:child_process");
 const { promisify } = require("node:util");
 
 const execFileAsync = promisify(execFile);
+const SOURCE_DATE_REGEX = /\d{1,2}\/\d{1,2}\/(?:20\d{2}|\d{2})/g;
 
 function compact(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -147,7 +148,7 @@ function parsePage(pageText, pageNumber) {
     const allocation = compact(line.slice(allocationStart, allocationEnd));
     const dateCell = line.slice(dateStart, observationStart);
     const observation = compact(line.slice(observationStart));
-    const dates = dateCell.match(/\d{1,2}\/\d{1,2}\/\d{2,4}/g) || [];
+    const dates = dateCell.match(SOURCE_DATE_REGEX) || [];
 
     if (subject && !/^DISCIPLINA$/i.test(subject)) {
       if (/^TCC$/i.test(subject) && !anchors.some((item) => item.lineIndex === index)) {
@@ -405,9 +406,10 @@ function normalizeAiGrade(rawGrade, pageText, pageNumber) {
     const discipline = compact(rawItem.disciplina);
     const teacher = compact(rawItem.docente);
     const code = compact(rawItem.codigo).toUpperCase();
+    const teacherHasFullName = normalizeEvidence(teacher).split(" ").filter(Boolean).length >= 2;
     const evidenceOk = (!code || normalizeEvidence(pageText).includes(normalizeEvidence(code))) &&
       (!discipline || tokensHaveEvidence(discipline, pageText)) &&
-      (!teacher || tokensHaveEvidence(teacher, pageText)) &&
+      (!teacher || (teacherHasFullName && tokensHaveEvidence(teacher, pageText))) &&
       periods.every((period) =>
         normalizeEvidence(pageText).includes(normalizeEvidence(period.inicio)) &&
         normalizeEvidence(pageText).includes(normalizeEvidence(period.fim)),
@@ -458,32 +460,44 @@ function normalizeAiGrade(rawGrade, pageText, pageNumber) {
 
 function aiPageCoverageIssue(pageText, grades) {
   const sourceCodes = new Set(
-    (pageText.match(/\b[A-Z]{3,6}\d{3,5}\b/g) || []).map((value) => value.toUpperCase()),
+    (pageText.match(/[A-Z]{3,6}\d{3,5}/g) || []).map((value) => value.toUpperCase()),
   );
   const extractedCodes = new Set(
     grades.flatMap((grade) => grade.itens.map((item) => item.codigo).filter(Boolean)),
   );
-  const sourceDates = new Set(pageText.match(/\d{1,2}\/\d{1,2}\/\d{2,4}/g) || []);
-  const extractedDates = new Set();
+  const countValues = (values) => values.reduce((counts, value) => {
+    counts.set(value, (counts.get(value) || 0) + 1);
+    return counts;
+  }, new Map());
+  const sourceDates = countValues(pageText.match(SOURCE_DATE_REGEX) || []);
+  const extractedDates = new Map();
   for (const grade of grades) {
     for (const item of grade.itens) {
       for (const period of item.periodos) {
-        extractedDates.add(period.inicio);
-        extractedDates.add(period.fim);
-      }
-      for (const date of item.observacao?.match(/\d{1,2}\/\d{1,2}\/\d{2,4}/g) || []) {
-        extractedDates.add(date);
+        extractedDates.set(period.inicio, (extractedDates.get(period.inicio) || 0) + 1);
+        extractedDates.set(period.fim, (extractedDates.get(period.fim) || 0) + 1);
       }
     }
   }
   const missingCodes = [...sourceCodes].filter((value) => !extractedCodes.has(value));
   const extraCodes = [...extractedCodes].filter((value) => !sourceCodes.has(value));
-  const missingDates = [...sourceDates].filter((value) => !extractedDates.has(value));
-  if (missingCodes.length === 0 && extraCodes.length === 0 && missingDates.length === 0) return null;
+  const missingDates = [...sourceDates.entries()].flatMap(([value, count]) =>
+    Array(Math.max(0, count - (extractedDates.get(value) || 0))).fill(value),
+  );
+  const repeatedDates = [...extractedDates.entries()].flatMap(([value, count]) =>
+    Array(Math.max(0, count - (sourceDates.get(value) || 0))).fill(value),
+  );
+  if (
+    missingCodes.length === 0 && extraCodes.length === 0 &&
+    missingDates.length === 0 && repeatedDates.length === 0
+  ) return null;
   const reason = [
     missingCodes.length > 0 ? `códigos não extraídos: ${missingCodes.join(", ")}` : null,
     extraCodes.length > 0 ? `códigos sem evidência: ${extraCodes.join(", ")}` : null,
     missingDates.length > 0 ? `datas não extraídas: ${missingDates.join(", ")}` : null,
+    repeatedDates.length > 0
+      ? `datas usadas mais vezes que na fonte: ${repeatedDates.join(", ")}`
+      : null,
   ].filter(Boolean).join("; ");
   return reason;
 }
@@ -500,6 +514,14 @@ function rejectAiPageCoverage(grades, pageNumber, reason) {
 }
 
 async function extractPageWithOllama(ollama, page, index, total, feedback = "") {
+  const detectedCodes = [...new Set(page.match(/[A-Z]{3,6}\d{3,5}/g) || [])];
+  const detectedDates = page.match(SOURCE_DATE_REGEX) || [];
+  const inventory =
+    `[INVENTÁRIO MECÂNICO DA FONTE]\n` +
+    `Códigos detectados (${detectedCodes.length}): ${detectedCodes.join(", ") || "nenhum"}\n` +
+    `Datas detectadas (${detectedDates.length}): ${detectedDates.join(", ") || "nenhuma"}\n` +
+    "Cada código deve aparecer exatamente uma vez em itens ou em linhas_incompletas. " +
+    "Não descarte um código somente porque suas demais colunas estão afastadas no texto.\n\n";
   const response = await ollama.chat([
     {
       role: "system",
@@ -515,7 +537,7 @@ async function extractPageWithOllama(ollama, page, index, total, feedback = "") 
       role: "user",
       content:
         `[PÁGINA ${index + 1} DE ${total}]\n` +
-        `${feedback ? `[CORREÇÃO OBRIGATÓRIA]\n${feedback}\n\n` : ""}${page}`,
+        `${feedback ? `[CORREÇÃO OBRIGATÓRIA]\n${feedback}\n\n` : ""}${inventory}${page}`,
     },
   ], [EXTRACTION_TOOL]);
   const payload = toolArguments(response);
@@ -523,6 +545,14 @@ async function extractPageWithOllama(ollama, page, index, total, feedback = "") 
     throw new Error(`O Ollama não conseguiu estruturar a página ${index + 1}.`);
   }
   return payload;
+}
+
+function normalizePastedPlanningText(value) {
+  return String(value || "")
+    .replace(/(\d{1,2}\/\d{1,2}\/(?:20\d{2}|\d{2}))(?=\d{1,2}\/\d{1,2}\/)/g, "$1 ")
+    .replace(/([A-ZÀ-Ú])(\d{2,3})(?=[A-ZÀ-Ú])/g, "$1 $2 ")
+    .replace(/(\d{1,2}\/\d{1,2}\/(?:20\d{2}|\d{2}))(?=[A-ZÀ-Ú]{2,})/g, "$1 ")
+    .replace(/([A-ZÀ-Ú]{3,6}\d{3,5})(?=[A-ZÀ-Ú])/g, "$1 ");
 }
 
 async function parsePlanningPdfWithOllama(text, ollama) {
@@ -640,9 +670,11 @@ module.exports = {
   parsePlanningPdfText,
   parsePlanningPdfWithOllama,
   normalizeAiGrade,
+  aiPageCoverageIssue,
   EXTRACTION_TOOL,
   toolArguments,
   extractPdfText,
   combinePdfRepresentations,
+  normalizePastedPlanningText,
   parsePlanningPdf,
 };

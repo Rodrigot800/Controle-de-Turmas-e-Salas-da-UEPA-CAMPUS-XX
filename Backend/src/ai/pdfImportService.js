@@ -134,19 +134,26 @@ async function analyzePlanningDocument(db, document, options = {}) {
     codigos_a_atualizar: 0,
     professores_existentes: 0,
     professores_novos: 0,
+    cargas_horarias_a_atualizar: 0,
   };
 
   for (const grade of document.turmas) {
-    const expectedStartYear = grade.ano_letivo - Math.floor(grade.periodo_turma / 2);
+    const expectedStartYear = Number(grade.ano_inicio_turma) ||
+      (grade.ano_letivo - Math.floor(grade.periodo_turma / 2));
+    const requestedClassName = normalizeText(grade.turma_nome);
     const classMatches = classesResult.rows.filter((item) =>
       Number(item.ano_inicio) === expectedStartYear &&
-      normalizeText(item.turno) === normalizeText(grade.turno),
+      normalizeText(item.turno) === normalizeText(grade.turno) &&
+      (!requestedClassName ||
+        normalizeText(item.nome) === requestedClassName ||
+        normalizeText(item.nome).startsWith(`${requestedClassName} `)),
     );
     let academicClass = null;
     if (classMatches.length === 1) academicClass = classMatches[0];
     else if (classMatches.length === 0) {
       errors.push(
-        `${grade.periodo_turma}º período/${grade.turno}: não há turma do curso iniciada em ${expectedStartYear}.`,
+        `${grade.periodo_turma}º período/${grade.turno}: não há turma ` +
+        `${grade.turma_nome ? `'${grade.turma_nome}' ` : ""}do curso iniciada em ${expectedStartYear}.`,
       );
     } else {
       errors.push(
@@ -228,17 +235,20 @@ async function analyzePlanningDocument(db, document, options = {}) {
         continue;
       }
       const subject = subjectMatch.record;
-      if (subject && Number(subject.carga_horaria) !== Number(item.carga_horaria)) {
-        errors.push(
-          `${itemLabel}: o PDF informa ${item.carga_horaria}h, mas o cadastro #${subject.id} possui ${subject.carga_horaria}h.`,
-        );
-        itemReports.push({ fonte: itemLabel, estado: "ERRO", motivo: "carga horária divergente" });
-        continue;
-      }
       if (subject && item.codigo && subject.codigo && normalizeText(subject.codigo) !== normalizeText(item.codigo)) {
         errors.push(`${itemLabel}: o cadastro #${subject.id} já usa o código ${subject.codigo}.`);
         itemReports.push({ fonte: itemLabel, estado: "ERRO", motivo: "código divergente" });
         continue;
+      }
+      const previousWorkload = subject && Number(subject.carga_horaria) !== Number(item.carga_horaria)
+        ? Number(subject.carga_horaria)
+        : null;
+      if (previousWorkload !== null) {
+        stats.cargas_horarias_a_atualizar += 1;
+        warnings.push(
+          `${itemLabel}: a carga horária cadastrada será corrigida de ` +
+          `${previousWorkload}h para ${item.carga_horaria}h conforme a fonte.`,
+        );
       }
 
       const teacherMatch = matchNamedRecord(item.docente, teachersResult.rows, { allowSubset: true });
@@ -276,6 +286,7 @@ async function analyzePlanningDocument(db, document, options = {}) {
         ...(item.codigo ? { codigo: item.codigo } : {}),
         disciplina: subject?.nome || item.disciplina,
         carga_horaria: item.carga_horaria,
+        ...(previousWorkload !== null ? { corrigir_carga_horaria: true } : {}),
         docente: teacher?.nome || item.docente,
         ...(item.lotacao_docente ? { lotacao_docente: item.lotacao_docente } : {}),
         tipo_disciplina: item.tipo_disciplina,
@@ -297,6 +308,9 @@ async function analyzePlanningDocument(db, document, options = {}) {
           ? `${teacher.nome} (#${teacher.id}, cadastrado${teacherMatch.mode !== "EXATO" ? `, ${teacherMatch.mode.toLowerCase()}` : ""})`
           : `${item.docente} (será criado)`,
         tipo: item.tipo_disciplina,
+        ...(previousWorkload !== null
+          ? { carga_horaria_anterior: previousWorkload, carga_horaria_nova: item.carga_horaria }
+          : {}),
         dias_semana: item.dias_semana || [],
         periodos: item.periodos,
         estado: "PRONTO",
