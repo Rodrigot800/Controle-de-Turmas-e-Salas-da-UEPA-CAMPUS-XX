@@ -48,6 +48,8 @@ services:
       OLLAMA_HOST: ${OLLAMA_HOST:-http://127.0.0.1:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5-coder:7b}
       AI_ALLOW_WRITES: ${AI_ALLOW_WRITES:-true}
+    volumes:
+      - ${AI_IMPORTS_DIR:-./Backend/imports}:/imports:ro
     stdin_open: true
     tty: true
     depends_on:

@@ -3,6 +3,7 @@ const express = require('express')
 const cors = require('cors')
 const http = require('http')
 const { Server } = require('socket.io')
+const { runMigrations } = require('./db/migrate')
 
 const app = express()
 const server = http.createServer(app)
@@ -53,6 +54,13 @@ app.get('/', (req, res) => {
 const PORT = process.env.PORT || 3001;
 const HOST = process.env.HOST || "0.0.0.0";
 
-server.listen(PORT, HOST, () => {
-  console.log(`Server is running on ${HOST}:${PORT}`);
-});
+runMigrations()
+  .then(() => {
+    server.listen(PORT, HOST, () => {
+      console.log(`Server is running on ${HOST}:${PORT}`);
+    });
+  })
+  .catch((error) => {
+    console.error("Falha ao aplicar migrações antes de iniciar o backend:", error.message);
+    process.exitCode = 1;
+  });

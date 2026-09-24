@@ -18,6 +18,8 @@ dist-ssr/
 *.local
 .env
 .env.*
+Backend/imports/*
+!Backend/imports/.gitkeep
 
 # Editor
 .vscode/*

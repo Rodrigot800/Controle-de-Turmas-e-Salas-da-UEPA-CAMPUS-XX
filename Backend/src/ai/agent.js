@@ -1,5 +1,6 @@
 const { createSystemPrompt } = require("./systemPrompt");
 const { toolDefinitions, WRITE_TOOLS, executeTool, ToolError } = require("./tools");
+const { classifyByDuration } = require("./pdfGradeParser");
 
 const KNOWN_TOOLS = new Set(toolDefinitions.map((tool) => tool.function.name));
 const TOOL_PARAMETERS = new Map(
@@ -191,14 +192,16 @@ function routeToolArguments(name, args, hasPendingGrade) {
 function parseBulkGradeIntent(value) {
   const text = String(value || "");
   const heading = text.match(/^\s*(.+?)\s*[—-]\s*(\d{4})[.](1|2)\s*$/m);
+  const courseField = text.match(/^\s*CURSO(?:\s+DE)?\s*:\s*(.+?)\s*$/im);
+  const semesterField = text.match(/^\s*SEMESTRE(?:\s+LETIVO)?\s*:?\s*(\d{4})[.](1|2)\s*$/im);
   const classPeriod = text.match(/turma\s*:\s*(\d+)/i);
   const shift = text.match(/turno\s*:\s*([^·\n]+)/i);
   const room = text.match(/sala\s*:\s*0*(\d+)/i);
   const codes = [...new Set(text.match(/\b[A-ZÀ-Ú]{3,6}\d{3,5}\b/g) || [])];
   return {
-    course: heading?.[1]?.trim() || null,
-    year: heading ? Number(heading[2]) : null,
-    semester: heading ? Number(heading[3]) : null,
+    course: heading?.[1]?.trim() || courseField?.[1]?.trim() || null,
+    year: heading ? Number(heading[2]) : (semesterField ? Number(semesterField[1]) : null),
+    semester: heading ? Number(heading[3]) : (semesterField ? Number(semesterField[2]) : null),
     classPeriod: classPeriod ? Number(classPeriod[1]) : null,
     shift: shift?.[1]?.trim() || null,
     roomNumber: room ? Number(room[1]) : null,
@@ -220,18 +223,15 @@ function parseStructuredGrade(value) {
     const match = line.match(rowPattern);
     if (!match) continue;
     const trailing = match[7]?.trim() || "";
-    const type = /\bmodular\b/i.test(trailing)
-      ? "MODULAR"
-      : /\bsemanal\b|\b(segunda|ter[cç]a|quarta|quinta|sexta|s[aá]bado|domingo)s?\b/i.test(trailing)
-        ? "SEMANAL"
-        : "PENDENTE";
+    const periods = [{ inicio: match[5], fim: match[6] }];
+    const type = classifyByDuration(periods);
     items.push({
       ...(match[1] ? { codigo: match[1].toUpperCase() } : {}),
       disciplina: match[2].trim(),
       carga_horaria: Number(match[3]),
       docente: match[4].trim(),
       tipo_disciplina: type,
-      periodos: [{ inicio: match[5], fim: match[6] }],
+      periodos: periods,
       ...(trailing ? { observacao: trailing } : {}),
     });
   }

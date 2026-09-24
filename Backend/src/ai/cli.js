@@ -7,6 +7,9 @@ const { runMigrations } = require("../db/migrate");
 const { getConfig } = require("./config");
 const { OllamaClient } = require("./ollamaClient");
 const { AcademicAgent } = require("./agent");
+const { parsePlanningPdf } = require("./pdfGradeParser");
+const { analyzePlanningDocument } = require("./pdfImportService");
+const { importarPlanejamentoSemestre } = require("./tools");
 
 const config = getConfig();
 const flags = new Set(process.argv.slice(2));
@@ -54,6 +57,178 @@ function createTerminalInput(input, output) {
 
 function compactJson(value) {
   return JSON.stringify(value, null, 2);
+}
+
+function tokenizeCommand(value) {
+  const tokens = [];
+  const pattern = /"([^"]*)"|'([^']*)'|(\S+)/g;
+  let match;
+  while ((match = pattern.exec(value)) !== null) tokens.push(match[1] ?? match[2] ?? match[3]);
+  return tokens;
+}
+
+function parseRoomAssignments(value) {
+  const assignments = {};
+  if (!value) return assignments;
+  for (const pair of String(value).split(",")) {
+    const match = pair.trim().match(/^(\d+)\s*=\s*(.+)$/);
+    if (!match) throw new Error(`Mapeamento de sala inválido: '${pair}'. Use período=sala, por exemplo 1=6.`);
+    assignments[Number(match[1])] = match[2].trim();
+  }
+  return assignments;
+}
+
+function parsePdfCommand(input) {
+  const tokens = tokenizeCommand(input);
+  const filePath = tokens[1];
+  let rooms = {};
+  let ignorePending = false;
+  let forceAi = false;
+  for (let index = 2; index < tokens.length; index += 1) {
+    if (tokens[index] === "--salas") {
+      rooms = parseRoomAssignments(tokens[index + 1]);
+      index += 1;
+    } else if (tokens[index] === "--ignorar-pendentes") {
+      ignorePending = true;
+    } else if (tokens[index] === "--usar-ia") {
+      forceAi = true;
+    } else {
+      throw new Error(`Opção desconhecida: ${tokens[index]}`);
+    }
+  }
+  return { filePath, rooms, ignorePending, forceAi };
+}
+
+function formatPeriods(periods) {
+  return periods.map((period) => `${period.inicio}–${period.fim}`).join(", ");
+}
+
+function formatWeekdays(days) {
+  const labels = ["", "segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo"];
+  return (days || []).map((day) => labels[day] || day).join(" e ");
+}
+
+function printPdfAnalysis(document, analysis) {
+  console.log(`\nPré-validação do PDF: ${analysis.curso?.nome || document.curso} — ${document.semestre}`);
+  console.log(
+    `Extrator: ${document.estrategia_extracao === "ollama" ? "Ollama (layout flexível)" : "tabela detectada"}`,
+  );
+  console.log(
+    `${document.turmas.length} turma(s) | ${analysis.estatisticas?.linhas_fonte ?? document.total_linhas} linha(s) na fonte | ` +
+    `${analysis.estatisticas?.importaveis || 0} pronta(s)`,
+  );
+  for (const grade of analysis.turmas || []) {
+    console.log(
+      `\n${grade.turma.nome} (#${grade.turma.id}) — ` +
+      `${grade.sala ? `${grade.sala.nome} (#${grade.sala.id})` : "SALA PENDENTE"}`,
+    );
+    for (const item of grade.itens) {
+      if (item.estado !== "PRONTO") {
+        console.log(`  ⚠ ${item.fonte}: ${item.motivo}`);
+        continue;
+      }
+      console.log(`  ✓ ${item.fonte}`);
+      console.log(`    Disciplina: ${item.disciplina}`);
+      console.log(`    Docente: ${item.professor}`);
+      const days = formatWeekdays(item.dias_semana);
+      console.log(
+        `    ${item.tipo === "SEMANAL" ? "REGULAR (SEMANAL no banco)" : item.tipo}` +
+        `${days ? ` | ${days}` : ""} | ${formatPeriods(item.periodos)}`,
+      );
+    }
+  }
+  if (analysis.estatisticas) {
+    console.log(
+      `\nCadastros: ${analysis.estatisticas.disciplinas_existentes} disciplina(s) existente(s), ` +
+      `${analysis.estatisticas.disciplinas_novas} nova(s), ` +
+      `${analysis.estatisticas.professores_existentes} docente(s) existente(s), ` +
+      `${analysis.estatisticas.professores_novos} novo(s).`,
+    );
+    if (analysis.estatisticas.codigos_a_atualizar > 0) {
+      console.log(
+        `${analysis.estatisticas.codigos_a_atualizar} disciplina(s) existente(s) receberão o código que consta no PDF.`,
+      );
+    }
+  }
+  if (analysis.avisos?.length > 0) {
+    console.log("\nAvisos:");
+    for (const warning of analysis.avisos) console.log(`- ${warning}`);
+  }
+  if (analysis.pendencias?.length > 0) {
+    console.log(`\nPendências${analysis.ignorando_pendencias ? " (serão ignoradas)" : ""}:`);
+    for (const issue of analysis.pendencias) console.log(`- ${issue}`);
+  }
+  if (analysis.erros?.length > 0) {
+    console.log("\nErros que bloqueiam a importação:");
+    for (const error of analysis.erros) console.log(`- ${error}`);
+  }
+}
+
+async function handlePdfCommand(input, terminal, ollama) {
+  const command = parsePdfCommand(input);
+  if (!command.filePath) {
+    console.log(
+      "Uso: :pdf /imports/arquivo.pdf --salas 1=6,3=7,5=8,6=9,8=10 " +
+      "[--ignorar-pendentes] [--usar-ia]\n",
+    );
+    return;
+  }
+  console.log(`\nExtraindo e conferindo ${command.filePath}...`);
+  const document = await parsePlanningPdf(command.filePath, {
+    ollama,
+    forceAi: command.forceAi,
+  });
+  const analysis = await analyzePlanningDocument(pool, document, {
+    roomAssignments: command.rooms,
+    ignorePending: command.ignorePending,
+  });
+  printPdfAnalysis(document, analysis);
+
+  if (!analysis.pronto) {
+    const hasMissingRooms = analysis.pendencias?.some((issue) => issue.includes("informe a sala"));
+    if (hasMissingRooms) {
+      console.log(
+        "\nNenhum dado foi alterado. Repita o comando informando uma sala para cada período, por exemplo:\n" +
+        `:pdf "${command.filePath}" --salas 1=6,3=7,5=8,6=9,8=10` +
+        `${analysis.pendencias.length > document.turmas.length ? " --ignorar-pendentes" : ""}\n`,
+      );
+    } else if (analysis.pendencias?.length > 0 && !command.ignorePending) {
+      console.log(
+        "\nNenhum dado foi alterado. Resolva as pendências ou repita com --ignorar-pendentes " +
+        "para importar somente as linhas completas.\n",
+      );
+    } else {
+      console.log("\nNenhum dado foi alterado. Corrija os erros acima antes de importar.\n");
+    }
+    return;
+  }
+  if (!config.allowWrites) {
+    console.log("\nA importação está pronta, mas AI_ALLOW_WRITES=false impede a gravação.\n");
+    return;
+  }
+
+  let approved = autoApprove;
+  if (autoApprove) console.log("\nImportação confirmada automaticamente por --yes.");
+  else {
+    const answer = await terminal.next(
+      `\nConfirma a importação atômica de ${analysis.estatisticas.importaveis} disciplina(s)? [s/N] `,
+    );
+    approved = answer !== null && ["s", "sim", "y", "yes"].includes(answer.trim().toLowerCase());
+  }
+  if (!approved) {
+    console.log("Importação cancelada. Nenhum dado foi inserido.\n");
+    return;
+  }
+  const result = await importarPlanejamentoSemestre(
+    analysis.gradesForImport,
+    pool,
+    { currentYear: config.currentYear },
+  );
+  console.log(
+    `\nImportação concluída: ${result.total_importado} disciplina(s) em ` +
+    `${result.total_turmas} turma(s). IDs das importações: ` +
+    `${result.importacoes.map((item) => item.importacao_id).join(", ")}.\n`,
+  );
 }
 
 function printWritePreview(name, args) {
@@ -168,7 +343,7 @@ async function main() {
 
   console.log("\nAgente acadêmico UniGestão");
   console.log(`Modelo: ${config.model} | Ollama: ${config.ollamaHost}`);
-  console.log("Comandos: :ajuda, :limpar, :sair\n");
+  console.log("Comandos: :ajuda, :pdf, :limpar, :sair\n");
 
   try {
     while (true) {
@@ -188,8 +363,19 @@ async function main() {
           "- Quantas salas existem e quais têm capacidade acima de 40?\n" +
           "- Liste a grade da turma X.\n" +
           "- Cadastre uma sala chamada Lab 4, capacidade 35, piso térreo, tipo laboratório.\n" +
-          "- Crie o curso X com 40 vagas, 8 semestres e as disciplinas A (60h) e B (80h).\n",
+          "- Crie o curso X com 40 vagas, 8 semestres e as disciplinas A (60h) e B (80h).\n" +
+          "- :pdf /imports/grade.pdf\n" +
+          "- :pdf /imports/grade.pdf --salas 1=6,3=7,5=8 --ignorar-pendentes\n" +
+          "- :pdf /imports/grade.pdf --usar-ia  (força o extrator para layouts diferentes)\n",
         );
+        continue;
+      }
+      if (command === ":pdf" || command.startsWith(":pdf ")) {
+        try {
+          await handlePdfCommand(input.trim(), terminal, ollama);
+        } catch (error) {
+          console.error(`\nErro no PDF > ${error.message}\n`);
+        }
         continue;
       }
 

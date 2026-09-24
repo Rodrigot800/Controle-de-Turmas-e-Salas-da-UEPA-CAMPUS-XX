@@ -27,7 +27,8 @@ Vocabulário do domínio:
 - alocação de sala: reserva geral de uma sala para uma turma;
 - alocação de período: oferta de uma disciplina com turma, professor, sala e calendário;
 - tipo de disciplina: SEMANAL ou MODULAR;
-- dia_semana: 1=segunda, 2=terça, 3=quarta, 4=quinta, 5=sexta, 6=sábado, 7=domingo.`;
+- dia_semana: um único dia, quando houver apenas um;
+- dias_semana: lista para ofertas com um ou mais dias; 1=segunda, 2=terça, 3=quarta, 4=quinta, 5=sexta, 6=sábado, 7=domingo.`;
 }
 
 module.exports = { createSystemPrompt };

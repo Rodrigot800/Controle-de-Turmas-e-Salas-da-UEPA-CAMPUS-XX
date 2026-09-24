@@ -110,6 +110,7 @@ CREATE TABLE alocacoes_periodo (
   data_fim DATE,
 
   dia_semana INTEGER, -- 1=Seg, 2=Ter... (usado se for SEMANAL)
+  dias_semana INTEGER[] NOT NULL DEFAULT '{}', -- preserva ofertas com mais de um dia
   reoferta BOOLEAN DEFAULT false,
   ano_letivo INTEGER,
   semestre_letivo INTEGER,

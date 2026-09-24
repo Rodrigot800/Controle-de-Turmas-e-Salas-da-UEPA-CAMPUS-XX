@@ -458,7 +458,10 @@ export default function TabelaAlocacaoDisciplinas({ salas, turmas = [], cursos =
                                   <span className="badge-modular" title="Disciplina concentrada">MODULAR</span>
                                 ) : (
                                   <span className="badge-semanal" title="Aula regular na semana">
-                                    às {formatarDia(aloc.dia_semana)}
+                                    às {(Array.isArray(aloc.dias_semana) && aloc.dias_semana.length > 0
+                                      ? aloc.dias_semana
+                                      : [aloc.dia_semana]
+                                    ).filter(Boolean).map(formatarDia).join(' e ') || 'dia não informado'}
                                   </span>
                                 )}
                               </div>

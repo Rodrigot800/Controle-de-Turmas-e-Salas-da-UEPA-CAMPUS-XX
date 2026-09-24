@@ -23,6 +23,16 @@ const {
   allocationRange,
   executeTool,
 } = require("../src/ai/tools");
+const {
+  classifyByDuration,
+  extractWeekdays,
+  normalizeAiGrade,
+  parsePlanningPdfWithOllama,
+} = require("../src/ai/pdfGradeParser");
+const {
+  tokenSignature,
+  matchNamedRecord,
+} = require("../src/ai/pdfImportService");
 
 test("configuração usa o modelo solicitado como padrão", () => {
   const config = getConfig({});
@@ -255,6 +265,116 @@ test("datas de uma grade em lote são normalizadas pelo ano letivo", () => {
   });
 });
 
+test("tipo modular ou regular é determinado por um mês-calendário", () => {
+  assert.equal(
+    classifyByDuration([{ inicio: "19/02/26", fim: "19/03/26" }]),
+    "MODULAR",
+  );
+  assert.equal(
+    classifyByDuration([{ inicio: "19/02/26", fim: "20/03/26" }]),
+    "SEMANAL",
+  );
+  assert.equal(
+    classifyByDuration([
+      { inicio: "25/03/26", fim: "17/04/26" },
+      { inicio: "24/04/26", fim: "29/05/26" },
+    ]),
+    "SEMANAL",
+  );
+});
+
+test("dias da semana são preservados sem reduzir uma disciplina com dois dias", () => {
+  assert.deepEqual(extractWeekdays("QUARTAS – SEXTAS 20H EAD"), [3, 5]);
+  assert.deepEqual(extractWeekdays("SEGUNDAS – 20H EAD"), [1]);
+});
+
+test("nomes equivalentes do PDF são relacionados sem criar duplicatas", () => {
+  assert.equal(
+    tokenSignature("Processos de Desenvolvimento de Software"),
+    tokenSignature("Desenvolvimento de Processos de Software"),
+  );
+  const antonilson = matchNamedRecord(
+    "Antonilson da Silva Alcântara",
+    [{ id: 11, nome: "ANTONILSON ALCANTARA" }],
+    { allowSubset: true },
+  );
+  assert.equal(antonilson.record.id, 11);
+  assert.equal(antonilson.mode, "APROXIMADO");
+});
+
+test("extração flexível só aceita valores comprovados no texto da página", () => {
+  const source =
+    "Curso Engenharia de Software 2026.1 Turma 1º período Tarde " +
+    "DMEI1024 Matemática Discreta 80 Gustavo Nogueira Dias 19/02/26 07/03/26";
+  const grade = normalizeAiGrade({
+    ano_letivo: 2026,
+    semestre_letivo: 1,
+    periodo_turma: 1,
+    turno: "Tarde",
+    itens: [{
+      codigo: "DMEI1024",
+      disciplina: "Matemática Discreta",
+      carga_horaria: 80,
+      docente: "Gustavo Nogueira Dias",
+      periodos: [{ inicio: "19/02/26", fim: "07/03/26" }],
+    }],
+  }, source, 1);
+  assert.equal(grade.itens[0].extracao_confiavel, true);
+  assert.equal(grade.itens[0].tipo_disciplina, "MODULAR");
+
+  const unproven = normalizeAiGrade({
+    ano_letivo: 2026,
+    semestre_letivo: 1,
+    periodo_turma: 1,
+    turno: "Tarde",
+    itens: [{
+      disciplina: "Matemática Discreta",
+      carga_horaria: 80,
+      docente: "Professor Inventado",
+      periodos: [{ inicio: "19/02/26", fim: "07/03/26" }],
+    }],
+  }, source, 1);
+  assert.equal(unproven.itens[0].extracao_confiavel, false);
+  assert.match(unproven.pendencias_extracao[0].motivo, /confirmação no texto-fonte/);
+});
+
+test("fallback do Ollama normaliza layouts sem posições fixas", async () => {
+  const ollama = {
+    chat: async () => ({
+      message: {
+        tool_calls: [{
+          function: {
+            name: "registrar_planejamento_extraido",
+            arguments: {
+              curso: "Engenharia de Software",
+              campus: "XX",
+              turmas: [{
+                ano_letivo: 2026,
+                semestre_letivo: 1,
+                periodo_turma: 1,
+                turno: "Tarde",
+                itens: [{
+                  codigo: "DMEI1024",
+                  disciplina: "Matemática Discreta",
+                  carga_horaria: 80,
+                  docente: "Gustavo Nogueira Dias",
+                  periodos: [{ inicio: "19/02/26", fim: "07/03/26" }],
+                }],
+              }],
+            },
+          },
+        }],
+      },
+    }),
+  };
+  const result = await parsePlanningPdfWithOllama(
+    "DMEI1024 Matemática Discreta 80 Gustavo Nogueira Dias 19/02/26 07/03/26",
+    ollama,
+  );
+  assert.equal(result.estrategia_extracao, "ollama");
+  assert.equal(result.turmas[0].itens[0].extracao_confiavel, true);
+});
+
 test("consulta de disciplina pode ser limitada ao curso da turma", async () => {
   let captured;
   const db = {
@@ -424,7 +544,7 @@ test("atualização corrige datas de alocação legada sem criar novo registro",
         return { rowCount: 0, rows: [] };
       }
       if (sql.includes("UPDATE alocacoes_periodo")) {
-        return { rowCount: 1, rows: [{ id: 2, data_inicio: values[7], data_fim: values[8] }] };
+        return { rowCount: 1, rows: [{ id: 2, data_inicio: values[8], data_fim: values[9] }] };
       }
       return { rowCount: 0, rows: [] };
     },

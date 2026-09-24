@@ -86,7 +86,7 @@ const ENTITY_CONFIG = {
   },
   alocacoes_periodo: {
     select:
-      "ap.id, ap.turma_id, t.nome AS turma_nome, ap.disciplina_id, d.codigo AS disciplina_codigo, d.nome AS disciplina_nome, ap.professor_id, p.nome AS professor_nome, p.lotacao AS professor_lotacao, ap.sala_id, s.nome AS sala_nome, ap.turno, ap.tipo_disciplina, ap.dia_semana, ap.data_inicio, ap.data_fim, ap.reoferta, ap.ano_letivo, ap.semestre_letivo, ap.periodos, ap.observacao, ap.importacao_id",
+      "ap.id, ap.turma_id, t.nome AS turma_nome, ap.disciplina_id, d.codigo AS disciplina_codigo, d.nome AS disciplina_nome, ap.professor_id, p.nome AS professor_nome, p.lotacao AS professor_lotacao, ap.sala_id, s.nome AS sala_nome, ap.turno, ap.tipo_disciplina, ap.dia_semana, ap.dias_semana, ap.data_inicio, ap.data_fim, ap.reoferta, ap.ano_letivo, ap.semestre_letivo, ap.periodos, ap.observacao, ap.importacao_id",
     from:
       "alocacoes_periodo ap JOIN turmas t ON t.id = ap.turma_id LEFT JOIN disciplinas d ON d.id = ap.disciplina_id LEFT JOIN professores p ON p.id = ap.professor_id LEFT JOIN salas s ON s.id = ap.sala_id",
     search: [
@@ -307,6 +307,7 @@ const toolDefinitions = [
           turno: { type: "string" },
           tipo_disciplina: { type: "string", enum: ["SEMANAL", "MODULAR"] },
           dia_semana: { type: "integer", minimum: 1, maximum: 7 },
+          dias_semana: { type: "array", items: { type: "integer", minimum: 1, maximum: 7 } },
           data_inicio: { type: "string", description: "Preserve a data do usuário em DD/MM ou DD/MM/AAAA. Se não houver ano, a ferramenta usa o ano atual." },
           data_fim: { type: "string", description: "Preserve a data do usuário em DD/MM ou DD/MM/AAAA. Se não houver ano, a ferramenta usa o ano atual." },
           reoferta: { type: "boolean" },
@@ -332,6 +333,7 @@ const toolDefinitions = [
           turno: { type: "string" },
           tipo_disciplina: { type: "string", enum: ["SEMANAL", "MODULAR"] },
           dia_semana: { type: "integer", minimum: 1, maximum: 7 },
+          dias_semana: { type: "array", items: { type: "integer", minimum: 1, maximum: 7 } },
           data_inicio: { type: "string", description: "Nova data em DD/MM ou DD/MM/AAAA; sem ano usa o ano atual." },
           data_fim: { type: "string", description: "Nova data em DD/MM ou DD/MM/AAAA; sem ano usa o ano atual." },
           reoferta: { type: "boolean" },
@@ -449,6 +451,7 @@ const toolDefinitions = [
                 lotacao_docente: { type: "string", description: "Sigla como DSCI ou DLLT." },
                 tipo_disciplina: { type: "string", enum: ["MODULAR", "SEMANAL", "PENDENTE"] },
                 dia_semana: { type: "integer", minimum: 1, maximum: 7 },
+                dias_semana: { type: "array", items: { type: "integer", minimum: 1, maximum: 7 } },
                 sala_id: { type: "integer", minimum: 1 },
                 periodos: {
                   type: "array",
@@ -492,6 +495,14 @@ function positiveInteger(value, field, { min = 1, max = Number.MAX_SAFE_INTEGER 
     throw new ToolError(`${field} deve ser um número inteiro entre ${min} e ${max}.`);
   }
   return parsed;
+}
+
+function normalizeWeekdays(value, field = "dias_semana") {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value)) throw new ToolError(`${field} deve ser uma lista.`);
+  return [...new Set(value.map((day, index) =>
+    positiveInteger(day, `${field}[${index}]`, { min: 1, max: 7 }),
+  ))].sort((left, right) => left - right);
 }
 
 function requiredText(value, field) {
@@ -759,6 +770,7 @@ async function gerarRelatorio(args, db = pool) {
 }
 
 async function withTransaction(work, db = pool) {
+  if (db && db.transactionClient) return work(db.transactionClient);
   const client = await db.connect();
   try {
     await client.query("BEGIN");
@@ -955,10 +967,16 @@ async function cadastrarAlocacaoPeriodo(args, db = pool) {
   const professorId = args.professor_id == null ? null : positiveInteger(args.professor_id, "professor_id");
   const tipo = requiredText(args.tipo_disciplina, "tipo_disciplina").toUpperCase();
   if (!["SEMANAL", "MODULAR"].includes(tipo)) throw new ToolError("tipo_disciplina deve ser SEMANAL ou MODULAR.");
-  const diaSemana = args.dia_semana == null ? null : positiveInteger(args.dia_semana, "dia_semana", { min: 1, max: 7 });
+  let diaSemana = args.dia_semana == null ? null : positiveInteger(args.dia_semana, "dia_semana", { min: 1, max: 7 });
+  const diasSemana = normalizeWeekdays(args.dias_semana);
+  if (diaSemana && !diasSemana.includes(diaSemana)) diasSemana.push(diaSemana);
+  diasSemana.sort((left, right) => left - right);
+  if (!diaSemana && diasSemana.length === 1) [diaSemana] = diasSemana;
   const dataInicio = optionalDate(args.data_inicio, "data_inicio");
   const dataFim = optionalDate(args.data_fim, "data_fim");
-  if (tipo === "SEMANAL" && !diaSemana) throw new ToolError("dia_semana é obrigatório para disciplina SEMANAL.");
+  if (tipo === "SEMANAL" && diasSemana.length === 0) {
+    throw new ToolError("dia_semana ou dias_semana é obrigatório para disciplina SEMANAL.");
+  }
   if (tipo === "MODULAR" && (!dataInicio || !dataFim)) throw new ToolError("data_inicio e data_fim são obrigatórias para disciplina MODULAR.");
   if (dataInicio && dataFim && dataInicio > dataFim) throw new ToolError("data_fim não pode ser anterior a data_inicio.");
 
@@ -1016,10 +1034,10 @@ async function cadastrarAlocacaoPeriodo(args, db = pool) {
     const result = await client.query(
       `INSERT INTO alocacoes_periodo
        (turma_id, disciplina_id, professor_id, sala_id, turno, tipo_disciplina,
-        dia_semana, data_inicio, data_fim, reoferta)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+        dia_semana, dias_semana, data_inicio, data_fim, reoferta)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
       [turmaId, disciplinaId, professorId, salaId, effectiveShift, tipo,
-        diaSemana, dataInicio, dataFim, args.reoferta === true],
+        diaSemana, diasSemana, dataInicio, dataFim, args.reoferta === true],
     );
     return result.rows[0];
   }, db);
@@ -1033,7 +1051,7 @@ async function atualizarAlocacaoPeriodo(args, db = pool) {
   const id = positiveInteger(args.id, "id");
   const patchFields = [
     "turma_id", "disciplina_id", "professor_id", "sala_id", "turno",
-    "tipo_disciplina", "dia_semana", "data_inicio", "data_fim", "reoferta",
+    "tipo_disciplina", "dia_semana", "dias_semana", "data_inicio", "data_fim", "reoferta",
   ];
   if (!patchFields.some((field) => hasOwn(args, field))) {
     throw new ToolError("Informe pelo menos um campo para atualizar a alocação.");
@@ -1058,14 +1076,22 @@ async function atualizarAlocacaoPeriodo(args, db = pool) {
       ? requiredText(args.tipo_disciplina, "tipo_disciplina").toUpperCase()
       : current.tipo_disciplina;
     if (!["SEMANAL", "MODULAR"].includes(tipo)) throw new ToolError("tipo_disciplina deve ser SEMANAL ou MODULAR.");
-    const diaSemana = hasOwn(args, "dia_semana")
+    let diaSemana = hasOwn(args, "dia_semana")
       ? (args.dia_semana == null ? null : positiveInteger(args.dia_semana, "dia_semana", { min: 1, max: 7 }))
       : current.dia_semana;
+    const diasSemana = hasOwn(args, "dias_semana")
+      ? normalizeWeekdays(args.dias_semana)
+      : normalizeWeekdays(current.dias_semana || (current.dia_semana ? [current.dia_semana] : []));
+    if (diaSemana && !diasSemana.includes(diaSemana)) diasSemana.push(diaSemana);
+    diasSemana.sort((left, right) => left - right);
+    if (!diaSemana && diasSemana.length === 1) [diaSemana] = diasSemana;
     const dataInicio = hasOwn(args, "data_inicio") ? optionalDate(args.data_inicio, "data_inicio") : current.data_inicio;
     const dataFim = hasOwn(args, "data_fim") ? optionalDate(args.data_fim, "data_fim") : current.data_fim;
     const reoferta = hasOwn(args, "reoferta") ? args.reoferta === true : current.reoferta;
 
-    if (tipo === "SEMANAL" && !diaSemana) throw new ToolError("dia_semana é obrigatório para disciplina SEMANAL.");
+    if (tipo === "SEMANAL" && diasSemana.length === 0) {
+      throw new ToolError("dia_semana ou dias_semana é obrigatório para disciplina SEMANAL.");
+    }
     if (tipo === "MODULAR" && (!dataInicio || !dataFim)) throw new ToolError("data_inicio e data_fim são obrigatórias para disciplina MODULAR.");
     if (dataInicio && dataFim && String(dataInicio) > String(dataFim)) {
       throw new ToolError("data_fim não pode ser anterior a data_inicio.");
@@ -1124,11 +1150,11 @@ async function atualizarAlocacaoPeriodo(args, db = pool) {
     const result = await client.query(
       `UPDATE alocacoes_periodo SET
        turma_id = $1, disciplina_id = $2, professor_id = $3, sala_id = $4,
-       turno = $5, tipo_disciplina = $6, dia_semana = $7, data_inicio = $8,
-       data_fim = $9, reoferta = $10
-       WHERE id = $11 RETURNING *`,
+       turno = $5, tipo_disciplina = $6, dia_semana = $7, dias_semana = $8,
+       data_inicio = $9, data_fim = $10, reoferta = $11
+       WHERE id = $12 RETURNING *`,
       [turmaId, disciplinaId, professorId, salaId, turno, tipo, diaSemana,
-        dataInicio, dataFim, reoferta, id],
+        diasSemana, dataInicio, dataFim, reoferta, id],
     );
     return result.rows[0];
   }, db);
@@ -1285,6 +1311,13 @@ async function importarGradeSemestre(args, db = pool) {
       }
       return { inicio: start, fim: end };
     });
+    let diaSemana = item.dia_semana == null
+      ? null
+      : positiveInteger(item.dia_semana, `${prefix}.dia_semana`, { min: 1, max: 7 });
+    const diasSemana = normalizeWeekdays(item.dias_semana, `${prefix}.dias_semana`);
+    if (diaSemana && !diasSemana.includes(diaSemana)) diasSemana.push(diaSemana);
+    diasSemana.sort((left, right) => left - right);
+    if (!diaSemana && diasSemana.length === 1) [diaSemana] = diasSemana;
     return {
       codigo: item.codigo
         ? requiredText(item.codigo, `${prefix}.codigo`).toUpperCase().replace(/\s+/g, "")
@@ -1294,9 +1327,8 @@ async function importarGradeSemestre(args, db = pool) {
       docente: item.docente ? requiredText(item.docente, `${prefix}.docente`) : null,
       lotacao: item.lotacao_docente ? requiredText(item.lotacao_docente, `${prefix}.lotacao_docente`).toUpperCase() : null,
       tipo,
-      diaSemana: item.dia_semana == null
-        ? null
-        : positiveInteger(item.dia_semana, `${prefix}.dia_semana`, { min: 1, max: 7 }),
+      diaSemana,
+      diasSemana,
       salaId: item.sala_id == null
         ? (args.sala_id == null ? null : positiveInteger(args.sala_id, "sala_id"))
         : positiveInteger(item.sala_id, `${prefix}.sala_id`),
@@ -1472,13 +1504,13 @@ async function importarGradeSemestre(args, db = pool) {
       const allocationResult = await client.query(
         `INSERT INTO alocacoes_periodo
          (turma_id, disciplina_id, professor_id, sala_id, turno, tipo_disciplina,
-          dia_semana, data_inicio, data_fim, reoferta, ano_letivo, semestre_letivo,
+          dia_semana, dias_semana, data_inicio, data_fim, reoferta, ano_letivo, semestre_letivo,
           periodos, observacao, importacao_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::jsonb, $14, $15)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14::jsonb, $15, $16)
          RETURNING *`,
         [turmaId, subject.id, professor?.id || null, item.salaId, turno,
           item.tipo === "PENDENTE" ? null : item.tipo,
-          item.diaSemana, starts[0], ends[ends.length - 1], item.reoferta,
+          item.diaSemana, item.diasSemana, starts[0], ends[ends.length - 1], item.reoferta,
           anoLetivo, semestreLetivo, JSON.stringify(item.periodos), item.observacao, importId],
       );
       imported.push({
@@ -1503,6 +1535,29 @@ async function importarGradeSemestre(args, db = pool) {
       total_importado: imported.length,
       itens: imported,
       avisos: warnings,
+    };
+  }, db);
+}
+
+async function importarPlanejamentoSemestre(grades, db = pool, options = {}) {
+  if (!Array.isArray(grades) || grades.length === 0) {
+    throw new ToolError("O planejamento deve conter ao menos uma turma para importação.");
+  }
+  if (grades.length > 20) throw new ToolError("Um planejamento aceita no máximo 20 turmas.");
+  const currentYear = options.currentYear || new Date().getFullYear();
+  const normalizedGrades = grades.map((grade) =>
+    normalizeToolArguments("importar_grade_semestre", grade, currentYear),
+  );
+  return withTransaction(async (client) => {
+    const transactionDb = { transactionClient: client };
+    const results = [];
+    for (const grade of normalizedGrades) {
+      results.push(await importarGradeSemestre(grade, transactionDb));
+    }
+    return {
+      total_turmas: results.length,
+      total_importado: results.reduce((total, result) => total + result.total_importado, 0),
+      importacoes: results,
     };
   }, db);
 }
@@ -1649,4 +1704,5 @@ module.exports = {
   normalizeAcademicDate,
   normalizeToolArguments,
   allocationRange,
+  importarPlanejamentoSemestre,
 };
