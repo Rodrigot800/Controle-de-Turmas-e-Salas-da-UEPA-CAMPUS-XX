@@ -1,6 +1,6 @@
 const { createSystemPrompt } = require("./systemPrompt");
 const { toolDefinitions, WRITE_TOOLS, executeTool, ToolError } = require("./tools");
-const { classifyByDuration } = require("./pdfGradeParser");
+const { classifyByDuration, extractWeekdays } = require("./pdfGradeParser");
 
 const KNOWN_TOOLS = new Set(toolDefinitions.map((tool) => tool.function.name));
 const TOOL_PARAMETERS = new Map(
@@ -279,19 +279,54 @@ function parseStructuredGrade(value, currentYear = new Date().getFullYear()) {
     return null;
   }
   const items = [];
+  const date = "\\d{1,2}\\/\\d{1,2}\\/(?:\\d{4}|\\d{2})";
+  const periodPattern = new RegExp(`(${date})\\s*(?:a|at[eé]|[-–—])\\s*(${date})`, "gi");
   const rowPattern = /^\s*(?:([A-ZÀ-Ú]{3,6}\d{3,5})\s+)?(.+?)\s+(\d+)\s*h\s+(.+?)\s+(\d{1,2}\/\d{1,2}\/(?:\d{2}|\d{4}))\s+a\s+(\d{1,2}\/\d{1,2}\/(?:\d{2}|\d{4}))(?:\s+(.*))?\s*$/i;
   for (const line of intent.lines) {
+    if (line.includes("|")) {
+      const fields = line.split("|").map((field) => field.trim());
+      const hasCode = /^[A-ZÀ-Ú]{3,6}\d{3,5}$/i.test(fields[0] || "");
+      const offset = hasCode ? 1 : 0;
+      const discipline = fields[offset];
+      const workload = fields[offset + 1]?.match(/\d+/)?.[0];
+      const teacher = fields[offset + 2];
+      const periodText = fields[offset + 3] || "";
+      const observation = fields.slice(offset + 4).filter(Boolean).join(" | ");
+      const periods = [...periodText.matchAll(periodPattern)].map((match) => ({
+        inicio: match[1],
+        fim: match[2],
+      }));
+      if (discipline && workload && teacher && periods.length > 0) {
+        const type = classifyByDuration(periods);
+        const weekdays = extractWeekdays(observation);
+        items.push({
+          ...(hasCode ? { codigo: fields[0].toUpperCase() } : {}),
+          disciplina: discipline,
+          carga_horaria: Number(workload),
+          docente: teacher,
+          tipo_disciplina: type,
+          ...(type === "SEMANAL" && weekdays.length > 0 ? { dias_semana: weekdays } : {}),
+          ...(type === "SEMANAL" && weekdays.length === 1 ? { dia_semana: weekdays[0] } : {}),
+          periodos: periods,
+          ...(observation ? { observacao: observation } : {}),
+        });
+      }
+      continue;
+    }
     const match = line.match(rowPattern);
     if (!match) continue;
     const trailing = match[7]?.trim() || "";
     const periods = [{ inicio: match[5], fim: match[6] }];
     const type = classifyByDuration(periods);
+    const weekdays = extractWeekdays(trailing);
     items.push({
       ...(match[1] ? { codigo: match[1].toUpperCase() } : {}),
       disciplina: match[2].trim(),
       carga_horaria: Number(match[3]),
       docente: match[4].trim(),
       tipo_disciplina: type,
+      ...(type === "SEMANAL" && weekdays.length > 0 ? { dias_semana: weekdays } : {}),
+      ...(type === "SEMANAL" && weekdays.length === 1 ? { dia_semana: weekdays[0] } : {}),
       periodos: periods,
       ...(trailing ? { observacao: trailing } : {}),
     });

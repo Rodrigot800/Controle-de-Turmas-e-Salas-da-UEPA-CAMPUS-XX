@@ -22,7 +22,15 @@ SALA: 06
 
 `SEMESTRE` aceita `1`, `1a`, `1ª`, `2`, `2a`, `2ª` ou a forma completa `2026.1`. Quando o ano for omitido, o agente usa o ano corrente configurado (`2026`). `TURMA` aceita tanto o período (`1º PERÍODO`) quanto o nome (`BES`, `BES 26` ou `BES 2026`). No exemplo acima, `BES` no semestre 1 de 2026 é relacionado à turma iniciada em 2026, cujo nome cadastrado esperado é `BES 26`. O curso continua obrigatório para evitar que uma sigla de turma seja associada ao curso errado.
 
-Quando as colunas copiadas vierem grudadas, o agente separa códigos, cargas e datas antes da extração. Ele também confere se todos os códigos e todas as datas da fonte foram usados exatamente uma vez. Uma associação que continuar ambígua é bloqueada e exibida como pendência; ela nunca é gravada por aproximação. Para resolver uma pendência, coloque cada disciplina em uma linha no formato `CÓDIGO | DISCIPLINA | CH | DOCENTE | DATA INICIAL | DATA FINAL` e cole novamente.
+Quando as colunas copiadas vierem grudadas, o agente separa códigos, cargas e datas antes da extração. Ele também confere se todos os códigos e todas as datas da fonte foram usados exatamente uma vez. Uma associação que continuar ambígua é bloqueada e exibida como pendência; ela nunca é gravada por aproximação. Para resolver uma pendência, coloque cada disciplina em uma linha no formato `CÓDIGO | DISCIPLINA | CH | DOCENTE | PERÍODOS | OBSERVAÇÃO` e cole novamente. Vários intervalos podem ser separados por ponto e vírgula.
+
+O arquivo `Backend/exemplos/grade_bes_2026_1.txt` contém as seis disciplinas deste planejamento já no formato pronto para colar.
+
+Dentro do terminal do agente, carregue esse arquivo com:
+
+```text
+:texto /app/exemplos/grade_bes_2026_1.txt
+```
 
 O comando `:pdf` aceita planejamentos com diagramações diferentes, desde que tragam as mesmas informações acadêmicas. Primeiro ele tenta reconhecer cabeçalhos e colunas dinamicamente. Quando o layout não é reconhecido, usa o Ollama como extrator estruturado, página por página. Valores extraídos pela IA precisam ter evidência no texto da página e, depois disso, ainda passam pelo mesmo cruzamento de curso, turma, disciplina, professor, carga horária, datas e sala. O parâmetro `--usar-ia` permite forçar esse segundo extrator para testar um novo layout.
 

@@ -709,3 +709,22 @@ test("atualização corrige datas de alocação legada sem criar novo registro",
   assert.equal(result.data_fim, "2026-10-12");
   assert.equal(executed.some(({ sql }) => sql.includes("INSERT INTO alocacoes_periodo")), false);
 });
+
+test("linhas com separador aceitam vários intervalos e preservam dias da semana", () => {
+  const parsed = parseStructuredGrade(
+    [
+      "CURSO: Engenharia de Software",
+      "SEMESTRE: 1",
+      "TURMA: BES 2026",
+      "TURNO: TARDE",
+      "SALA: 06",
+      "CÓDIGO | DISCIPLINA | CH | DOCENTE | PERÍODOS | OBSERVAÇÃO",
+      "DENG0770 | Programação Estruturada | 60h | Jairo Fadul de Lima | 25/03/2026 a 17/04/2026; 24/04/2026 a 29/05/2026 | Sábados",
+    ].join("\n"),
+    2026,
+  );
+  assert.equal(parsed.items.length, 1);
+  assert.deepEqual(parsed.items[0].periodos, [{ inicio: "25/03/2026", fim: "17/04/2026" }, { inicio: "24/04/2026", fim: "29/05/2026" }]);
+  assert.equal(parsed.items[0].tipo_disciplina, "SEMANAL");
+  assert.deepEqual(parsed.items[0].dias_semana, [6]);
+});

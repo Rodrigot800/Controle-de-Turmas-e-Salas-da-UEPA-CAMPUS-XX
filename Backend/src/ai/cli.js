@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 require("dotenv").config();
+const fs = require("node:fs/promises");
 const readline = require("node:readline");
 const { stdin, stdout } = require("node:process");
 const pool = require("../db/pool");
@@ -47,21 +48,38 @@ function createTerminalInput(input, output) {
     return new Promise((resolve) => waiters.push(resolve));
   }
 
-  async function collectPaste(prompt) {
-    const first = await next(prompt);
-    if (first === null) return null;
+  async function collectContinuation(first) {
     const lines = [first];
-    let previousSize = -1;
-    for (let attempt = 0; attempt < 5; attempt += 1) {
-      await new Promise((resolve) => setTimeout(resolve, 60));
-      if (queue.length === previousSize) break;
-      previousSize = queue.length;
+    const isBulkPaste = /^(?:IMPORTAR\s+GRADE|CURSO\s*:|SEMESTRE\s*:|[A-Z]{2,}\d+\s*\|)/i.test(
+      first.trim(),
+    );
+    const delayMs = isBulkPaste ? 100 : 40;
+    const requiredStableChecks = isBulkPaste ? 10 : 2;
+    const maxChecks = isBulkPaste ? 50 : 5;
+    let previousSize = queue.length;
+    let stableChecks = 0;
+
+    for (let attempt = 0; attempt < maxChecks; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      if (queue.length === previousSize) {
+        stableChecks += 1;
+      } else {
+        previousSize = queue.length;
+        stableChecks = 0;
+      }
+      if (stableChecks >= requiredStableChecks) break;
     }
     while (queue.length > 0) lines.push(queue.shift());
     return lines.join("\n");
   }
 
-  return { next, collectPaste, close: () => rl.close() };
+  async function collectPaste(prompt) {
+    const first = await next(prompt);
+    if (first === null) return null;
+    return collectContinuation(first);
+  }
+
+  return { next, collectPaste, collectContinuation, close: () => rl.close() };
 }
 
 function compactJson(value) {
@@ -344,10 +362,30 @@ async function handlePastedPlanning(content, terminal, ollama) {
   let approved = autoApprove;
   if (autoApprove) console.log("\nImportação confirmada automaticamente por --yes.");
   else {
-    const answer = await terminal.next(
-      `\nConfirma a importação atômica de ${analysis.estatisticas.importaveis} disciplina(s)? [s/N] `,
-    );
-    approved = answer !== null && ["s", "sim", "y", "yes"].includes(answer.trim().toLowerCase());
+    while (true) {
+      const answer = await terminal.next(
+        `\nConfirma a importação atômica de ${analysis.estatisticas.importaveis} disciplina(s)? [s/N] `,
+      );
+      if (answer === null) {
+        approved = false;
+        break;
+      }
+      const normalizedAnswer = answer.trim().toLowerCase();
+      if (["s", "sim", "y", "yes"].includes(normalizedAnswer)) {
+        approved = true;
+        break;
+      }
+      if (["", "n", "não", "nao", "no"].includes(normalizedAnswer)) {
+        approved = false;
+        break;
+      }
+      if (/^[A-Z][A-Z0-9]{2,}\s*\|/i.test(answer.trim())) {
+        const continuation = await terminal.collectContinuation(answer);
+        console.log("\nRecebi mais linha(s) da grade durante a confirmação. Recalculando a prévia...");
+        return handlePastedPlanning(`${content.trimEnd()}\n${continuation}`, terminal, ollama);
+      }
+      console.log("\nResposta inválida. Digite s para confirmar ou n para cancelar.");
+    }
   }
   if (!approved) {
     console.log("Importação cancelada. Nenhum dado foi inserido.\n");
@@ -477,7 +515,7 @@ async function main() {
 
   console.log("\nAgente acadêmico UniGestão");
   console.log(`Modelo: ${config.model} | Ollama: ${config.ollamaHost}`);
-  console.log("Comandos: :ajuda, :pdf, :limpar, :sair — ou cole uma grade diretamente\n");
+  console.log("Comandos: :ajuda, :texto, :pdf, :limpar, :sair — ou cole uma grade diretamente\n");
 
   try {
     while (true) {
@@ -499,12 +537,22 @@ async function main() {
           "- Cadastre uma sala chamada Lab 4, capacidade 35, piso térreo, tipo laboratório.\n" +
           "- Crie o curso X com 40 vagas, 8 semestres e as disciplinas A (60h) e B (80h).\n" +
           "- Cole uma grade iniciando com CURSO, SEMESTRE (1, 1a ou 2026.1), TURMA (BES ou 1º PERÍODO), TURNO e SALA.\n" +
+          "- :texto /app/exemplos/grade_bes_2026_1.txt\n" +
           "- :pdf /imports/grade.pdf\n" +
           "- :pdf /imports/grade.pdf --salas 1=6,3=7,5=8 --ignorar-pendentes\n" +
           "- :pdf /imports/grade.pdf --usar-ia  (força o extrator para layouts diferentes)\n",
         );
         continue;
       }
+      if (command === ":texto" || command.startsWith(":texto ")) {
+        try {
+          await handleTextFileCommand(input.trim(), terminal, ollama);
+        } catch (error) {
+          console.error(`\nErro no arquivo de texto > ${error.message}\nNenhum dado foi alterado.\n`);
+        }
+        continue;
+      }
+
       if (command === ":pdf" || command.startsWith(":pdf ")) {
         try {
           await handlePdfCommand(input.trim(), terminal, ollama);
@@ -545,3 +593,20 @@ main().catch(async (error) => {
   }
   process.exitCode = 1;
 });
+async function handleTextFileCommand(input, terminal, ollama) {
+  const tokens = tokenizeCommand(input);
+  const filePath = tokens[1];
+  if (!filePath) {
+    console.log("Uso: :texto /app/exemplos/grade_bes_2026_1.txt\n");
+    return;
+  }
+  if (tokens.length > 2) throw new Error("O comando :texto aceita apenas o caminho do arquivo.");
+  const stats = await fs.stat(filePath);
+  if (!stats.isFile()) throw new Error("O caminho informado não é um arquivo.");
+  if (stats.size > 1024 * 1024) throw new Error("O arquivo de texto excede o limite de 1 MB.");
+  const content = await fs.readFile(filePath, "utf8");
+  if (!isBulkGradeRequest(content, config.currentYear)) {
+    throw new Error("O arquivo não contém um planejamento acadêmico reconhecível.");
+  }
+  await handlePastedPlanning(content, terminal, ollama);
+}
