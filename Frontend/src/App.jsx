@@ -11,7 +11,7 @@ import ModalConflitoAlocacao from "./components/modalConflitoAlocacao";
 import ModalProfessores from "./components/modalProfessores";
 import ModalDisciplinas from "./components/modalDisciplinas";
 import ModalAlocacaoPeriodo from "./components/modalAlocacaoPeriodo";
-import PaginaMetricas from "./components/paginaMetricas";
+import PaginaMetricas from "./components/paginaMetricasNova";
 
 import Sidebar from "./components/sidebar";
 import API_BASE from "./config/api";

@@ -198,4 +198,6 @@ router.get("/turnos", async (req, res) => {
   }
 });
 
+require("./metricasDashboard")(router, pool);
+
 module.exports = router;
